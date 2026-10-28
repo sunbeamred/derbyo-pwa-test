@@ -199,7 +199,7 @@ function PlayerSide({ name, mark, red, tokens, active, mine, isBot, reaction, aw
   const status = left ? html`<span class="st left">○ покинул матч</span>`
     : missed > 0 && away === null ? html`<span class=${cx("st", missed >= 2 ? "idle" : "missed")}>${missed >= 2 ? "⏱ не отвечает" : "⏱ пропустил ход"}</span>`
     : away !== null ? html`<span class="st away">◒ свернул ${away} с</span>`
-    : html`<span class="st in"><i class="dot"></i><span class="st-t">в игре</span></span>`;
+    : html`<span class="st in">● в игре</span>`;
   const tokenCount = html`<span class="tokens"><img src=${img("coin")} alt="" /><b>${tokens}</b></span>`;
   const gone = away !== null || left;
   const avatar = html`<span class=${cx("pavatar", red ? "red" : "green", active && "active", !mine && gone && "gone", mine ? "mine" : "theirs")}>
@@ -252,7 +252,7 @@ function WordLines({ text }) {
   // A hyphenated name breaks after the hyphen (Saint-|Germain), so one long word does not shrink the whole label.
   const words = text.split(" ").flatMap((w) => w.replace(/-(?=\S)/g, "-\n").split("\n"));
   const longest = Math.max(...words.map((w) => w.length));
-  const size = Math.max(10, Math.min(12, 12 * 8.4 / Math.max(longest, 1)));
+  const size = Math.max(9, Math.min(12, 12 * 8.4 / Math.max(longest, 1)));
   return html`<span class="word-lines" style=${`font-size:${size}px`}>${words.map((w) => html`<span>${w}</span>`)}</span>`;
 }
 
