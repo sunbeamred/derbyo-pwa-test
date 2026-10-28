@@ -118,7 +118,7 @@ export class Match {
   opener(n) { return (n - 1) % 2 === this.mySeat ? 0 : 1; }
 
   /** As on the site: one level up per round up to Легенда (Энциклопедия only by preset), plus agreed raises. */
-  levelIndex(n) { return Math.min(LEVELS.length - 1, Math.min(3, this.startLevel + n - 1) + this.levelBoost); }
+  levelIndex(n) { const climb = this.startLevel >= 3 ? this.startLevel : Math.min(3, this.startLevel + n - 1); return Math.min(LEVELS.length - 1, climb + this.levelBoost); }
   get level() { return LEVELS[this.levelIndex(this.round)]; }
   get nextLevel() { return LEVELS[this.levelIndex(this.round + 1)]; }
   /** Three levels around the current one for the header: the one before (from round 2), the current, the next. */
