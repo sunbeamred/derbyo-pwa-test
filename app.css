@@ -391,37 +391,37 @@ input { font-family: inherit; }
 
 /* ===== Match ===== */
 .match { position: absolute; inset: 0; background: radial-gradient(520px at 50% 0, #12243A, var(--bg)); overflow: hidden; }
-.match-body { height: 100%; display: flex; flex-direction: column; gap: 8px; padding: calc(var(--safe-t) + 14px) 12px 0; }
+.match-body { height: 100%; display: flex; flex-direction: column; gap: 8px; padding: calc(var(--safe-t) + 10px) 12px 0; }
 
-.scoreboard { position: relative; flex: none; border-radius: 18px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.scoreboard { position: relative; flex: none; border-radius: 18px; padding: 10px 10px; display: flex; flex-direction: column; gap: 8px; }
 .side-tints { position: absolute; inset: 0; border-radius: 18px; overflow: hidden; display: flex; pointer-events: none; }
 .tint { flex: 1; position: relative; opacity: 0; transition: opacity .35s ease-out; background: linear-gradient(90deg, color-mix(in srgb, var(--t) 34%, transparent), transparent); }
 .tint::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--t); box-shadow: 0 0 12px var(--t); }
 .tint.right { background: linear-gradient(270deg, color-mix(in srgb, var(--t) 34%, transparent), transparent); }
 .tint.right::before { left: auto; right: 0; }
 .tint.on { opacity: 1; }
-.score-row { position: relative; display: flex; align-items: center; gap: 6px; }
+.score-row { position: relative; display: flex; align-items: center; gap: 5px; }
 .pside { position: relative; flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; opacity: .62; transition: opacity .2s ease-out; }
 .pside.active { opacity: 1; }
 .pside.theirs { justify-content: flex-end; }
 .pinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .pside.theirs .pinfo { align-items: flex-end; text-align: right; }
-.pname { height: 30px; display: flex; align-items: flex-end; font-size: 12.5px; font-weight: 600; line-height: 15px; overflow: hidden; overflow-wrap: anywhere; max-width: 100%; }
+.pname { height: 32px; display: flex; align-items: flex-end; font-size: 13px; font-weight: 600; line-height: 16px; overflow: hidden; overflow-wrap: anywhere; max-width: 100%; }
 .pside.theirs .pname { justify-content: flex-end; }
-.pstatus { display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 11px; font-weight: 500; max-width: 100%; min-width: 0; overflow: hidden; }
+.pstatus { display: flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 10.5px; letter-spacing: -.1px; font-weight: 500; max-width: 100%; min-width: 0; overflow: hidden; }
 .pstatus .st { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .pstatus .tokens { flex: none; }
 /* A narrow side keeps the green dot and drops the words «в игре», so the tokens never reach the score. */
 .pinfo { container-type: inline-size; }
-@container (max-width: 112px) { .st.in .st-t { display: none; } }
+@container (max-width: 78px) { .st.in .st-t { display: none; } }
 .st.in { color: var(--mint); }
 .st.left { color: #FF9AA8; }
 .st.idle { color: #FFB37A; }
 .st.missed, .st.away { color: var(--soft); }
-.tokens { display: inline-flex; align-items: center; gap: 3px; color: rgba(244, 247, 252, .85); font-size: 12px; }
-.tokens img { width: 14px; height: 14px; }
-.pavatar { position: relative; flex: none; padding: 2px; border-radius: 13px; box-shadow: inset 0 0 0 1.5px transparent; transition: box-shadow .2s; }
-.pavatar .face { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.tokens { display: inline-flex; align-items: center; gap: 2px; color: rgba(244, 247, 252, .85); font-size: 12px; }
+.tokens img { width: 13px; height: 13px; }
+.pavatar { position: relative; flex: none; padding: 3px; border-radius: 13px; box-shadow: inset 0 0 0 1.5px transparent; transition: box-shadow .2s; }
+.pavatar .face { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
 .pavatar.red .face { box-shadow: inset 0 0 0 1px rgba(245, 140, 158, .7); }
 .pavatar.green .face { box-shadow: inset 0 0 0 1px rgba(131, 216, 176, .7); }
 .pavatar .bot { width: 26px; height: 26px; }
@@ -431,11 +431,11 @@ input { font-family: inherit; }
 .pmark { position: absolute; width: 16px; height: 16px; bottom: -3px; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); }
 .pavatar.mine .pmark { right: -3px; }
 .pavatar.theirs .pmark { left: -3px; }
-.scorebug { flex: none; padding: 6px 9px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 5px;
+.scorebug { flex: none; padding: 6px 10px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 5px;
   background: radial-gradient(44px 44px at 50% 35%, rgba(246, 212, 130, .16), transparent), linear-gradient(#0B1626, #03070D);
   border: 1px solid rgba(246, 212, 130, .3); box-shadow: 0 3px 12px rgba(0, 0, 0, .35); }
 .digits { display: flex; align-items: center; gap: 3px; }
-.digit { font-family: var(--rounded); font-size: 26px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums;
+.digit { font-family: var(--rounded); font-size: 28px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums;
   background-image: linear-gradient(#FFF1C2, #F2C14E); background-clip: text; -webkit-background-clip: text; color: transparent;
   filter: drop-shadow(0 0 5px rgba(246, 212, 130, .7)) drop-shadow(0 0 12px rgba(246, 212, 130, .3)); }
 .colon { font-size: 22px; font-weight: 700; color: rgba(246, 212, 130, .45); margin-top: -4px; }
