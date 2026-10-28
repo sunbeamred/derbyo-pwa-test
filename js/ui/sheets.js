@@ -9,7 +9,7 @@ export const Face = ({ p, size }) => html`<span class="face-circle" style=${`--s
 
 /** The answer panel, built for one thumb: field at the bottom, what it needs right above it, the cell on top.
  * Picking a player never answers by itself (a site invariant). */
-export function AnswerSheet({ m, cell, dismiss, hardClose }) {
+export function AnswerSheet({ m, cell, dismiss }) {
   const [query, setQuery] = useState(has("demoQuery") ? "Mo" : has("demoLastMove") ? "Henry" : has("demoMismatch") ? "Kaka" : "");
   const [picked, setPicked] = useState(null);
   const [scoutOpen, setScoutOpen] = useState(false);
@@ -29,7 +29,6 @@ export function AnswerSheet({ m, cell, dismiss, hardClose }) {
     if (!picked) return;
     const r = m.answer(picked);
     if (r === "used") field.current?.parentElement?.animate([{ transform: "translateX(0)" }, { transform: "translateX(8px)" }, { transform: "translateX(-8px)" }, { transform: "translateX(5px)" }, { transform: "none" }], { duration: 300 });
-    else if (r === "captured") hardClose();
     else if (r === "mismatch") field.current?.blur();
     store.changed();
   };
@@ -171,8 +170,8 @@ export function ChatSheet({ m, openStands, openViewer }) {
 }
 
 /** The opponent asks you to count a name the base does not know: 20 seconds, silence is a refusal. */
-export function ReviewDecision({ m }) {
-  const r = m.review;
+export function ReviewDecision({ m, review }) {
+  const r = review;
   if (!r) return null;
   const row = rows[Math.floor(r.cell / 3)], col = columns[r.cell % 3];
   const nm = byId[r.playerId].name;
@@ -187,8 +186,8 @@ export function ReviewDecision({ m }) {
     <div class="rv-conds"><${ConditionIcon} icon=${col.icon} size=${24} /><b>${col.title}</b><i>×</i><${ConditionIcon} icon=${row.icon} size=${24} /><b>${row.title}</b></div>
     <p>По базе: ${r.why.replace(nm + " ", "")}. Молчание — отказ.</p>
     <div class="mm-actions">
-      <button class="navy-btn" onClick=${() => { m.decideReview(false); store.changed(); }}>Не засчитывать</button>
-      <button class="green-btn press" onClick=${() => { m.decideReview(true); store.changed(); }}>Зачесть</button>
+      <button class="navy-btn" disabled=${m.review !== r} onClick=${() => { m.decideReview(false); store.changed(); }}>Не засчитывать</button>
+      <button class="green-btn press" disabled=${m.review !== r} onClick=${() => { m.decideReview(true); store.changed(); }}>Зачесть</button>
     </div>
   </div>`;
 }

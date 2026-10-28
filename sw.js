@@ -1,9 +1,9 @@
 // Offline cache: the app shell and its art; a new version replaces the old cache.
-const VERSION = "derbyo-pwa-1";
+const VERSION = "derbyo-pwa-2";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(["./", "index.html", "app.css", "manifest.webmanifest", "vendor/preact-htm.js",
-    "js/app.js", "js/data.js", "js/model.js", "js/sound.js", "js/install.js", "js/ui/common.js", "js/ui/match.js", "js/ui/sheets.js", "js/ui/profile.js", "js/ui/lobby.js"])));
+    "js/app.js", "js/data.js", "js/model.js", "js/sound.js", "js/install.js", "js/ui/common.js", "js/ui/match.js", "js/ui/sheets.js", "js/ui/profile.js", "js/ui/lobby.js", "js/ui/tabbar.js", "js/touch.js"])));
   self.skipWaiting();
 });
 

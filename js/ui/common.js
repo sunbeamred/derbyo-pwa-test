@@ -81,32 +81,47 @@ export const CloseButton = ({ onClick }) =>
 /** Nicknames like damir_andromeda may wrap after "_", "-" or ".". */
 export const breakable = (n) => n.replaceAll("_", "_​").replaceAll("-", "-​").replaceAll(".", ".​");
 
-/** How far the on-screen keyboard covers the bottom of the layout (iOS Safari keeps the layout size). */
-export function useKeyboard() {
-  const [kb, setKb] = useState(0);
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const f = () => setKb(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
-    vv.addEventListener("resize", f); vv.addEventListener("scroll", f); f();
-    return () => { vv.removeEventListener("resize", f); vv.removeEventListener("scroll", f); };
-  }, []);
-  return kb > 60 ? kb : 0;
-}
-
-/** A panel that slides up from the bottom edge: a dim layer behind it closes it, so does a downward drag. */
-export function Panel({ onClose, closable = true, children, class: c }) {
+/** A panel that slides up from the bottom edge: a dim layer behind it closes it, so does a downward drag
+ * (a quick flick or past a third of its height). It sits in the part of the screen the keyboard leaves free. */
+export function Panel({ onClose, closable = true, shut = false, children, class: c }) {
   const [out, setOut] = useState(false);
-  const [drag, setDrag] = useState(0);
-  const start = useRef(null);
-  const kb = useKeyboard();
-  const leave = () => { if (!closable || out) return; document.activeElement?.blur?.(); setOut(true); setTimeout(onClose, 170); };
-  const down = (e) => { if (closable) start.current = e.clientY; };
-  const move = (e) => { if (start.current !== null) setDrag(Math.max(0, e.clientY - start.current)); };
-  const up = () => { if (start.current === null) return; start.current = null; if (drag > 90) leave(); else setDrag(0); };
+  const panel = useRef(), dim = useRef();
+  const g = useRef(null);
+  const gone = useRef(false);
+  const leave = (force) => {
+    if ((!closable && force !== true) || gone.current) return;
+    gone.current = true;
+    if (panel.current?.contains(document.activeElement)) document.activeElement.blur();
+    setOut(true); setTimeout(onClose, 250);
+  };
+  // `shut`: the screen closes it (the turn passed, a decision came), and it still slides away.
+  useEffect(() => { if (shut) leave(true); }, [shut]);
+  const set = (y, settle) => {
+    const el = panel.current;
+    el.classList.toggle("settle", settle);
+    el.style.transform = y ? `translate3d(0,${y}px,0)` : "";
+    if (dim.current) dim.current.style.opacity = y ? String(Math.max(0, 1 - y / el.offsetHeight)) : "";
+  };
+  const down = (e) => { if (!closable || e.target.closest("button")) return; e.currentTarget.setPointerCapture?.(e.pointerId); g.current = { y: e.clientY, dy: 0, v: 0, t: e.timeStamp }; };
+  const move = (e) => {
+    const s = g.current;
+    if (!s) return;
+    const dy = e.clientY - s.y;
+    // Upwards it gives a little, like a rubber band.
+    const y = dy > 0 ? dy : -Math.sqrt(-dy) * 2;
+    s.v = (dy - s.dy) / Math.max(1, e.timeStamp - s.t); s.dy = dy; s.t = e.timeStamp;
+    set(y, false);
+  };
+  const up = () => {
+    const s = g.current;
+    if (!s) return;
+    g.current = null;
+    if (s.dy > panel.current.offsetHeight / 3 || (s.v > 0.5 && s.dy > 30)) { panel.current.style.transform = ""; leave(); }
+    else set(0, true);
+  };
   return html`<div class=${cx("overlay", out && "out")} onKeyDown=${(e) => e.key === "Escape" && leave()}>
-    <div class="dim" onClick=${leave}></div>
-    <div class=${cx("panel", c)} role="dialog" style=${`--kb:${kb}px;bottom:${kb}px;transform:translateY(${drag}px);${kb ? "padding-bottom:10px" : ""}`}>
+    <div class="dim" ref=${dim} onClick=${leave}></div>
+    <div class=${cx("panel", c)} role="dialog" ref=${panel}>
       <div class="grip-row" onPointerDown=${down} onPointerMove=${move} onPointerUp=${up} onPointerCancel=${up}>
         <span class="grip"></span>
         ${closable ? html`<${CloseButton} onClick=${leave} />` : null}
@@ -114,6 +129,13 @@ export function Panel({ onClose, closable = true, children, class: c }) {
       ${typeof children === "function" ? children(leave) : children}
     </div>
   </div>`;
+}
+
+/** Keeps a panel on screen while it slides away after `open` turns false: [mounted, shut, gone]. */
+export function useSheet(open) {
+  const [shown, setShown] = useState(open);
+  useEffect(() => { if (open) setShown(true); }, [open]);
+  return [open || shown, !open, () => setShown(false)];
 }
 
 /** A fixed bar at the bottom of a scrolling screen, on a solid backing that fades in at its top edge. */
@@ -124,15 +146,18 @@ export const LobbyHeader = ({ title, back }) => html`<div class="lobby-header">
   <h1>${title}</h1>
 </div>`;
 
-/** A sheet for alerts and confirmations, in place of the system alert. */
+/** A sheet for alerts and confirmations, in place of the system alert: it pops in, and fades before its action runs
+ * (`stay` actions run at once and may keep it open). */
 export function Alert({ title, message, actions, onClose, children }) {
-  return html`<div class="alert-wrap" onClick=${(e) => e.target === e.currentTarget && onClose?.()}>
+  const [out, setOut] = useState(false);
+  const after = (f) => () => { if (out) return; setOut(true); setTimeout(() => f?.(), 170); };
+  return html`<div class=${cx("alert-wrap", out && "out")} onClick=${(e) => e.target === e.currentTarget && onClose && after(onClose)()}>
     <div class="alert" role="alertdialog">
       <h3>${title}</h3>
       ${message ? html`<p>${message}</p>` : null}
       ${children}
       <div class="alert-actions">
-        ${actions.map((a) => html`<button class=${cx("alert-btn", a.kind)} onClick=${a.run}>${a.title}</button>`)}
+        ${actions.map((a) => html`<button class=${cx("alert-btn", a.kind)} onClick=${a.stay ? a.run : after(a.run)}>${a.title}</button>`)}
       </div>
     </div>
   </div>`;

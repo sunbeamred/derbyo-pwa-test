@@ -1,5 +1,5 @@
 // The match screen (port of MatchView.swift and Motion.swift).
-import { html, useState, useEffect, useRef, cx, img, Icon, Panel, Alert, Toast, RatingTag, breakable, vibrate } from "./common.js";
+import { html, useState, useEffect, useRef, cx, img, Icon, Panel, useSheet, Alert, Toast, RatingTag, breakable, vibrate } from "./common.js";
 import { columns, rows, byId } from "../data.js";
 import { store } from "../model.js";
 import { Sound } from "../sound.js";
@@ -13,7 +13,7 @@ const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matche
 export const raiseKeyboard = () => document.getElementById("kbd-proxy")?.focus();
 
 export function MatchScreen({ m, close, findNew, minimize }) {
-  const [answering, setAnswering] = useState(false);
+  const [answerCell, setAnswerCell] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOf, setProfileOf] = useState(null);
@@ -66,23 +66,25 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     }
     prev.current = { landed: m.landed, miss: m.missSignal, turn: m.turn, away: m.oppAwayFor === null, alert: m.timerAlert, unread: m.unread, finish: m.finishSignal };
   });
-  // The answer panel goes when the turn does.
-  useEffect(() => { if (m.turn !== 0 && answering) closeAnswer(); }, [m.turn]);
-
-  const closeAnswer = () => { m.cancelMismatch(); setAnswering(false); m.selected = null; store.changed(); };
-  const tapCell = (i) => { raiseKeyboard(); m.select(i); setAnswering(m.selected !== null); store.changed(); };
+  const closeAnswer = () => { m.cancelMismatch(); setAnswerCell(null); m.selected = null; store.changed(); };
+  const tapCell = (i) => { raiseKeyboard(); m.select(i); if (m.selected !== null) setAnswerCell(i); store.changed(); };
+  // The review panel slides away once the decision is made (or the time runs out).
+  const [reviewShown, reviewShut, reviewGone] = useSheet(m.review?.owner === 1);
+  const lastReview = useRef(null);
+  if (m.review?.owner === 1) lastReview.current = m.review;
 
   const notes = [...rows, ...columns].filter((c) => c.note);
   const slotLine = m.watching ? "Ты на трибуне: ходить нельзя, болеть в чате можно" : m.turn === 0 ? "Выбери клетку и назови футболиста" : "Ход соперника. Присмотри клетку на свой ход";
 
+  let leaveMenu = null;
   const menuRow = (title, run, { destructive = false, enabled = true } = {}) => html`
     <button class=${cx("navy-btn menu-row", destructive && "destructive")} disabled=${!enabled}
-      onClick=${() => { if (Date.now() - menuOpenedAt.current < 500) return; setMenuOpen(false); run(); store.changed(); }}>${title}</button>`;
+      onClick=${() => { if (Date.now() - menuOpenedAt.current < 500) return; leaveMenu?.(); run(); store.changed(); }}>${title}</button>`;
   const invite = async () => {
     const text = `Сыграем в DERBYO? Комната ${m.code}: derbyo.online/r/${m.code.replace(" ", "")}`;
     try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); m.show("Приглашение скопировано", true); store.changed(); } } catch {}
   };
-  const menu = html`<div class="menu">
+  const menu = (leave) => (leaveMenu = leave, html`<div class="menu">
     <h2>Матч</h2>
     ${m.watching ? html`
       ${menuRow(Sound.enabled ? "Выключить звук" : "Включить звук", () => (Sound.enabled = !Sound.enabled))}
@@ -99,7 +101,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
         ${m.turn === 0 && !m.paused ? menuRow("Передать ход", () => m.passOnPurpose()) : null}
         ${m.canLeaveFree ? menuRow(`Выйти без штрафа · ${m.opponent.name} не отвечает`, close)
           : menuRow("Сдаться в раунде", () => setConfirmSurrender(true), { destructive: true })}`}`}
-  </div>`;
+  </div>`);
 
   return html`<div class="match">
     <div class="match-body">
@@ -125,11 +127,11 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     </div>
     ${finishing && !reduceMotion() ? html`<${FinishAtmosphere} winner=${m.roundWinner === null ? null : m.seat(m.roundWinner)} key=${finishing} />` : null}
     ${coins && !reduceMotion() ? html`<${CoinAtmosphere} key=${coins} done=${() => setCoins(0)} />` : null}
-    ${answering && m.selected !== null ? html`<${Panel} onClose=${closeAnswer} class="answer-panel">${(leave) => html`<${AnswerSheet} m=${m} cell=${m.selected} dismiss=${leave} hardClose=${closeAnswer} />`}<//>` : null}
-    ${chatOpen ? html`<${Panel} onClose=${() => setChatOpen(false)} class="chat-panel">
-      <${ChatSheet} m=${m} openStands=${() => { setChatOpen(false); setStandsOpen(true); }} openViewer=${(v) => { setChatOpen(false); setViewer(v); }} /><//>` : null}
-    ${m.review?.owner === 1 ? html`<${Panel} closable=${false} onClose=${() => {}}><${ReviewDecision} m=${m} /><//>` : null}
-    ${standsOpen ? html`<${Panel} onClose=${() => setStandsOpen(false)}><${StandsSheet} m=${m} open=${(v) => { setStandsOpen(false); setViewer(v); }} /><//>` : null}
+    ${answerCell !== null ? html`<${Panel} onClose=${closeAnswer} shut=${m.turn !== 0 || m.roundOver} class="answer-panel">${(leave) => html`<${AnswerSheet} m=${m} cell=${answerCell} dismiss=${leave} />`}<//>` : null}
+    ${chatOpen ? html`<${Panel} onClose=${() => setChatOpen(false)} class="chat-panel">${(leave) => html`
+      <${ChatSheet} m=${m} openStands=${() => { leave(); setStandsOpen(true); }} openViewer=${(v) => { leave(); setViewer(v); }} />`}<//>` : null}
+    ${reviewShown ? html`<${Panel} closable=${false} shut=${reviewShut} onClose=${reviewGone}><${ReviewDecision} m=${m} review=${lastReview.current} /><//>` : null}
+    ${standsOpen ? html`<${Panel} onClose=${() => setStandsOpen(false)}>${(leave) => html`<${StandsSheet} m=${m} open=${(v) => { leave(); setViewer(v); }} />`}<//>` : null}
     ${viewer ? html`<${Panel} onClose=${() => setViewer(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${1} viewer=${viewer} close=${leave} />`}<//>` : null}
     ${profileOf !== null ? html`<${Panel} onClose=${() => setProfileOf(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${profileOf} close=${leave} />`}<//>` : null}
     ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}>${menu}<//>` : null}
@@ -162,7 +164,7 @@ function Scoreboard({ m, openProfile, openStands }) {
     </div>
     <div class="level-row">
       <span class=${cx("fade", live(0) && "on")}><${RatingTag} flag=${m.myFlag} rating=${m.myRating} rank=${m.myRank} /></span>
-      <span class="level-path">${m.levelPath.map((s, i) => html`${i > 0 ? html`<i> → </i>` : null}<span class=${s.current ? "cur" : ""}>${s.name}</span>`)}</span>
+      <span class="level-path">${m.levelPath.map((s, i) => html`${i > 0 ? html`<i>→</i>` : null}<span class=${s.current ? "cur" : ""}>${s.name}</span>`)}</span>
       <span class=${cx("fade", live(1) && "on")}><${RatingTag} flag=${m.opponent.flag} rating=${m.opponent.rating} rank=${m.opponent.rank} flagAfter=${true} /></span>
     </div>
     ${m.viewers.length ? html`<button class="eye-badge press" onClick=${openStands} aria-label=${`Трибуна: ${m.viewers.length}`}>

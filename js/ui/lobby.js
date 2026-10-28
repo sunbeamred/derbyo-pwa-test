@@ -144,7 +144,7 @@ function RoomPassword({ room, enter, cancel }) {
   const go = () => { if (pw === "1234") enter(); else { setPw(""); setWrong(true); } };
   return html`<${Alert} title=${wrong ? "Неверный пароль" : "🔒 Закрытая комната"} onClose=${cancel}
     message=${wrong ? "Попробуй ещё раз. Пароль знает создатель комнаты." : `${room} закрыта. Введи пароль, чтобы войти.`}
-    actions=${[{ title: "Отмена", run: cancel }, { title: "Войти", kind: "bold", run: go }]}>
+    actions=${[{ title: "Отмена", run: cancel }, { title: "Войти", kind: "bold", stay: true, run: go }]}>
     <input ref=${ref} class="alert-input" type="password" placeholder="Пароль" value=${pw} onInput=${(e) => setPw(e.target.value)}
       onKeyDown=${(e) => e.key === "Enter" && go()} />
   <//>`;
@@ -182,7 +182,7 @@ export function QuickPickView({ nav, app }) {
     <button class="primary-btn" disabled=${!chosen.size} onClick=${() => {
       QuickChoice.presets = PRESETS.map((p) => p.id).filter((id) => chosen.has(id));
       QuickChoice.remember = remember;
-      nav.back(); app.quick();
+      nav.back(app.quick);
     }}><img src=${img("bolt")} alt="" />Найти соперника</button>
   <//></div>`;
 }
@@ -201,7 +201,7 @@ export function SearchView({ done }) {
   }, []);
   const C = 2 * Math.PI * 85;
   const lvl = PRESETS.find((p) => QuickChoice.presets.includes(p.id))?.name ?? "Любитель";
-  return html`<div class="search cover">
+  return html`<div class="search">
     <div class="search-head"><button class="text-btn red" onClick=${() => done(null)}>Отмена</button><b>Быстрая игра</b><span style="width:60px"></span></div>
     <div class="search-mid">
       <span class="search-ring"><svg viewBox="0 0 180 180"><circle cx="90" cy="90" r="85" fill="none" stroke="#17283A" stroke-width="10" />

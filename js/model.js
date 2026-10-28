@@ -53,7 +53,7 @@ export class Match {
     this.opponent = opponent;
     this.watching = watching;
     this.cells = Array(9).fill(null);
-    this.seconds = 60; this.score = [0, 0]; this.round = 1; this.tokens = 4; this.oppTokens = 4;
+    this.seconds = 60; this.turnLength = 60; this.score = [0, 0]; this.round = 1; this.tokens = 4; this.oppTokens = 4;
     this.code = `${Math.floor(rand(100, 1000))} ${String(Math.floor(rand(0, 1000))).padStart(3, "0")}`;
     this.startLevel = 1; this.levelBoost = 0; this.raiseAnswered = false;
     this.myName = "damir_andromeda"; this.myFlag = "🇰🇿";
@@ -228,7 +228,8 @@ export class Match {
       this.selected = null;
       this.put(i, 0, pl.id);
       this.markRecent(i);
-      const fast = !this.hintThisTurn && 60 - this.seconds <= 5;
+      // Fast is measured from the turn's own start, bonus seconds included.
+      const fast = !this.hintThisTurn && this.turnLength - this.seconds <= 5;
       this.streak = this.hintThisTurn ? 0 : this.streak + 1;
       const bonus = this.streak >= 2;
       if (bonus) { this.tokens++; this.streak = 0; }
@@ -351,6 +352,7 @@ export class Match {
     this.turn = 1 - this.turn;
     this.seconds = this.turn === 1 && demoIdle ? 8 : 60;
     if (this.turn === 0) { this.seconds += this.nextBonus; this.nextBonus = 0; this.hintThisTurn = false; }
+    this.turnLength = this.seconds;
     if (this.turn === 1 || this.watching) this.opponentMove();
   }
 
@@ -415,7 +417,7 @@ export class Match {
   }
 
   endRound(winner) {
-    this.review = null; this.roundOver = true; this.roundWinner = winner; this.selected = null;
+    this.review = null; this.mismatch = null; this.oppSelected = null; this.roundOver = true; this.roundWinner = winner; this.selected = null;
     if (winner !== null) this.score[winner]++;
     this.roundResults.push(winner);
     this.moveToken = id();
@@ -428,7 +430,7 @@ export class Match {
     this.nextAsked = false; this.paused = false; this.pauseAskLeft = null; this.oppPauseAskLeft = null; this.resumeWait = null;
     this.round++;
     this.cells = Array(9).fill(null); this.used = new Set();
-    this.turn = this.opener(this.round); this.seconds = 60; this.selected = null; this.roundOver = false; this.roundWinner = null;
+    this.turn = this.opener(this.round); this.seconds = 60; this.turnLength = 60; this.hintThisTurn = false; this.selected = null; this.roundOver = false; this.roundWinner = null;
     this.raiseAnswered = false; this.review = null; this.oppSelected = null; this.sharedClues = {};
     if (this.turn === 1 || this.watching) this.opponentMove();
   }

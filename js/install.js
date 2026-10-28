@@ -5,7 +5,7 @@ let deferred = null;
 addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; });
 
 export const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+export const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 export const installState = {
   /** Offered once: until the player installs or chooses to stay in the browser. */
@@ -19,7 +19,7 @@ export const installState = {
 export function InstallSheet({ close }) {
   const [steps, setSteps] = useState(false);
   const [out, setOut] = useState(false);
-  const leave = (choice) => { if (choice) installState.remember(choice); setOut(true); setTimeout(close, 170); };
+  const leave = (choice) => { if (choice) installState.remember(choice); setOut(true); setTimeout(close, 250); };
   const install = async () => {
     if (deferred) {
       deferred.prompt();
