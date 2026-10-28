@@ -3,6 +3,10 @@
 // iOS Safari only applies :active while a touch listener exists; without it no button reacts to a press.
 document.addEventListener("touchstart", () => {}, { passive: true });
 
+// Focus rings only for the keyboard: a tapped card must not stay framed after a panel closes.
+addEventListener("keydown", (e) => { if (e.key === "Tab") document.documentElement.classList.add("kbd"); }, true);
+addEventListener("pointerdown", () => document.documentElement.classList.remove("kbd"), true);
+
 // The page does not zoom on a pinch (Safari ignores user-scalable=no); double tap is off in app.css.
 for (const t of ["gesturestart", "gesturechange"]) document.addEventListener(t, (e) => e.preventDefault());
 

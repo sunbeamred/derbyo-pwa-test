@@ -25,7 +25,9 @@ button:disabled { cursor: default; }
 img { display: block; -webkit-user-drag: none; }
 h1, h2, h3, h4, p { margin: 0; }
 input { font-family: inherit; }
-:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+:focus-visible { outline: none; }
+.kbd :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.lb-name .flag { font-style: normal; }
 #kbd-proxy { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; font-size: 16px; pointer-events: none; }
 
 .grad { background-clip: text; -webkit-background-clip: text; color: transparent; }
@@ -328,6 +330,8 @@ input { font-family: inherit; }
 .mini-field input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--ink); font-size: 16px; }
 .mini-field .send { width: 34px; height: 34px; }
 .waiting-bar { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 16px; border-radius: 16px; background: var(--navy); border: 1px solid var(--navy-line); }
+.waiting-bar .wb-t { flex: 1; min-width: 0; }
+.waiting-bar .wb-cancel { width: auto; flex: none; padding: 0 14px; }
 .waiting-bar b { display: block; font-size: 15px; font-weight: 600; }
 .waiting-bar small { display: block; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 

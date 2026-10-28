@@ -127,6 +127,11 @@ export function OnlineSearch({ done }) {
   </div>`;
 }
 
+/** «Готов. Ждём …» with «Отменить», when the server can take readiness back (the sandbox can, older servers cannot). */
+const ReadyWait = ({ m, who }) => html`<div class="waiting-bar"><span class="spinner muted"></span>
+  <span class="wb-t"><b>Готов. Ждём ${who}…</b><small>матч начнётся, когда оба готовы</small></span>
+  ${m?.state && "freeLeave" in m.state ? html`<button class="navy-btn small wb-cancel" onClick=${() => m.unready().catch(() => {})}>Отменить</button>` : null}</div>`;
+
 /** Hooks a screen to a room's live match; a room left behind (back, not into the match) is left on the server. */
 function useRoom(make, app) {
   const [m, setM] = useState(null);
@@ -149,6 +154,8 @@ export function OnlineRoom({ nav, app }) {
   const [copied, setCopied] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [m, err] = useRoom(() => createRoom(createBody(settings)).then((s) => new OnlineMatch(s)), app);
+  // The tap shows «Готов» at once; from the next server state on, the server's word is what shows.
+  useEffect(() => setWaiting(false), [m?.state]);
   const first = useRef(true);
   // Changed settings go to the server, after the first (sent with the room itself).
   useEffect(() => { if (first.current) { first.current = false; return; } if (m && passwordOK(settings)) m.settings(createBody(settings)).catch(() => {}); }, [settings, m]);
@@ -184,7 +191,7 @@ export function OnlineRoom({ nav, app }) {
     </button>
     ${!friend && m ? html`<button class="navy-btn" onClick=${() => m.addBot().catch(() => {})}><img src=${img("bot")} alt="" />Посадить бота</button>` : null}
   </div></div>
-  <${BottomBar}>${meReady || waiting ? html`<div class="waiting-bar"><span class="spinner muted"></span><span><b>Готов. Ждём ${friend?.name ?? "второго игрока"}…</b><small>матч начнётся, когда оба готовы</small></span></div>`
+  <${BottomBar}>${meReady || waiting ? html`<${ReadyWait} m=${m} who=${friend?.name ?? "второго игрока"} />`
     : html`<button class="primary-btn" disabled=${!m || !friend || !passwordOK(settings)} onClick=${() => { setWaiting(true); m.ready().catch(() => setWaiting(false)); }}>
     ${!passwordOK(settings) ? "Задай пароль от 4 символов" : !friend ? "Ждём второго игрока" : "Начать матч"}</button>`}<//>
   </div>`;
@@ -270,7 +277,7 @@ export function OnlineLocker({ nav, app, m }) {
   </div></div>
   <${BottomBar}>
     ${m.closed ? html`<button class="primary-btn" onClick=${nav.back}>К списку комнат</button>`
-      : meReady ? html`<div class="waiting-bar"><span class="spinner muted"></span><span><b>Готов. Ждём ${host?.name ?? "соперника"}…</b><small>матч начнётся, когда оба готовы</small></span></div>`
+      : meReady ? html`<${ReadyWait} m=${m} who=${host?.name ?? "соперника"} />`
       : html`<button class="primary-btn" disabled=${!host} onClick=${() => m.ready().catch(() => {})}>${host ? "Я готов — начать матч" : "Ждём второго игрока"}</button>`}
   <//>
   ${profile ? html`<${Panel} onClose=${() => setProfile(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${profile.owner} close=${leave} />`}<//>` : null}

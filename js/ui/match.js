@@ -170,7 +170,7 @@ function Scoreboard({ m, openProfile, openStands }) {
     </div>
     <div class="level-row">
       <span class=${cx("fade", live(0) && "on")}><${SideTag} m=${m} owner=${0} /></span>
-      <span class="level-path">${m.levelPath.map((s, i) => html`${i > 0 ? html`<i>→</i>` : null}<span class=${s.current ? "cur" : ""}>${s.name}</span>`)}</span>
+      <span class="level-path">ур. <span class="cur">${m.levelPath.find((s) => s.current)?.name ?? ""}</span></span>
       <span class=${cx("fade", live(1) && "on")}><${SideTag} m=${m} owner=${1} /></span>
     </div>
     ${m.viewers.length ? html`<button class="eye-badge press" onClick=${openStands} aria-label=${`Трибуна: ${m.viewers.length}`}>
@@ -178,16 +178,13 @@ function Scoreboard({ m, openProfile, openStands }) {
   </div>`;
 }
 
-/** Under a player in the header: the rating (with flag and place) when there is one; online, a guest or a
- * player still calibrating shows the level, a bot shows nothing. */
+/** Under a player in the header: the rating with flag and place, when the player has one. */
 function SideTag({ m, owner }) {
   const mine = owner === 0;
   const rating = mine ? m.myRating : m.opponent.rating;
   if (rating != null) return mine ? html`<${RatingTag} flag=${m.myFlag} rating=${rating} rank=${m.myRank} />`
     : html`<${RatingTag} flag=${m.opponent.flag} rating=${rating} rank=${m.opponent.rank} flagAfter=${true} />`;
-  if (!m.online || (!mine && m.opponent.isBot)) return null;
-  const level = (mine ? m.me : m.them)?.card?.level;
-  return level ? html`<span class="lvl-chip">Ур. ${level}</span>` : null;
+  return null;
 }
 
 /** A player as on the site's player card, folded into half the header width. */

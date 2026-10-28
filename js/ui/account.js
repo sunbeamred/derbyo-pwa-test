@@ -1,6 +1,7 @@
 // The «Рейтинг» and «Профиль» tabs on the site's data: the leaderboard, your account (guest, login, register).
 import { html, useState, useEffect, cx, Icon, rankTier, tierStyle, placeStyle, levelColor } from "./common.js";
 import { account, leaderboard, playerProfile } from "../net.js";
+import { flagOf } from "../online.js";
 import { Panel } from "./common.js";
 
 const PERIODS = [["rating", "Рейтинг"], ["week", "Неделя"], ["friends", "Друзья"]];
@@ -27,7 +28,7 @@ export function RatingTab({ visible }) {
       : !list.length ? html`<p class="placeholder">${period === "week" ? "На этой неделе ещё никто не набрал очков." : "Пока пусто."}</p>`
       : html`<div class="board-list glass">${list.map((e) => html`<button class=${cx("lb-row press", e.self && "self")} onClick=${() => setOpen(e.id)}>
           <b class=${cx("lb-place num", placeStyle(e.rank) && "grad")} style=${placeStyle(e.rank)}>${e.rank}</b>
-          <span class="lb-name"><b>${e.nickname}</b><small>${e.games} игр · ${e.winRate}% побед</small></span>
+          <span class="lb-name"><b>${flagOf(e.country) ? html`<i class="flag">${flagOf(e.country)}</i> ` : null}${e.nickname}</b><small>${e.games} игр · ${e.winRate}% побед</small></span>
           <b class="lb-pts grad num" style=${tierStyle(e.rating ?? 0)}>${period === "week" ? (e.points > 0 ? "+" : "") + e.points : e.rating}</b>
         </button>`)}</div>
         <p class="hint-line small center">${data.total} игроков в рейтинге · рейтинг после 5 игр с двумя разными соперниками</p>`}
@@ -48,7 +49,7 @@ function PlayerCard({ id }) {
   return html`<div class="profile">
     <div class="pf-head">
       <span class="pf-avatar neutral">${p.nickname.slice(0, 2).toUpperCase()}</span>
-      <span class="pf-name"><b>${p.nickname}</b><span><em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>
+      <span class="pf-name"><b>${p.nickname}</b><span>${flagOf(p.country) ? html`<i class="flag">${flagOf(p.country)}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>
         ${p.presence ? html`<small>${{ online: "в сети", in_match: "в матче", offline: "не в сети" }[p.presence]}</small>` : null}</span></span>
       <span class="pf-rating">${p.rating != null ? html`<b class="grad" style=${`${tierStyle(p.rating)};filter:drop-shadow(0 0 6px ${t.b}80)`}>${p.rating}</b><small>${t.name}</small>`
         : html`<small>калибровка</small>`}</span>
@@ -86,7 +87,7 @@ export function ProfileTab({ children }) {
     <div class="profile glass account-card">
       <div class="pf-head">
         <span class="pf-avatar neutral">${(account.name || "?").slice(0, 2).toUpperCase()}</span>
-        <span class="pf-name"><b>${account.name}</b><span><em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em><small>${p.registered ? "аккаунт derbyo.online" : "гость"}</small></span></span>
+        <span class="pf-name"><b>${account.name}</b><span>${flagOf(p.country) ? html`<i class="flag">${flagOf(p.country)}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em><small>${p.registered ? "аккаунт derbyo.online" : "гость"}</small></span></span>
         <span class="pf-rating">${p.rating != null ? html`<b class="grad" style=${`${tierStyle(p.rating)};filter:drop-shadow(0 0 6px ${t.b}80)`}>${p.rating}</b>
           <small>${p.rank ? html`<span class=${cx(placeStyle(p.rank) && "grad")} style=${placeStyle(p.rank)}>${p.rank}</span> место` : t.name}</small>`
           : html`<small>${p.registered ? "рейтинг после 5 игр" : "рейтинг — после входа"}</small>`}</span>
