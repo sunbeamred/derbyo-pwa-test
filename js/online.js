@@ -253,6 +253,22 @@ export class OnlineMatch {
     return LEVELS[(lv ?? 2) - 1];
   }
   /** «Снова ничья — сложнее?»: shown until you answer; the other side's offer is answered with the same buttons. */
+  /** The level of round n by the room's rules (quick-game presets, or one up per round, or fixed). */
+  levelOfRound(n) {
+    const s = this.state?.settings ?? {}, byPreset = { easy: 1, amateur: 2, medium: 3, hard: 4, encyclopedia: 5 };
+    if (s.roundPresets?.length) return byPreset[s.roundPresets[n - 1] ?? s.roundPresets.at(-1)] ?? s.level ?? 2;
+    return s.progressive ? Math.min(4, (s.level ?? 2) + n - 1) : s.level ?? 2;
+  }
+  /** Rising difficulty: the level before, the current one and the next; null when every round has the same level. */
+  get levelChain() {
+    const s = this.state?.settings ?? {};
+    const rises = s.progressive || new Set((s.roundPresets ?? []).map((p) => p)).size > 1 || (this.state?.levelBoost ?? 0) > 0;
+    if (!rises) return null;
+    const cur = this.g?.level ?? this.levelOfRound(Math.max(1, this.round));
+    const prev = this.round > 1 ? this.levelOfRound(this.round - 1) : null;
+    const next = Number.isFinite(this.state?.nextLevel) ? this.state.nextLevel : this.levelOfRound(this.round + 1);
+    return { prev: prev && prev !== cur ? LEVELS[prev - 1] : null, cur: LEVELS[cur - 1], next: next && next !== cur ? LEVELS[next - 1] : null };
+  }
   get offerRaise() { return !!this.state?.canRaise && this.raise?.by !== this.mySeat; }
   get raisedLevel() { return LEVELS[Math.min(LEVELS.length - 1, (this.state?.nextLevel ?? this.levelIndexNow + 1))]; }
   raiseLevel(yes) {

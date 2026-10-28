@@ -129,6 +129,14 @@ export class Match {
     for (let k = from; k <= Math.min(last, from + 2); k++) out.push({ name: LEVELS[k], current: k === i });
     return out;
   }
+  /** Rising difficulty: the level before, the current one and the next; null when every round has the same level. */
+  get levelChain() {
+    const i = this.levelIndex(this.round);
+    const rises = [1, 2, 3, 4].some((n) => this.levelIndex(n) !== this.levelIndex(1)) || this.levelBoost > 0;
+    if (!rises) return null;
+    const prev = this.round > 1 ? this.levelIndex(this.round - 1) : null, next = this.levelIndex(this.round + 1);
+    return { prev: prev !== null && prev !== i ? LEVELS[prev] : null, cur: LEVELS[i], next: next !== i ? LEVELS[next] : null };
+  }
   get offerRaise() {
     return this.roundOver && this.roundWinner === null && !this.matchOver && !this.raiseAnswered && this.round >= 3
       && this.levelIndex(this.round + 1) < LEVELS.length - 1 && this.levelIndex(this.round + 1) === this.levelIndex(this.round);

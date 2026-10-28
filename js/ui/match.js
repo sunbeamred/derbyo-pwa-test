@@ -168,13 +168,24 @@ function Scoreboard({ m, openProfile, openStands }) {
       <${PlayerSide} name=${m.opponent.name} mark=${m.mark(1)} red=${m.mySeat === 1} tokens=${m.oppTokens} active=${live(1)} mine=${false}
         isBot=${m.opponent.isBot} reaction=${m.oppReaction} away=${m.oppAwayFor} left=${m.oppLeft} missed=${m.oppMissed} onClick=${() => openProfile(1)} />
     </div>
-    <div class="level-row">
-      <span class=${cx("fade", live(0) && "on")}><${SideTag} m=${m} owner=${0} /></span>
-      <span class="level-path">ур. <span class="cur">${m.levelPath.find((s) => s.current)?.name ?? ""}</span></span>
-      <span class=${cx("fade", live(1) && "on")}><${SideTag} m=${m} owner=${1} /></span>
-    </div>
+    <${LevelRow} m=${m} live=${live} />
     ${m.viewers.length ? html`<button class="eye-badge press" onClick=${openStands} aria-label=${`Трибуна: ${m.viewers.length}`}>
       <${Icon} name="eye" size="11" /><b>${m.viewers.length}</b></button>` : null}
+  </div>`;
+}
+
+/** Under the score: the ratings at the edges and the level in the middle. When the difficulty rises from round to
+ * round it reads «Новичок • Любитель • Знаток»: the current level always under the score, the one before and the next
+ * beside it, fading out towards the ratings. A level that never changes reads «ур. Любитель». */
+function LevelRow({ m, live }) {
+  const chain = m.levelChain;
+  const cur = chain?.cur ?? m.levelPath.find((s) => s.current)?.name ?? "";
+  return html`<div class="level-row">
+    <span class="lr-side"><span class=${cx("fade", live(0) && "on")}><${SideTag} m=${m} owner=${0} /></span>
+      ${chain ? html`<span class="lv-side lv-prev">${chain.prev ? html`<span>${chain.prev}<i>•</i></span>` : null}</span>` : null}</span>
+    <span class="level-path">${chain ? null : html`ур. `}<span class="cur">${cur}</span></span>
+    <span class="lr-side end">${chain ? html`<span class="lv-side lv-next">${chain.next ? html`<span><i>•</i>${chain.next}</span>` : null}</span>` : null}
+      <span class=${cx("fade", live(1) && "on")}><${SideTag} m=${m} owner=${1} /></span></span>
   </div>`;
 }
 
