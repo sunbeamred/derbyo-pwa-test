@@ -165,7 +165,7 @@ export function ChatSheet({ m, openStands, openViewer }) {
       <h2>Чат матча</h2>
       ${m.viewers.length ? html`<button class="stands-chip press" onClick=${openStands} aria-label=${`Трибуна: ${m.viewers.length}`}>
         <${Icon} name="eye" size="12" /><b>${m.viewers.length}</b><${Icon} name="right" size="9" weight="3.4" /></button>` : null}
-      <small>удержи сообщение — жалоба</small>
+      ${m.online ? html`<span class="sp"></span>` : html`<small>удержи сообщение — жалоба</small>`}
     </div>
     <div class="chat-list" ref=${list}>
       ${m.chat.filter((x) => !m.isBlocked(x.who)).map((x) => x.kind === "friendOut" ? html`<div class="friend-line">

@@ -160,8 +160,8 @@ export class OnlineMatch {
   reactions(list) {
     if (!Array.isArray(list)) return;
     for (const x of list) {
-      if (this.seenEvents.has(x.id)) continue;
-      this.seenEvents.add(x.id);
+      if (this.seenEvents.has(`x:${x.id}`)) continue;
+      this.seenEvents.add(`x:${x.id}`);
       if (this.firstState) continue;
       const r = { e: x.emoji, n: x.id };
       if (x.seat === this.mySeat) this.myReaction = r; else this.oppReaction = r;
@@ -170,8 +170,9 @@ export class OnlineMatch {
 
   /** New things since the last state become the screen's signals: a capture lands, a miss shakes, a toast. */
   events(g, before) {
-    const fresh = [...(g.events ?? []), ...(this.state.events ?? [])].filter((e) => !this.seenEvents.has(e.id));
-    for (const e of fresh) this.seenEvents.add(e.id);
+    // Round events and room events count from 1 each (and a round's restart with every new round): key them apart.
+    const keyed = [...(g.events ?? []).map((e) => [`g:${g.id}:${e.id}`, e]), ...(this.state.events ?? []).map((e) => [`r:${e.id}`, e])];
+    const fresh = keyed.filter(([k]) => !this.seenEvents.has(k)).map(([k, e]) => (this.seenEvents.add(k), e));
     if (this.firstState) { if (this.roundOver) this.finishSignal = 0; return; }
     if (before?.id === g.id && before.stage === "play" && g.stage !== "play") this.finishSignal++;
     for (const e of fresh.sort((a, b) => a.at - b.at)) {

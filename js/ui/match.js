@@ -168,13 +168,25 @@ function Scoreboard({ m, openProfile, openStands }) {
         isBot=${m.opponent.isBot} reaction=${m.oppReaction} away=${m.oppAwayFor} left=${m.oppLeft} missed=${m.oppMissed} onClick=${() => openProfile(1)} />
     </div>
     <div class="level-row">
-      <span class=${cx("fade", live(0) && "on")}>${m.myRating != null ? html`<${RatingTag} flag=${m.myFlag} rating=${m.myRating} rank=${m.myRank} />` : null}</span>
+      <span class=${cx("fade", live(0) && "on")}><${SideTag} m=${m} owner=${0} /></span>
       <span class="level-path">${m.levelPath.map((s, i) => html`${i > 0 ? html`<i>→</i>` : null}<span class=${s.current ? "cur" : ""}>${s.name}</span>`)}</span>
-      <span class=${cx("fade", live(1) && "on")}>${m.opponent.rating != null ? html`<${RatingTag} flag=${m.opponent.flag} rating=${m.opponent.rating} rank=${m.opponent.rank} flagAfter=${true} />` : null}</span>
+      <span class=${cx("fade", live(1) && "on")}><${SideTag} m=${m} owner=${1} /></span>
     </div>
     ${m.viewers.length ? html`<button class="eye-badge press" onClick=${openStands} aria-label=${`Трибуна: ${m.viewers.length}`}>
       <${Icon} name="eye" size="11" /><b>${m.viewers.length}</b></button>` : null}
   </div>`;
+}
+
+/** Under a player in the header: the rating (with flag and place) when there is one; online, a guest or a
+ * player still calibrating shows the level, a bot shows nothing. */
+function SideTag({ m, owner }) {
+  const mine = owner === 0;
+  const rating = mine ? m.myRating : m.opponent.rating;
+  if (rating != null) return mine ? html`<${RatingTag} flag=${m.myFlag} rating=${rating} rank=${m.myRank} />`
+    : html`<${RatingTag} flag=${m.opponent.flag} rating=${rating} rank=${m.opponent.rank} flagAfter=${true} />`;
+  if (!m.online || (!mine && m.opponent.isBot)) return null;
+  const level = (mine ? m.me : m.them)?.card?.level;
+  return level ? html`<span class="lvl-chip">Ур. ${level}</span>` : null;
 }
 
 /** A player as on the site's player card, folded into half the header width. */
@@ -189,7 +201,7 @@ function PlayerSide({ name, mark, red, tokens, active, mine, isBot, reaction, aw
   const status = left ? html`<span class="st left">○ покинул матч</span>`
     : missed > 0 && away === null ? html`<span class=${cx("st", missed >= 2 ? "idle" : "missed")}>${missed >= 2 ? "⏱ не отвечает" : "⏱ пропустил ход"}</span>`
     : away !== null ? html`<span class="st away">◒ свернул ${away} с</span>`
-    : html`<span class="st in">● в игре</span>`;
+    : html`<span class="st in">●<span class="st-t"> в игре</span></span>`;
   const tokenCount = html`<span class="tokens"><img src=${img("coin")} alt="" /><b>${tokens}</b></span>`;
   const gone = away !== null || left;
   const avatar = html`<span class=${cx("pavatar", red ? "red" : "green", active && "active", !mine && gone && "gone", mine ? "mine" : "theirs")}>
