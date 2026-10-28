@@ -1,4 +1,7 @@
 /* DERBYO PWA: the iOS prototype's look (Theme.swift), as CSS. Site tokens from design-tokens.css. */
+/* Flat rectangular flags, the site's own font (Android draws wavy emoji flags, Windows none at all). */
+@font-face { font-family: "Twemoji Country Flags"; unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;
+  src: url(fonts/TwemojiCountryFlags.woff2) format("woff2"); font-display: swap; }
 :root {
   --bg: #060D16; --panel: #0D1927; --raised: #17283A; --ink: #F4F7FC; --muted: #A8B8CA; --line: #2C4057;
   --red: #FF5364; --on-red: #07131E; --mint: #32E5A1; --gold: #F6D482; --soft: #C9D5E3;
@@ -10,7 +13,7 @@
   --tb-h: 62px; --tb-bottom: max(12px, calc(var(--safe-b) - 10px)); --tb-space: calc(var(--tb-bottom) + var(--tb-h) + 12px);
   /* iOS motion: sheets and pushes settle fast and soft; springs overshoot a touch. */
   --ease: cubic-bezier(.32, .72, 0, 1); --spring: cubic-bezier(.34, 1.36, .5, 1);
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font: "Twemoji Country Flags", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --rounded: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, sans-serif;
   color-scheme: dark;
 }
@@ -447,13 +450,13 @@ input { font-family: inherit; }
 .step.o { background: #7EE5B8; }
 .step.d { background: #A4B9CB; }
 .step.live::after { content: ""; position: absolute; inset: -2.5px; border-radius: 6px; border: 1px solid #A4B9CB; }
-.level-row { position: relative; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; }
+.level-row { position: relative; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; padding: 0 4px; }
 .level-row .fade { flex: none; opacity: .62; transition: opacity .2s; }
 .lr-side { min-width: 0; display: flex; align-items: center; gap: 6px; }
 .lr-side.end { justify-content: flex-end; }
 /* The neighbouring levels sit beside the current one and fade towards the ratings. */
 .lv-side { flex: 1; min-width: 0; font-size: 12px; color: rgba(168, 184, 202, .75); white-space: nowrap; overflow: hidden; }
-.lv-side i { font-style: normal; padding: 0 5px; color: rgba(168, 184, 202, .6); }
+.lv-side i { font-style: normal; padding: 0 2px; color: rgba(168, 184, 202, .6); }
 .lv-side { display: flex; }
 .lv-side > span { flex: none; }
 /* flex-end makes a long name overflow on the left, so the «•» next to the current level is never cut. */
