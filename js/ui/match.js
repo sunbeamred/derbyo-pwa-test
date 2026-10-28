@@ -70,9 +70,10 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   const closeAnswer = () => { m.cancelMismatch(); setAnswerCell(null); m.selected = null; store.changed(); };
   const tapCell = (i) => { raiseKeyboard(); m.select(i); if (m.selected !== null) setAnswerCell(i); store.changed(); };
   // The review panel slides away once the decision is made (or the time runs out).
-  const [reviewShown, reviewShut, reviewGone] = useSheet(m.review?.owner === 1);
+  // Only the player the dispute is addressed to decides it; the stands just watch.
+  const [reviewShown, reviewShut, reviewGone] = useSheet(m.review?.owner === 1 && !m.watching);
   const lastReview = useRef(null);
-  if (m.review?.owner === 1) lastReview.current = m.review;
+  if (m.review?.owner === 1 && !m.watching) lastReview.current = m.review;
 
   const notes = [...m.rows, ...m.cols].filter((c) => c.note);
   const slotLine = m.watching ? "Ты на трибуне: ходить нельзя, болеть в чате можно" : m.turn === 0 ? "Выбери клетку и назови футболиста" : "Ход соперника. Присмотри клетку на свой ход";
@@ -113,9 +114,9 @@ export function MatchScreen({ m, close, findNew, minimize }) {
       <${Scoreboard} m=${m} openProfile=${setProfileOf} openStands=${() => setStandsOpen(true)} />
       <${Board} m=${m} tap=${tapCell} />
       <div class="slot">
-        ${notes.length ? html`<div class=${cx("notes", (m.offerRaise || m.roundOver) && "hidden")}>
+        ${notes.length ? html`<div class=${cx("notes", ((m.offerRaise && !m.watching) || m.roundOver) && "hidden")}>
           ${notes.map((c) => html`<div><b>${(c.label ?? c.title) + ": "}</b><span>${c.note}</span></div>`)}</div>` : null}
-        ${m.offerRaise ? html`<div class="raise-offer glass">
+        ${m.offerRaise && !m.watching ? html`<div class="raise-offer glass">
             <span>Снова ничья. Следующий раунд — «${m.raisedLevel}»?</span>
             <button class="navy-btn small" onClick=${() => m.raiseLevel(false)}>Оставить</button>
             <button class="gold-pill press" onClick=${() => m.raiseLevel(true)}>Сложнее</button>
@@ -352,26 +353,28 @@ export function TurnDial({ m, size = 52 }) {
 function BottomTray({ m, findNew, close, openChat, openMenu }) {
   const opp = m.opponent.name;
   let pause = null;
-  if (m.paused) pause = m.resumeWait !== null ? { title: `Ждём ${opp}…`, detail: `ты готов продолжить · ${m.resumeWait} с`, color: MUTED, run: () => {} }
+  if (m.watching) pause = null;
+  else if (m.paused) pause = m.resumeWait !== null ? { title: `Ждём ${opp}…`, detail: `ты готов продолжить · ${m.resumeWait} с`, color: MUTED, run: () => {} }
     : { title: "Продолжить ▶︎", detail: "пауза · часы стоят", color: MINT, run: () => m.requestResume() };
   else if (m.oppPauseAskLeft !== null) pause = { title: "Принять паузу", detail: `${opp} просит паузу · ${m.oppPauseAskLeft} с`, color: GOLD, run: () => m.acceptPause() };
   else if (m.pauseAskLeft !== null) pause = { title: "Пауза предложена", detail: `ждём ${opp} · ${m.pauseAskLeft} с`, color: MUTED, run: () => {} };
 
   const mine = m.turn === 0;
-  const title = m.watching ? (m.paused ? "Пауза" : `Ходит ${m.name(m.turn)}`)
+  const title = m.watching ? (m.paused ? "Пауза" : m.review ? `Зачёт · решает ${m.name(1 - m.review.owner)}` : `Ходит ${m.name(m.turn)}`)
     : m.review?.owner === 0 ? "Ждём решение" : m.review?.owner === 1 ? "Твоё решение"
     : m.paused ? "Пауза — часы стоят" : mine ? "Твой ход" : m.oppSelected !== null ? `${opp} думает…` : `Ходит ${opp}`;
   const color = m.review ? GOLD : m.paused ? MUTED : m.seat(m.turn) === 0 ? "#FFB3C1" : "#91FFD3";
-  const sub = m.watching ? html`<small>ты на трибуне</small>`
+  const sub = m.watching ? html`<small>${m.review ? `${m.review.name ?? ""} · ${m.review.left} с` : m.paused ? "игроки взяли паузу" : "ты на трибуне"}</small>`
     : m.review ? html`<small>зачёт: ${m.review.name ?? byId[m.review.playerId].name}</small>`
     : m.oppAwayFor !== null ? html`<small style=${`color:${m.mySeat === 1 ? "#FFB3C1" : "#91FFD3"}`}>◒ ${opp} · ещё ${m.oppAwayBudget} с</small>`
     : m.awaySeconds < 45 ? html`<small>${m.awaySeconds > 0 ? `вне игры: ещё ${m.awaySeconds} с` : "время вне игры вышло"}</small>` : null;
 
   return html`<div class="tray-row">
     <div class=${cx("tray turn-tray glass", m.roundOver && "over")}>
-      ${m.roundOver ? html`<${RoundButton} m=${m} findNew=${findNew} />` : html`
+      ${m.roundOver && m.watching ? html`<${TurnDial} m=${m} size=${48} /><${StandsBetween} m=${m} />`
+      : m.roundOver ? html`<${RoundButton} m=${m} findNew=${findNew} />` : html`
         <${TurnDial} m=${m} size=${48} />
-        ${m.canLeaveFree ? html`<button class="tray-label press" onClick=${m.paused ? close : findNew}>
+        ${m.canLeaveFree && !m.watching ? html`<button class="tray-label press" onClick=${m.paused ? close : findNew}>
             <b style="color:#32E5A1">${m.paused ? "Выйти без штрафа »" : "Новый соперник »"}</b>
             <small>${m.paused ? `${opp} не продолжает игру` : `${opp} не отвечает`}</small></button>`
         : pause ? html`<button class="tray-label press" onClick=${() => { pause.run(); store.changed(); }}>
@@ -385,6 +388,15 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
       <button class="tool press" onClick=${openMenu} aria-label="Меню матча"><img src=${img("menu")} alt="" /></button>
     </div>
   </div>`;
+}
+
+/** From the stands between rounds: what the players are doing, no buttons (the next round is theirs to start). */
+function StandsBetween({ m }) {
+  const ready = m.online ? [m.me, m.them].filter((p) => p?.ready).length : 0;
+  const title = m.matchOver ? "Матч окончен" : "Перерыв";
+  const detail = m.matchOver ? (m.rematchOffer ? "игроки договариваются о реванше" : "ждём, решат ли играть ещё")
+    : ready === 1 ? "один игрок готов · ждём второго" : `раунд ${m.round + 1} начнут игроки`;
+  return html`<span class="tray-label"><b style=${`color:${GOLD}`}>${title}</b><small>${detail}</small></span>`;
 }
 
 /** At the end of a round the dial swells into this button: what comes next. */

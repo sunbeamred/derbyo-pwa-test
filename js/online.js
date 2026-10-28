@@ -112,7 +112,7 @@ export class OnlineMatch {
     this.rematchAsked = this.rematchOffer?.by === this.mySeat;
     this.oppRematch = !!this.rematchOffer && this.rematchOffer.by !== this.mySeat;
     this.raise = st.raise ?? null;
-    this.freeLeave = st.freeLeave ?? null;
+    this.freeLeave = this.watching ? null : st.freeLeave ?? null;
     this.reactions(st.reactions);
     this.score = [st.score[this.mySeat] ?? 0, st.score[1 - this.mySeat] ?? 0];
     this.round = st.round;
@@ -136,7 +136,8 @@ export class OnlineMatch {
       : { owner: this.owner(c.owner), playerId: c.id, name: c.name, photo: c.photo, wp: c.wp, winning: !!g.line?.includes(i), manual: c.manual });
     this.tokens = g.wallets?.[this.mySeat] ?? 0; this.oppTokens = g.wallets?.[1 - this.mySeat] ?? 0;
     this.scout = !!g.scout;
-    this.oppSelected = g.turn !== this.mySeat && !this.roundOver ? g.selected : null;
+    // From the stands either player's pick shows; a player sees only the other side's.
+    this.oppSelected = !this.roundOver && (this.watching || g.turn !== this.mySeat) ? g.selected : null;
     if (this.turn !== 0 || this.roundOver) this.selected = null;
     this.sharedClues = {};
     g.clues?.forEach((c, i) => { if (c) this.sharedClues[i] = { open: (c.purchased ?? []).map((l) => HINT_ID[l]), facts: c.facts, mask: c.mask, options: c.options?.map((o) => ({ id: o.id, name: o.name, used: o.used })) }; });
@@ -163,6 +164,8 @@ export class OnlineMatch {
       if (this.seenEvents.has(`x:${x.id}`)) continue;
       this.seenEvents.add(`x:${x.id}`);
       if (this.firstState) continue;
+      // Reactions from the stands have no avatar to rise over.
+      if (x.seat !== 0 && x.seat !== 1) continue;
       const r = { e: x.emoji, n: x.id };
       if (x.seat === this.mySeat) this.myReaction = r; else this.oppReaction = r;
     }
