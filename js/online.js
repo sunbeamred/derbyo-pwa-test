@@ -213,7 +213,8 @@ export class OnlineMatch {
     const until = them?.awayDeadline ?? them?.returnDeadline;
     this.oppAwayFor = them && (until || !them.online || them.status === "hidden") && !this.roundOver ? Math.max(0, Math.round((now - (them.since ?? now)) / 1000)) : null;
     this.oppAwayBudget = until ? Math.max(0, Math.ceil((until - now) / 1000)) : Math.round((them?.hideLeftMs ?? 45000) / 1000);
-    this.awaySeconds = Math.round((me?.hideLeftMs ?? (g.hideBudget ?? 45000)) / 1000);
+    // Shown only once some of the budget is spent; levels without a budget never show it.
+    this.awaySeconds = g.hideBudget && me && me.hideLeftMs < g.hideBudget ? Math.round(me.hideLeftMs / 1000) : 45;
     // Waiting for the other player: a rematch I offered, or the next round I am ready for.
     const st = this.state;
     const waitUntil = this.rematchAsked ? this.rematchOffer.until : this.nextAsked ? st.readyDeadline : null;
