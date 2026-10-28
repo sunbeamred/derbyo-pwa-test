@@ -413,7 +413,7 @@ input { font-family: inherit; }
 .pstatus .tokens { flex: none; }
 /* A narrow side keeps the green dot and drops the words «в игре», so the tokens never reach the score. */
 .pinfo { container-type: inline-size; }
-@container (max-width: 78px) { .st.in .st-t { display: none; } }
+@container (max-width: 70px) { .st.in .st-t { display: none; } }
 .st.in { color: var(--mint); }
 .st.left { color: #FF9AA8; }
 .st.idle { color: #FFB37A; }
@@ -804,6 +804,19 @@ input { font-family: inherit; }
 .auth .text-btn { align-self: center; }
 .recovery { font-family: ui-monospace, Menlo, monospace; font-size: 17px; letter-spacing: 1px; color: var(--gold); -webkit-user-select: text; user-select: text; word-break: break-all; }
 .cicon.text { display: grid; place-items: center; height: var(--s); border-radius: 50%; background: #1E3349; font-size: calc(var(--s) * .34); font-weight: 700; }
+
+/* Narrow phones (most Android phones are 360–393 px wide, with the wider Roboto): the header gives up a few
+   pixels of avatar and score so «● в игре» and the tokens still fit beside the name. */
+@media (max-width: 400px) {
+  .pavatar .face { width: 32px; height: 32px; border-radius: 10px; }
+  .pavatar { padding: 2px; }
+  .pside { gap: 5px; }
+  .score-row { gap: 4px; }
+  .scorebug { padding: 6px 7px; }
+  .digit { font-size: 25px; }
+  .pstatus { font-size: 10px; gap: 3px; }
+  .pname { font-size: 12.5px; }
+}
 
 /* Short screens (a browser with its toolbars, small phones): the board gives up height first */
 @media (max-height: 740px) {
