@@ -101,7 +101,7 @@ const CondHalf = ({ c }) => html`<span class="cond-half"><${ConditionIcon} icon=
 
 /** A listed player the base says does not fit: ask the opponent to count him, or cancel and name someone else. */
 function MismatchCard({ mm, cancel, ask }) {
-  const p = byId[mm.playerId];
+  const p = mm.name ? { name: mm.name, wp: mm.wp ?? null, photo: mm.photo ?? null } : byId[mm.playerId];
   const reason = mm.why.replace(p.name + " ", "");
   return html`<div class="mismatch">
     <div class="mm-top">

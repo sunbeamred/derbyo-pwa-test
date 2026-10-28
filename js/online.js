@@ -106,7 +106,14 @@ export class OnlineMatch {
     const me = st.players[this.mySeat], them = st.players[1 - this.mySeat];
     this.me = me; this.them = them;
     this.myName = me?.name ?? account.name;
-    this.opponent = { name: them?.name ?? "Ждём соперника", isBot: !!them?.bot, flag: null, rating: null, rank: null, present: !!them };
+    this.opponent = { name: them?.name ?? "Ждём соперника", isBot: !!them?.bot, flag: null, rating: them?.card?.rating ?? null, rank: them?.card?.rank ?? null, present: !!them };
+    // Newer servers (the sandbox) add rematch offers, harder rounds, free leave, reactions; on others these stay off.
+    this.rematchOffer = st.rematch ?? null;
+    this.rematchAsked = this.rematchOffer?.by === this.mySeat;
+    this.oppRematch = !!this.rematchOffer && this.rematchOffer.by !== this.mySeat;
+    this.raise = st.raise ?? null;
+    this.freeLeave = st.freeLeave ?? null;
+    this.reactions(st.reactions);
     this.score = [st.score[this.mySeat] ?? 0, st.score[1 - this.mySeat] ?? 0];
     this.round = st.round;
     this.roundResults = (st.roundResults ?? []).map((r) => this.owner(r.winner));
@@ -136,6 +143,8 @@ export class OnlineMatch {
     this.review = g.review ? { id: g.review.id, owner: this.owner(g.review.owner), cell: g.review.cell, name: g.review.name, playerId: null, until: g.review.until, left: 20 } : null;
     this.paused = !!g.paused;
     this.choices = g.choices ?? null;
+    this.mismatch = g.mismatch ? { cell: g.mismatch.cell, playerId: g.mismatch.player, name: g.mismatch.name, why: g.mismatch.why } : null;
+    this.oppMissed = g.missed?.[1 - this.mySeat] ?? 0;
     const pr = g.pauseRequest;
     this.pauseRequest = pr;
     this.resume = g.resume;
@@ -145,6 +154,18 @@ export class OnlineMatch {
     this.events(g, before);
     this.clock();
     this.firstState = false;
+  }
+
+  /** A new reaction shows over the avatar of whoever sent it. */
+  reactions(list) {
+    if (!Array.isArray(list)) return;
+    for (const x of list) {
+      if (this.seenEvents.has(x.id)) continue;
+      this.seenEvents.add(x.id);
+      if (this.firstState) continue;
+      const r = { e: x.emoji, n: x.id };
+      if (x.seat === this.mySeat) this.myReaction = r; else this.oppReaction = r;
+    }
   }
 
   /** New things since the last state become the screen's signals: a capture lands, a miss shakes, a toast. */
@@ -164,6 +185,9 @@ export class OnlineMatch {
           break;
         case "miss": this.missSignal++; this.show(e.text ? `${e.actorName ?? ""} ${e.text}`.trim() : "Ход переходит", false); break;
         case "finish": break;
+        case "rematch": case "raise":
+          if (e.text && !mine) this.show(`${e.actorName ?? ""}: ${e.text}`.replace(/^: /, ""), true);
+          break;
         case "hint": case "review": case "pause_request": case "pause": case "resume": case "join": case "leave": case "disconnect": case "connect": case "absence": case "hide-budget": case "viewer":
           if (e.text) this.show(e.actorName && !e.text.includes(e.actorName) ? `${e.actorName}: ${e.text}` : e.text, e.type === "resume" || e.type === "connect" || e.type === "join");
           break;
@@ -190,6 +214,10 @@ export class OnlineMatch {
     this.oppAwayFor = them && (until || !them.online || them.status === "hidden") && !this.roundOver ? Math.max(0, Math.round((now - (them.since ?? now)) / 1000)) : null;
     this.oppAwayBudget = until ? Math.max(0, Math.ceil((until - now) / 1000)) : Math.round((them?.hideLeftMs ?? 45000) / 1000);
     this.awaySeconds = Math.round((me?.hideLeftMs ?? (g.hideBudget ?? 45000)) / 1000);
+    // Waiting for the other player: a rematch I offered, or the next round I am ready for.
+    const st = this.state;
+    const waitUntil = this.rematchAsked ? this.rematchOffer.until : this.nextAsked ? st.readyDeadline : null;
+    if (waitUntil) { this.readyLeft = Math.max(0, Math.ceil((waitUntil - now) / 1000)); this.readyTotal = this.rematchAsked ? 30 : Math.round((st.readyTotal ?? 90000) / 1000); }
     if (this.turn === 0 && !this.watching && !this.roundOver && !this.paused && (this.seconds === 15 || this.seconds === 5) && prev !== this.seconds) {
       this.show(this.seconds === 15 ? "Осталось 15 секунд на ход" : "5 секунд — последний шанс ответить", false);
       this.timerAlert++;
@@ -203,8 +231,8 @@ export class OnlineMatch {
   name(owner) { return owner === 0 ? this.leftName : this.opponent.name; }
   seat(owner) { return owner === 0 ? this.mySeat : 1 - this.mySeat; }
   mark(owner) { return this.seat(owner) === 0 ? "mark-x" : "mark-o"; }
-  get myRating() { return account.profile?.rating ?? null; }
-  get myRank() { return account.profile?.rank ?? null; }
+  get myRating() { return this.me?.card?.rating ?? account.profile?.rating ?? null; }
+  get myRank() { return this.me?.card?.rank ?? account.profile?.rank ?? null; }
   get levelPath() {
     const i = this.levelIndexNow ?? (this.levelSetting - 1), last = LEVELS.length - 1;
     const from = Math.max(0, Math.min(last - 2, this.round <= 1 ? i : i - 1));
@@ -213,16 +241,26 @@ export class OnlineMatch {
     return out;
   }
   get nextLevel() {
+    if (Number.isFinite(this.state?.nextLevel)) return LEVELS[this.state.nextLevel - 1];
     const p = this.state?.settings?.roundPresets?.[this.round];
     const lv = p ? { easy: 1, amateur: 2, medium: 3, hard: 4, encyclopedia: 5 }[p] : this.state?.settings?.progressive ? Math.min(4, (this.levelIndexNow ?? 1) + 2) : (this.levelIndexNow ?? 1) + 1;
     return LEVELS[(lv ?? 2) - 1];
   }
-  get offerRaise() { return false; }
-  get canLeaveFree() { return false; }
+  /** «Снова ничья — сложнее?»: shown until you answer; the other side's offer is answered with the same buttons. */
+  get offerRaise() { return !!this.state?.canRaise && this.raise?.by !== this.mySeat; }
+  get raisedLevel() { return LEVELS[Math.min(LEVELS.length - 1, (this.state?.nextLevel ?? this.levelIndexNow + 1))]; }
+  raiseLevel(yes) {
+    const answer = this.raise ? (yes ? "accept_raise" : "decline_raise") : yes ? "offer_raise" : "decline_raise";
+    this.act(answer).then(() => { if (answer === "offer_raise") this.show(`Предложили сложнее · ждём ${this.opponent.name}`, true); store.changed(); }).catch(() => {});
+  }
+  /** The server says when you may leave without it counting: the other side stopped answering. */
+  get canLeaveFree() { return !!this.freeLeave; }
   get hasBoard() { return !!this.g; }
 
   profile(owner) {
     const m = owner === 0 ? this.me : this.them;
+    const c = m?.card;
+    if (c && (c.games || c.rating != null)) return { name: m.name, flag: null, rating: c.rating, rank: c.rank, level: c.level, games: c.games, winRate: c.games ? Math.round((c.wins / c.games) * 100) : 0, bestStreak: c.bestStreak };
     if (owner === 0 && account.profile && !this.watching) {
       const p = account.profile;
       return { name: this.leftName, flag: null, rating: p.rating, rank: p.rank, level: p.level, games: p.games, winRate: p.games ? Math.round((p.wins / p.games) * 100) : 0, bestStreak: p.bestStreak };
@@ -246,12 +284,18 @@ export class OnlineMatch {
     const i = this.selected;
     if (i === null) return "none";
     if (this.used.has(pl.id)) return "used";
-    const r = await this.act(this.choices?.cell === i && this.choices.candidates.some((c) => c.id === pl.id) ? "choose" : "guess", { cell: i, player: pl.id }).catch(() => null);
+    // `hold`: a player who does not fit waits with you (cancel or ask for review); older servers ignore it.
+    const r = await this.act(this.choices?.cell === i && this.choices.candidates.some((c) => c.id === pl.id) ? "choose" : "guess", { cell: i, player: pl.id, hold: true }).catch(() => null);
     if (!r) return "none";
+    if (r.kind === "mismatch") { this.mismatch = { cell: i, playerId: pl.id, name: pl.name, why: r.why, photo: pl.photo, wp: pl.wp }; return "mismatch"; }
     if (r.message) this.show(r.message, r.kind === "accepted");
     return r.kind === "accepted" ? "captured" : r.kind === "review" ? "review" : r.kind === "choices" ? "choices" : r.kind === "unknown" ? "unknown" : "none";
   }
-  cancelMismatch() { this.mismatch = null; }
+  cancelMismatch() {
+    const mm = this.mismatch;
+    this.mismatch = null;
+    if (mm && this.g?.mismatch) this.act("cancel_mismatch", { cell: mm.cell }).catch(() => {});
+  }
   /** Autocomplete over the whole base; it does not say whether the player fits. */
   async search(q) {
     const r = await this.post("/api/search", { query: q });
@@ -263,7 +307,7 @@ export class OnlineMatch {
     await this.act("hint", { cell: i, level });
     return true;
   }
-  requestReview() {}
+  requestReview() { const mm = this.mismatch; if (mm) { this.mismatch = null; this.act("request_review", { cell: mm.cell }).catch(() => {}); } }
   decideReview(accept) { if (this.review?.owner === 1) this.act("review_decide", { review: this.review.id, accept }).catch(() => {}); }
   passOnPurpose() { this.act("pass").catch(() => {}); }
   surrender() { this.act("resign").catch(() => {}); }
@@ -272,12 +316,16 @@ export class OnlineMatch {
   requestResume() { this.act("resume").catch(() => {}); }
   askNextRound() { this.act("ready").catch(() => {}); }
   ready() { return this.act("ready"); }
-  /** After the match: the room's host starts a new series, then both press ready. */
+  /** After the match: either player offers a rematch and the other accepts (newer servers); otherwise the host restarts. */
   async rematch() {
+    if ("rematch" in (this.state ?? {})) { await this.act(this.oppRematch ? "accept_rematch" : "offer_rematch").catch(() => {}); return; }
     if (this.isHost) { await this.act("new_series").catch(() => {}); this.act("ready").catch(() => {}); }
     else this.show("Реванш начинает создатель комнаты — ждём его", true);
   }
-  react(e) { this.myReaction = { e, n: uuid() }; this.send(e); }
+  react(e) {
+    this.myReaction = { e, n: uuid() };
+    if (Array.isArray(this.state?.reactions)) this.act("reaction", { emoji: e }).catch(() => {}); else this.send(e);
+  }
   send(text) { this.act("chat", { text }).catch(() => {}); }
   sendFriendRequest() {} acceptFriend() {} block() {} report() { this.show("Жалобы — в версии сайта", false); }
   cameBack() {}
@@ -288,7 +336,8 @@ export class OnlineMatch {
   stop(leave = true) {
     if (!this.alive) return;
     this.alive = false;
-    if (leave) this.post("/api/action", { id: uuid(), type: "leave", game: this.g?.id ?? null }).catch(() => {});
+    // When the other side stopped answering the server allows a leave that does not count against you.
+    if (leave) this.post("/api/action", { id: uuid(), type: this.freeLeave ? "leave_free" : "leave", game: this.g?.id ?? null }).catch(() => {});
     this.stopStream?.(); clearInterval(this.pulse);
     document.removeEventListener("visibilitychange", this.onVisibility);
     removeEventListener("pagehide", this.onHide);
