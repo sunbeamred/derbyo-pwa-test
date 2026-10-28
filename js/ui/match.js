@@ -1,6 +1,7 @@
 // The match screen (port of MatchView.swift and Motion.swift).
 import { html, useState, useEffect, useRef, cx, img, Icon, Panel, useSheet, Alert, Toast, RatingTag, breakable, vibrate } from "./common.js";
-import { columns, rows, byId } from "../data.js";
+import { byId } from "../data.js";
+import { photoOf } from "../net.js";
 import { store } from "../model.js";
 import { Sound } from "../sound.js";
 import { AnswerSheet, ChatSheet, ReviewDecision, StandsSheet } from "./sheets.js";
@@ -73,7 +74,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   const lastReview = useRef(null);
   if (m.review?.owner === 1) lastReview.current = m.review;
 
-  const notes = [...rows, ...columns].filter((c) => c.note);
+  const notes = [...m.rows, ...m.cols].filter((c) => c.note);
   const slotLine = m.watching ? "Ты на трибуне: ходить нельзя, болеть в чате можно" : m.turn === 0 ? "Выбери клетку и назови футболиста" : "Ход соперника. Присмотри клетку на свой ход";
 
   let leaveMenu = null;
@@ -103,6 +104,10 @@ export function MatchScreen({ m, close, findNew, minimize }) {
           : menuRow("Сдаться в раунде", () => setConfirmSurrender(true), { destructive: true })}`}`}
   </div>`);
 
+  if (!m.hasBoard || m.closed) return html`<div class="match"><div class="match-wait">
+    <span class="spinner muted big"></span><b>${m.closed ?? "Выходим на поле…"}</b>
+    <small>${m.closed ? "" : !m.state ? "Соединяемся с сервером" : m.opponent?.present ? `Ждём, пока ${m.opponent.name} выйдет на поле` : "Ждём соперника"}</small>
+    <button class="navy-btn" onClick=${close}>${m.closed ? "Закрыть" : "Выйти"}</button></div></div>`;
   return html`<div class="match">
     <div class="match-body">
       <${Scoreboard} m=${m} openProfile=${setProfileOf} openStands=${() => setStandsOpen(true)} />
@@ -163,9 +168,9 @@ function Scoreboard({ m, openProfile, openStands }) {
         isBot=${m.opponent.isBot} reaction=${m.oppReaction} away=${m.oppAwayFor} left=${m.oppLeft} missed=${m.oppMissed} onClick=${() => openProfile(1)} />
     </div>
     <div class="level-row">
-      <span class=${cx("fade", live(0) && "on")}><${RatingTag} flag=${m.myFlag} rating=${m.myRating} rank=${m.myRank} /></span>
+      <span class=${cx("fade", live(0) && "on")}>${m.myRating != null ? html`<${RatingTag} flag=${m.myFlag} rating=${m.myRating} rank=${m.myRank} />` : null}</span>
       <span class="level-path">${m.levelPath.map((s, i) => html`${i > 0 ? html`<i>→</i>` : null}<span class=${s.current ? "cur" : ""}>${s.name}</span>`)}</span>
-      <span class=${cx("fade", live(1) && "on")}><${RatingTag} flag=${m.opponent.flag} rating=${m.opponent.rating} rank=${m.opponent.rank} flagAfter=${true} /></span>
+      <span class=${cx("fade", live(1) && "on")}>${m.opponent.rating != null ? html`<${RatingTag} flag=${m.opponent.flag} rating=${m.opponent.rating} rank=${m.opponent.rank} flagAfter=${true} />` : null}</span>
     </div>
     ${m.viewers.length ? html`<button class="eye-badge press" onClick=${openStands} aria-label=${`Трибуна: ${m.viewers.length}`}>
       <${Icon} name="eye" size="11" /><b>${m.viewers.length}</b></button>` : null}
@@ -224,7 +229,11 @@ export function ConditionIcon({ icon, size = 34 }) {
     case "crest": case "image": return html`<img class="cicon" style=${s} src=${icon.src} alt="" />`;
     case "flag": return html`<span class="cicon flag" style=${s}>${icon.emoji}</span>`;
     case "league": return html`<span class="cicon flag league" style=${s}>${icon.emoji}<img src=${img("ball")} alt="" /></span>`;
-    case "person": return html`<span class="cicon person" style=${s}><img class="ph" src=${icon.photo} alt="" /><img class="fr" src=${icon.frame} alt="" /></span>`;
+    case "person": {
+      const ph = icon.photo ?? photoOf(icon.person);
+      return html`<span class="cicon person" style=${s}>${ph ? html`<img class="ph" src=${ph} alt="" />` : null}<img class="fr" src=${icon.frame} alt="" /></span>`;
+    }
+    case "text": return html`<span class="cicon text" style=${s}>${icon.text}</span>`;
   }
 }
 
@@ -261,17 +270,17 @@ function Board({ m, tap }) {
   return html`<div class="board" ref=${ref}>
     <div class="board-row head">
       <span class="lead"></span>
-      ${columns.map((c) => html`<span class="col-head"><${ConditionIcon} icon=${c.icon} size=${38} /><span class="col-title">${c.title}</span></span>`)}
+      ${m.cols.map((c) => html`<span class="col-head"><${ConditionIcon} icon=${c.icon} size=${38} /><span class="col-title">${c.title}</span></span>`)}
     </div>
     ${[0, 1, 2].map((r) => html`<div class="board-row">
-      <span class="lead row-head"><${ConditionIcon} icon=${rows[r].icon} size=${38} /><${WordLines} text=${rows[r].title} /></span>
+      <span class="lead row-head"><${ConditionIcon} icon=${m.rows[r].icon} size=${38} /><${WordLines} text=${m.rows[r].title} /></span>
       ${[0, 1, 2].map((c) => {
         const i = r * 3 + c, cell = m.cells[i];
         return html`<${Cell} key=${i} cell=${cell} cross=${cell ? m.seat(cell.owner) === 0 : false}
           selected=${m.selected === i || (m.review?.owner === 0 && m.review?.cell === i)} locked=${locked}
           oppPick=${m.oppSelected === i || (m.review?.owner === 1 && m.review?.cell === i)} clued=${!!m.sharedClues[i]}
           recent=${m.recent === i} disputed=${m.review?.cell === i} plain=${m.watching} phase=${Math.max(0, winning.indexOf(i)) * 0.3}
-          label=${`${rows[r].title} и ${columns[c].title}`}
+          label=${`${m.rows[r].title} и ${m.cols[c].title}`}
           tap=${() => { if (!cell && m.turn === 0 && !m.watching && !m.roundOver && !m.paused && !m.review) tap(i); }} />`;
       })}
     </div>`)}
@@ -279,7 +288,8 @@ function Board({ m, tap }) {
 }
 
 function Cell({ cell, cross, selected, locked, oppPick, clued, recent, disputed, plain, phase, label, tap }) {
-  const p = cell ? byId[cell.playerId] : null;
+  if (cell?.blocked) return html`<button class="cell free locked" aria-label=${`${label}: закрыта опекой`}><img class="cell-glyph lock" src=${img("lock")} alt="" /></button>`;
+  const p = !cell ? null : cell.name ? { name: cell.name, photo: photoOf(cell) } : byId[cell.playerId];
   const cls = cx("cell", cell ? (cross ? "taken x" : "taken o") : "free", selected && "selected", oppPick && !cell && "opp-pick",
     cell?.winning && "winning", recent && "recent", locked && !oppPick && "locked");
   return html`<button class=${cls} onClick=${tap} aria-label=${label} style=${`--phase:${-phase}s`}>
@@ -341,7 +351,7 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
     : m.paused ? "Пауза — часы стоят" : mine ? "Твой ход" : m.oppSelected !== null ? `${opp} думает…` : `Ходит ${opp}`;
   const color = m.review ? GOLD : m.paused ? MUTED : m.seat(m.turn) === 0 ? "#FFB3C1" : "#91FFD3";
   const sub = m.watching ? html`<small>ты на трибуне</small>`
-    : m.review ? html`<small>зачёт: ${byId[m.review.playerId].name}</small>`
+    : m.review ? html`<small>зачёт: ${m.review.name ?? byId[m.review.playerId].name}</small>`
     : m.oppAwayFor !== null ? html`<small style=${`color:${m.mySeat === 1 ? "#FFB3C1" : "#91FFD3"}`}>◒ ${opp} · ещё ${m.oppAwayBudget} с</small>`
     : m.awaySeconds < 45 ? html`<small>${m.awaySeconds > 0 ? `вне игры: ещё ${m.awaySeconds} с` : "время вне игры вышло"}</small>` : null;
 
@@ -371,7 +381,7 @@ function RoundButton({ m, findNew }) {
   const offerNew = m.canLeaveFree && (m.rematchAsked || m.nextAsked);
   const waiting = (m.rematchAsked || m.nextAsked) && !offerNew;
   const opp = m.opponent.name;
-  const title = gone || offerNew ? "Новый соперник" : waiting ? `Ждём ${opp} · ${m.readyLeft} с` : done ? "Реванш" : "Следующий раунд";
+  const title = gone || offerNew ? "Новый соперник" : waiting ? (m.online ? `Ждём ${opp}` : `Ждём ${opp} · ${m.readyLeft} с`) : done ? "Реванш" : "Следующий раунд";
   const detail = m.watching ? "начнут игроки" : gone ? `${opp} покинул матч` : offerNew ? `${opp} не отвечает · ${m.readyLeft} с`
     : waiting ? (m.rematchAsked ? "реванш предложен" : `ты готов к раунду ${m.round + 1}`) : done ? `ещё матч с ${opp}` : `раунд ${m.round + 1} · ${m.nextLevel}`;
   const kind = waiting ? "wait" : done && !gone && !offerNew ? "gold" : "green";

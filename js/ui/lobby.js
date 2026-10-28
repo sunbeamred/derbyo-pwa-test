@@ -3,6 +3,7 @@ import { html, useState, useEffect, useRef, cx, img, Icon, PickMark, BottomBar, 
 import { Match, Opponent, MAX_VIEWERS, store } from "../model.js";
 import { has, rand } from "../data.js";
 import { Sound } from "../sound.js";
+import { ONLINE, siteStats } from "../net.js";
 import { ProfileSheet } from "./profile.js";
 import { ViewerList } from "./sheets.js";
 
@@ -15,25 +16,25 @@ export const PRESETS = [
   { id: "hard", name: "Легенда", description: "Клубы мира и редкие сборные", icon: "level-legend", level: 4, tokens: 4 },
   { id: "encyclopedia", name: "Энциклопедия", description: "Редкие клубы, тренеры и одноклубники", icon: "expert", level: 5, tokens: 4 },
 ];
-const LEVELS = ["Новичок", "Любитель", "Знаток", "Легенда", "Энциклопедия"];
-const SECONDS = [0, 15, 20, 30, 45, 60, 90, 120];
+export const LEVELS = ["Новичок", "Любитель", "Знаток", "Легенда", "Энциклопедия"];
+export const SECONDS = [0, 15, 20, 30, 45, 60, 90, 120];
 const ROUNDS = [1, 2, 3, 5, 7];
-const THEMES = [["mixed", "Разные условия"], ["clubs", "Клуб × клуб"], ["club-national", "Клуб × сборная"], ["club-position", "Клуб × позиция"],
+export const THEMES = [["mixed", "Разные условия"], ["clubs", "Клуб × клуб"], ["club-national", "Клуб × сборная"], ["club-position", "Клуб × позиция"],
   ["national-position", "Сборная × позиция"], ["club-league", "Клуб × чемпионат"], ["national-league", "Сборная × чемпионат"],
   ["club-history", "Клуб × трофеи, тренеры, одноклубники"], ["national-trophy", "Сборная × трофеи"]];
 
 export const newSettings = (o = {}) => ({ preset: "amateur", level: 2, seconds: 60, tokens: 6, format: "twoWins", rounds: 3, theme: "mixed",
   progressive: false, penaltiesOnDraw: false, penaltiesEachRound: false, lastChance: false, closed: false, password: "", ...o });
-const presetOf = (s) => PRESETS.find((p) => p.id === s.preset);
-const passwordOK = (s) => !s.closed || s.password.length >= 4;
+export const presetOf = (s) => PRESETS.find((p) => p.id === s.preset);
+export const passwordOK = (s) => !s.closed || s.password.length >= 4;
 const roundsWord = (n) => `${n} раунд${n === 1 ? "" : n < 5 ? "а" : "ов"}`;
 const fmtOf = (s) => (s.format === "twoWins" ? "до двух побед" : s.format === "tiebreak" ? "2 раунда + решающий" : roundsWord(s.rounds));
-function summary(s) {
+export function summary(s) {
   const p = presetOf(s);
   if (p) return `${p.name} · 60 с на ход · до двух побед`;
   return `${LEVELS[s.level - 1]}${s.progressive ? " и выше" : ""} · ${s.seconds === 0 ? "без таймера" : `${s.seconds} с на ход`} · ${fmtOf(s)}`;
 }
-function settingRows(s) {
+export function settingRows(s) {
   const p = presetOf(s);
   const out = [
     ["Сложность", p?.name ?? LEVELS[s.level - 1] + (s.progressive ? " и выше каждый раунд" : "")],
@@ -47,7 +48,7 @@ function settingRows(s) {
   out.push(["Доступ", s.closed ? "🔒 по паролю" : "открытая"]);
   return out;
 }
-function extras(s) {
+export function extras(s) {
   const parts = [];
   if (s.progressive && !presetOf(s)) parts.push("сложность растёт");
   if (s.penaltiesOnDraw) parts.push(s.penaltiesEachRound ? "Пенальти в каждом раунде" : "Пенальти при ничьей");
@@ -64,27 +65,30 @@ export const QuickChoice = {
   get summary() { const c = QuickChoice.presets; return PRESETS.filter((p) => c.includes(p.id)).map((p) => p.name).join(" · "); },
 };
 
-const Section = ({ t }) => html`<h4 class="section">${t}</h4>`;
+export const Section = ({ t }) => html`<h4 class="section">${t}</h4>`;
 
 // MARK: home
 
 /** The «Играть» tab: DERBYO as a collection of games; each game is one card with one «Играть». */
 export function HomeView({ nav }) {
   const [sound, setSound] = useState(Sound.enabled);
+  // Online: the site's own count of open browsers.
+  const [visitors, setVisitors] = useState(null);
+  useEffect(() => { if (ONLINE) siteStats().then((s) => setVisitors(s.visitors)).catch(() => {}); }, []);
   return html`<div class="screen-scroll"><div class="page">
     <div class="home-head">
       <b class="logo">DERBYO</b><span class="sp"></span>
       <button class="sound-btn glass press" aria-label=${sound ? "Выключить звук" : "Включить звук"}
         onClick=${() => { Sound.enabled = !sound; setSound(!sound); Sound.play("turn"); }}>
         <img src=${img("sound")} alt="" class=${sound ? "" : "off"} />${sound ? null : html`<i class="slash"></i>`}</button>
-      <span class="online-pill"><i></i>41 онлайн</span>
+      <span class="online-pill"><i></i>${ONLINE ? visitors ?? "…" : 41} онлайн</span>
     </div>
     <${Section} t="ИГРЫ" />
     <div class="game-card">
       <img class="hero" src="img/hero.jpg" alt="" />
       <div class="gc-in">
         <h2>Футбольные<br />крестики-нолики</h2>
-        <p><i></i>Дуэли онлайн · 26 играют сейчас</p>
+        <p><i></i>${ONLINE ? "Дуэли онлайн · база derbyo.online" : "Дуэли онлайн · 26 играют сейчас"}</p>
         <button class="primary-btn" onClick=${() => nav.push("lobby")}><img src=${img("bolt")} alt="" />Играть</button>
       </div>
     </div>
@@ -136,12 +140,13 @@ export function GameLobby({ nav, app }) {
 }
 
 /** The password prompt of a closed room; in the prototype the password is 1234. */
-function RoomPassword({ room, enter, cancel }) {
+export function RoomPassword({ room, enter, cancel, check }) {
   const [pw, setPw] = useState("");
   const [wrong, setWrong] = useState(false);
   const ref = useRef();
   useEffect(() => ref.current?.focus(), [wrong]);
-  const go = () => { if (pw === "1234") enter(); else { setPw(""); setWrong(true); } };
+  // Online the server checks it (`check` resolves to whether it let you in); offline the prototype's 1234.
+  const go = async () => { const ok = check ? await check(pw) : pw === "1234" && (enter(), true); if (!ok) { setPw(""); setWrong(true); } };
   return html`<${Alert} title=${wrong ? "Неверный пароль" : "🔒 Закрытая комната"} onClose=${cancel}
     message=${wrong ? "Попробуй ещё раз. Пароль знает создатель комнаты." : `${room} закрыта. Введи пароль, чтобы войти.`}
     actions=${[{ title: "Отмена", run: cancel }, { title: "Войти", kind: "bold", stay: true, run: go }]}>
@@ -222,7 +227,7 @@ export function SearchView({ done }) {
 const roomModel = (host) => { const r = new Match(Opponent.human(host), false); r.stop(); return r; };
 
 /** A player's card in a room: avatar in the mark colour (a mint ring once ready), name, rating, status pill. */
-function SeatCard({ name, red, ready, gone = false, note = "", flag, rating, place, open }) {
+export function SeatCard({ name, red, ready, gone = false, note = "", flag, rating, place, open }) {
   return html`<button class="seat press" onClick=${open} aria-label=${`${name}, открыть профиль`}>
     <span class=${cx("seat-av", red ? "red" : "green", ready && "ready", gone && "gone")}><span>${name.slice(0, 2).toUpperCase()}</span></span>
     <b class="seat-name">${breakable(name)}</b>
@@ -231,7 +236,7 @@ function SeatCard({ name, red, ready, gone = false, note = "", flag, rating, pla
   </button>`;
 }
 
-function ProfilePanel({ target, room, close }) {
+export function ProfilePanel({ target, room, close }) {
   return html`<${Panel} onClose=${close}>${(leave) => html`<${ProfileSheet} m=${room} owner=${target.owner} viewer=${target.viewer} close=${leave} />`}<//>`;
 }
 
@@ -307,7 +312,7 @@ export function JoinCodeView({ nav }) {
 }
 
 /** A card with a tappable header that folds its content away; folded, it shows a one-line summary. */
-function Collapsible({ title, summary: sum, open, toggle, children }) {
+export function Collapsible({ title, summary: sum, open, toggle, children }) {
   return html`<div class="collapsible glass">
     <button class="col-head-btn" onClick=${toggle} aria-expanded=${open}>
       <span><small class="cap">${title}</small>${!open && sum ? html`<b>${sum}</b>` : null}</span>

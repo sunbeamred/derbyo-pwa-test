@@ -8,9 +8,15 @@ import { MatchScreen } from "./ui/match.js";
 import { HomeView, GameLobby, QuickPickView, SearchView, RoomView, JoinCodeView, LockerRoom, MatchSettingsView } from "./ui/lobby.js";
 import { InstallSheet, installState, InstallRow, isStandalone, isIOS } from "./install.js";
 import { TabBar } from "./ui/tabbar.js";
+import { ONLINE, account, createRoom, joinRoom, savedSession } from "./net.js";
+import { OnlineMatch } from "./online.js";
+import { OnlineLobby, OnlineSearch, OnlineRoom, OnlineJoinCode, OnlineLocker } from "./ui/live.js";
+import { RatingTab, ProfileTab } from "./ui/account.js";
 import "./touch.js";
 
-const SCREENS = { lobby: GameLobby, quickPick: QuickPickView, room: RoomView, code: JoinCodeView, locker: LockerRoom, settings: MatchSettingsView };
+// Online (this app's own host) the screens play on the site's server; the GitHub copy and demo links stay offline.
+const SCREENS = ONLINE ? { lobby: OnlineLobby, quickPick: QuickPickView, room: OnlineRoom, code: OnlineJoinCode, locker: OnlineLocker, settings: MatchSettingsView }
+  : { lobby: GameLobby, quickPick: QuickPickView, room: RoomView, code: JoinCodeView, locker: LockerRoom, settings: MatchSettingsView };
 const matchDemo = ["demoBoard", "demoWin", "demoWinLater", "demoLoseLater", "demoLongMatch", "demoMix", "demoLastMove", "demoOppReview", "demoMismatch", "demoHuman", "demoFriendAsk", "demoWatch"].some(has);
 const humanDemo = ["demoOppAway", "demoHuman", "demoFriendAsk", "demoWatch", "demoOppIdle", "demoOppLeaves", "demoOppPause"].some(has);
 /** How long a screen takes to slide in or out, and a cover to rise or fall (ms). */
@@ -52,9 +58,18 @@ function App() {
   const leaveTimer = useRef();
   /** What to do once the back step has landed (history.back() is asynchronous). */
   const afterPop = useRef(null);
+  /** What to do once a cover's own back step has landed. */
+  const afterCover = useRef(null);
   live.current = { match, minimized, stack, searching, leaving, tab, matchLeaving };
 
   useEffect(() => store.on(redraw), []);
+  // Online: who you are on the site, and a match you were in before the app was closed.
+  useEffect(() => {
+    if (!ONLINE) return;
+    account.load().catch(() => {});
+    const s = savedSession.get();
+    if (s?.token) setMinimized(watchClose(new OnlineMatch(s)));
+  }, []);
   // One clock for the match, open or minimised: it keeps running while you look at the tabs.
   useEffect(() => {
     const t = setInterval(() => { const m = live.current.match ?? live.current.minimized; if (m) { m.tick(); store.changed(); } }, 1000);
@@ -80,11 +95,13 @@ function App() {
 
   // The browser's back (Android button, Safari edge swipe) walks the play stack; in a match it minimises it.
   useEffect(() => {
+    // A reload keeps the old history entries: the one we land on starts the app afresh, at its first screen.
+    history.replaceState({ d: 0 }, "");
     // Demo screens opened at launch get their history entries, so «Назад» stays inside the app.
     live.current.stack.forEach((_, i) => history.pushState({ d: i + 1 }, ""));
     if (live.current.match) history.pushState({ d: live.current.stack.length, cover: true }, "");
     const f = () => {
-      if (skipPop.current) { skipPop.current = false; return; }
+      if (skipPop.current) { skipPop.current = false; const f = afterCover.current; afterCover.current = null; f?.(); return; }
       const l = live.current;
       const cover = !!history.state?.cover;
       if (l.match && !cover) { minimize(); return; }
@@ -122,11 +139,17 @@ function App() {
     setTimeout(() => { setMatchLeaving(false); then(); }, reduceMotion() ? 0 : COVER_MS - 40);
   };
   const open = (m) => {
-    if (minimized && !minimized.watching) { setBusy(true); m.stop(); return; }
+    if (busyNow() && live.current.minimized !== m) { setBusy(true); m.stop(); return; }
     minimized?.stop();
     setMinimized(null); setMatchLeaving(false); setMatch(m); coverOpened();
   };
-  const close = () => { const m = live.current.match; m?.stop(); minimized?.stop(); setMinimized(null); coverClosed(); dropMatch(() => setMatch(null)); };
+  const close = () => {
+    const m = live.current.match; m?.stop(); minimized?.stop(); setMinimized(null);
+    // A match that began in a room screen ends that room too: back to the list.
+    const top = live.current.stack.at(-1);
+    if (ONLINE && ["room", "locker"].includes(top?.name)) afterCover.current = () => nav.back();
+    coverClosed(); dropMatch(() => setMatch(null));
+  };
   const minimize = () => {
     const m = live.current.match;
     if (!m || live.current.matchLeaving) return;
@@ -137,11 +160,42 @@ function App() {
     setSearchLeaving(true);
     setTimeout(() => { setSearchLeaving(false); setSearching(false); then?.(); }, reduceMotion() ? 0 : COVER_MS - 40);
   };
+  /** A server match that ends (room closed, opened elsewhere) leaves the return bar. */
+  function watchClose(m) { m.onClosed = () => { if (live.current.minimized === m) setMinimized(null); }; return m; }
+  const busyNow = () => { const b = live.current.minimized; return b && !b.watching && !b.closed; };
   const app = {
-    open,
-    quick: () => { if (minimized && !minimized.watching) setBusy(true); else openSearch(); },
+    open: (m) => open(watchClose(m)),
+    quick: () => { if (busyNow()) setBusy(true); else openSearch(); },
     join: (name) => open(new Match(Opponent.human(name), false)),
     watch: (name) => open(new Match(Opponent.human(name), true)),
+    /** A practice match on the real board: your room, a bot in the other seat, ready at once. */
+    bot: async () => {
+      if (busyNow()) { setBusy(true); return; }
+      try {
+        const m = watchClose(new OnlineMatch(await createRoom({ preset: QUICK_BOT_PRESET() })));
+        open(m);
+        for (let i = 0; i < 50 && !m.state && m.alive; i++) await new Promise((r) => setTimeout(r, 100));
+        await m.addBot(); await m.ready();
+      } catch (e) { alert(e.message); }
+    },
+    /** Joins a room by code: a seat goes to the room screen, the stands straight to the match. Resolves false on a wrong password. */
+    joinRoom: async (code, { role = "player", password, onError } = {}) => {
+      if (busyNow()) { setBusy(true); return true; }
+      try {
+        const s = await joinRoom(code, { role, password });
+        const m = watchClose(new OnlineMatch(s));
+        if (s.role === "player" && !s.seatTaken) {
+          for (let i = 0; i < 50 && !m.state; i++) await new Promise((r) => setTimeout(r, 100));
+          if (!m.hasBoard) { nav.push("locker", { m }); return true; }
+        }
+        open(m);
+        return true;
+      } catch (e) {
+        if (e.code === "ROOM_PASSWORD") return false;
+        (onError ?? alert)(e.message);
+        return true;
+      }
+    },
   };
   const ret = () => { setMatch(minimized); setMinimized(null); setMatchLeaving(false); coverOpened(); };
 
@@ -168,18 +222,21 @@ function App() {
 
   return html`<div class=${cx("app", minimized && !match && "has-return")}>
     <main class="tab-body">
-      <section class="tab-pane" hidden=${tab !== 0}><${Placeholder} title="Рейтинг" text="Неделя и всё время, все и друзья, твоё место снизу. Следующий шаг прототипа." /></section>
+      <section class="tab-pane" hidden=${tab !== 0}>${ONLINE ? html`<${RatingTab} visible=${tab === 0} />` : html`<${Placeholder} title="Рейтинг" text="Неделя и всё время, все и друзья, твоё место снизу. Следующий шаг прототипа." />`}</section>
       <section class="tab-pane" hidden=${tab !== 1}>${playTab}</section>
-      <section class="tab-pane" hidden=${tab !== 2}><${Placeholder} title="Профиль" text="Статистика, история, друзья и заявки, настройки звука, вибро и уведомлений. Следующий шаг прототипа.">
-        <${InstallRow} open=${() => setInstall(true)} /><//></section>
+      <section class="tab-pane" hidden=${tab !== 2}>${ONLINE ? html`<${ProfileTab}><${InstallRow} open=${() => setInstall(true)} /><//>` : html`<${Placeholder} title="Профиль" text="Статистика, история, друзья и заявки, настройки звука, вибро и уведомлений. Следующий шаг прототипа.">
+        <${InstallRow} open=${() => setInstall(true)} /><//>`}</section>
     </main>
     <div class="edge-fade" aria-hidden="true"></div>
-    ${minimized && !match ? html`<${ReturnBar} m=${minimized} go=${ret} />` : null}
-    <${TabBar} tab=${tab} pick=${pickTab} items=${[["Рейтинг", "trophy"], ["Играть", "bolt"], ["Профиль", "profile-v1", 1]]} />
-    ${searching ? html`<${Cover} class="search-cover" leaving=${searchLeaving}><${SearchView} done=${(opp) => {
+    ${minimized && !match && (!minimized.online || minimized.state) ? html`<${ReturnBar} m=${minimized} go=${ret} />` : null}
+    <${TabBar} tab=${tab} pick=${pickTab} items=${[["Рейтинг", "trophy"], ["Играть", "bolt"], ["Профиль", "profile-v1", ONLINE ? (account.ready && !account.registered ? "!" : null) : 1]]} />
+    ${searching ? html`<${Cover} class="search-cover" leaving=${searchLeaving}>${ONLINE ? html`<${OnlineSearch} done=${(r) => {
+      coverClosed();
+      closeSearch(r?.session ? () => open(watchClose(new OnlineMatch(r.session))) : r?.bot ? () => app.bot() : null);
+    }} />` : html`<${SearchView} done=${(opp) => {
       coverClosed();
       closeSearch(opp ? () => open(new Match(opp, false)) : null);
-    }} /><//>` : null}
+    }} />`}<//>` : null}
     ${match ? html`<${Cover} leaving=${matchLeaving}><${MatchScreen} m=${match} key=${match.code} close=${close} minimize=${() => { coverClosed(); minimize(); }}
       findNew=${() => { close(); setTimeout(openSearch, COVER_MS); }} /><//>` : null}
     ${busy ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setBusy(false)}
@@ -190,6 +247,8 @@ function App() {
   </div>`;
 }
 
+/** The bot practice uses the first level the quick game remembers. */
+const QUICK_BOT_PRESET = () => { try { return JSON.parse(localStorage.getItem("quickPresets"))?.[0] ?? "amateur"; } catch { return "amateur"; } };
 const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** iOS's swipe from the left edge back to the previous screen. In Safari the browser does this itself,

@@ -773,6 +773,28 @@ input { font-family: inherit; }
 .ent-copy b { font-size: 34px; font-weight: 700; letter-spacing: -1px; color: #F3F6FF; white-space: nowrap; }
 @keyframes ent-copy { 0% { opacity: 0; transform: translateY(18px); } 28% { opacity: 1; transform: none; } 75% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
 
+/* Online: waiting for the server, the leaderboard, the account */
+.match-wait { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; }
+.match-wait b { font-size: 18px; font-weight: 700; }
+.match-wait small { font-size: 13px; color: var(--muted); }
+.match-wait .navy-btn { width: 200px; margin-top: 12px; }
+.spinner.big { width: 34px; height: 34px; border-width: 3px; }
+.send.busy { opacity: .6; }
+.board-list { border-radius: 16px; padding: 4px 12px; }
+.lb-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 0; }
+.lb-row + .lb-row { border-top: 1px solid #1F3247; }
+.lb-row.self { background: rgba(246, 212, 130, .08); margin: 0 -12px; padding: 10px 12px; width: calc(100% + 24px); }
+.lb-place { flex: none; width: 30px; text-align: center; font-size: 16px; font-weight: 800; color: var(--muted); }
+.lb-name { flex: 1; min-width: 0; }
+.lb-name b { display: block; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-name small { display: block; font-size: 12px; color: var(--muted); }
+.lb-pts { flex: none; font-family: var(--rounded); font-size: 18px; font-weight: 700; }
+.account-card { border-radius: 18px; padding: 14px; }
+.auth { display: flex; flex-direction: column; gap: 10px; }
+.auth .text-btn { align-self: center; }
+.recovery { font-family: ui-monospace, Menlo, monospace; font-size: 17px; letter-spacing: 1px; color: var(--gold); -webkit-user-select: text; user-select: text; word-break: break-all; }
+.cicon.text { display: grid; place-items: center; height: var(--s); border-radius: 50%; background: #1E3349; font-size: calc(var(--s) * .34); font-weight: 700; }
+
 /* Short screens (a browser with its toolbars, small phones): the board gives up height first */
 @media (max-height: 740px) {
   .board .cicon { --s: 30px !important; }

@@ -67,6 +67,7 @@ export class Match {
     this.pauseAskLeft = null; this.oppPauseAskLeft = null; this.resumeWait = null;
     this.oppLeft = false; this.rematchAsked = false; this.nextAsked = false; this.readyLeft = 0; this.readyTotal = 60;
     this.alive = true;
+    this.rows = rows; this.cols = columns;
     // Demos keep you on the cross unless asked otherwise; a real match draws the seat.
     this.mySeat = has("demoSeatO") ? 1 : [...new URLSearchParams(location.search).keys()].some((k) => k.startsWith("demo")) ? 0 : Math.round(Math.random());
     this.turn = this.mySeat === 0 ? 0 : 1;
@@ -107,6 +108,7 @@ export class Match {
   put(i, owner, pid) { this.cells[i] = { owner, playerId: pid, winning: false }; this.used.add(pid); }
   fillDemo() { for (const [i, o, pid] of [[0, 0, "rakitic"], [4, 1, "marcelo"], [7, 0, "benzema"], [2, 1, "mandzukic"]]) this.put(i, o, pid); }
 
+  get hasBoard() { return true; }
   get leftName() { return this.watching ? "aruzhan_7" : this.myName; }
   name(owner) { return owner === 0 ? this.leftName : this.opponent.name; }
   get myRating() { return this.watching ? 1510 : has("demoLegend") ? 2310 : 1420; }

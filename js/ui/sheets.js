@@ -1,11 +1,16 @@
 // The panels over the match (port of AnswerSheet.swift).
 import { html, useState, useEffect, useRef, cx, img, Icon } from "./common.js";
-import { columns, rows, byId, search, has } from "../data.js";
+import { byId, search, has } from "../data.js";
+import { photoOf } from "../net.js";
+import { initials } from "../online.js";
 import { store, Hints, clueFacts, clueMask, MAX_VIEWERS } from "../model.js";
 import { TurnDial, ConditionIcon } from "./match.js";
 
-export const Face = ({ p, size }) => html`<span class="face-circle" style=${`--s:${size}px`}>
-  ${p.photo ? html`<img src=${p.photo} alt="" />` : html`<span style=${`font-size:${size * 0.32}px`}>${p.initials}</span>`}</span>`;
+export function Face({ p, size }) {
+  const src = p.wp !== undefined ? photoOf(p) : p.photo;
+  return html`<span class="face-circle" style=${`--s:${size}px`}>
+    ${src ? html`<img src=${src} alt="" />` : html`<span style=${`font-size:${size * 0.32}px`}>${p.initials ?? initials(p.name)}</span>`}</span>`;
+}
 
 /** The answer panel, built for one thumb: field at the bottom, what it needs right above it, the cell on top.
  * Picking a player never answers by itself (a site invariant). */
@@ -15,8 +20,19 @@ export function AnswerSheet({ m, cell, dismiss }) {
   const [scoutOpen, setScoutOpen] = useState(false);
   const field = useRef();
   const wrap = useRef();
-  const col = columns[cell % 3], row = rows[Math.floor(cell / 3)];
+  const col = m.cols[cell % 3], row = m.rows[Math.floor(cell / 3)];
   const clue = m.sharedClues[cell];
+  const [found, setFound] = useState([]);
+  const [busy, setBusy] = useState(false);
+  // On the site the search is the server's, over the whole base; a pause in typing sends it.
+  useEffect(() => {
+    if (!m.online) return;
+    const q = query.trim();
+    if (q.length < 2 || picked?.name === query) { setFound([]); return; }
+    let live = true;
+    const t = setTimeout(() => m.search(q).then((r) => live && setFound(r)).catch(() => {}), 180);
+    return () => { live = false; clearTimeout(t); };
+  }, [query]);
 
   useEffect(() => { field.current?.focus({ preventScroll: true }); }, []);
   // Short lists sit on the bottom row, long ones start scrolled to it.
@@ -24,29 +40,38 @@ export function AnswerSheet({ m, cell, dismiss }) {
 
   const type = (q) => { setQuery(q); if (q && q !== picked?.name) { setPicked(null); setScoutOpen(false); } };
   const choose = (p) => { setPicked(p); setQuery(p.name); field.current?.focus({ preventScroll: true }); };
-  const submit = (e) => {
+  const shake = () => field.current?.parentElement?.animate([{ transform: "translateX(0)" }, { transform: "translateX(8px)" }, { transform: "translateX(-8px)" }, { transform: "translateX(5px)" }, { transform: "none" }], { duration: 300 });
+  const submit = async (e) => {
     e?.preventDefault();
-    if (!picked) return;
-    const r = m.answer(picked);
-    if (r === "used") field.current?.parentElement?.animate([{ transform: "translateX(0)" }, { transform: "translateX(8px)" }, { transform: "translateX(-8px)" }, { transform: "translateX(5px)" }, { transform: "none" }], { duration: 300 });
+    if (!picked || busy) return;
+    setBusy(true);
+    const r = await m.answer(picked);
+    setBusy(false);
+    if (r === "used" || r === "unknown") shake();
     else if (r === "mismatch") field.current?.blur();
+    else if (r === "review") dismiss();
+    else if (r === "choices") { setPicked(null); setQuery(""); }
     store.changed();
   };
 
-  const hits = query.length >= 2 && picked?.name !== query ? search(query) : [];
+  const choices = m.online && m.choices?.cell === cell ? m.choices.candidates.map((c) => ({ ...c, born: c.birthYear, initials: initials(c.name) })) : null;
+  const hits = choices ?? (query.length >= 2 && picked?.name !== query ? (m.online ? found : search(query)) : []);
   const mm = m.mismatch?.cell === cell ? m.mismatch : null;
   let body;
   if (mm) body = html`<${MismatchCard} m=${m} mm=${mm} cancel=${() => { m.cancelMismatch(); setPicked(null); setQuery(""); store.changed(); setTimeout(() => field.current?.focus(), 0); }}
     ask=${() => { m.requestReview(); store.changed(); dismiss(); }} />`;
   else if (scoutOpen) body = html`<${ScoutChoices} m=${m} cell=${cell} clue=${clue}
     bought=${(h) => { setScoutOpen(false); if (h === "four") { setPicked(null); setQuery(""); } }} />`;
+  else if (choices) body = html`<p class="hint-line small">${m.choices.text ?? "Тёзки — выбери, кого имел в виду"}</p>
+    <div class="hits">${choices.map((p) => html`<button class=${cx("hit", picked?.id === p.id && "on")} onClick=${() => choose(p)}>
+      <${Face} p=${p} size=${40} /><span class="hit-name"><b>${p.name}</b><small>${p.born ?? "—"} г. р.</small></span><i>${picked?.id === p.id ? "✓" : "↵"}</i></button>`)}</div>`;
   else if (query.length >= 2 && picked?.name !== query) {
     body = !hits.length && query.trim().length >= 3 ? html`<div class="info-card">
         <div class="ic-title"><${Icon} name="search" size="15" weight="3" style="color:#F6D482" /><b>Совпадений не найдено</b></div>
         <p>Выбери футболиста из списка.</p></div>`
       : !hits.length ? html`<p class="hint-line">Никого не нашли — проверь написание</p>`
       : html`<div class="hits">${hits.slice(0, 5).reverse().map((p) => html`<button class=${cx("hit", picked === p && "on")} onClick=${() => choose(p)}>
-          <${Face} p=${p} size=${40} /><span class="hit-name"><b>${p.name}</b><small>${p.born} г. р.</small></span><i>${picked === p ? "✓" : "↵"}</i></button>`)}</div>`;
+          <${Face} p=${p} size=${40} /><span class="hit-name"><b>${p.name}</b><small>${p.born ? `${p.born} г. р.` : "год неизвестен"}</small></span><i>${picked === p ? "✓" : "↵"}</i></button>`)}</div>`;
   } else body = html`<p class="hint-line">Начни вводить фамилию. Не знаешь — спроси скаута.</p>`;
 
   const showClue = clue && clue.open.length && !scoutOpen && !mm && (query.length < 2 || picked);
@@ -63,7 +88,7 @@ export function AnswerSheet({ m, cell, dismiss }) {
       <span class=${cx("field", picked && "picked")}>
         <input ref=${field} value=${query} onInput=${(e) => type(e.target.value)} placeholder=${picked?.name ?? "Фамилия игрока…"}
           autocapitalize="words" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="send" disabled=${!!mm} />
-        <button type="submit" class=${cx("send", picked && "on")} disabled=${!picked} aria-label=${picked ? `Ответить: ${picked.name}` : "Ответить"}><${Icon} name="up" size="17" weight="3" /></button>
+        <button type="submit" class=${cx("send", picked && "on", busy && "busy")} disabled=${!picked || busy} aria-label=${picked ? `Ответить: ${picked.name}` : "Ответить"}><${Icon} name="up" size="17" weight="3" /></button>
       </span>
       <button type="button" class=${cx("round-tool press", scoutOpen && "on")} disabled=${!!mm} aria-label=${`Скаут, жетонов: ${m.tokens}`}
         onPointerDown=${(e) => e.preventDefault()} onClick=${() => setScoutOpen(!scoutOpen)}>
@@ -95,7 +120,7 @@ function ScoutChoices({ m, cell, clue, bought }) {
   const choice = (h, detail) => {
     const opened = clue?.open.includes(h.id), afford = m.tokens >= h.cost;
     return html`<button class=${cx("scout-choice", opened && "open")} disabled=${opened || !afford}
-      onClick=${() => { if (!opened && m.buy(h, cell)) { bought(h.id); store.changed(); } }}>
+      onClick=${async () => { if (!opened && (await m.buy(h, cell))) { bought(h.id); store.changed(); } }}>
       <span><b>${h.title}</b><small>${opened ? "Открыто" : !afford ? `Нужно ещё ${h.cost - m.tokens} жет.` : detail}</small></span>
       ${opened ? html`<${Icon} name="check" size="16" weight="3" style="color:#32E5A1" />` : html`<span class="cost"><img src=${img("coin")} alt="" /><b>${h.cost}</b></span>`}
     </button>`;
@@ -114,11 +139,11 @@ function ScoutChoices({ m, cell, clue, bought }) {
 function ClueCard({ clue, picked, used, pick }) {
   return html`<div class="clue">
     <div class="clue-head"><img src=${img("scout")} alt="" /><small>ОТКРЫТО ДЛЯ ОБОИХ</small><b>${clue.open.map((h) => Hints[h].title).join(" · ")}</b></div>
-    ${clue.open.includes("profile") ? clueFacts(clue).map((f) => html`<div class="fact"><small>${f.label}</small><b>${[f.flag, f.text].filter(Boolean).join(" ")}</b></div>`) : null}
-    ${clue.open.includes("letters") ? html`<div class="mask">${clueMask(clue).map((w) => html`<b>${w}</b>`)}</div>
+    ${clue.open.includes("profile") ? (clue.facts ?? clueFacts(clue)).map((f) => html`<div class="fact"><small>${f.label}</small><b>${[f.flag, f.text].filter(Boolean).join(" ")}</b></div>`) : null}
+    ${clue.open.includes("letters") ? html`<div class="mask">${(clue.mask ? clue.mask.split(" ") : clueMask(clue)).map((w) => html`<b>${w}</b>`)}</div>
       <p class="hint-line small">Первые буквы открыты, точки заменяют остальные.</p>` : null}
     ${clue.open.includes("four") && clue.options ? html`<p class="hint-line small">Выбери имя. Ошибка передаст ход.</p>
-      <div class="four">${clue.options.map((p, j) => html`<button class=${cx("four-opt", picked === p && "on")} disabled=${used.has(p.id)} onClick=${() => pick(p)}>
+      <div class="four">${clue.options.map((p, j) => html`<button class=${cx("four-opt", picked?.id === p.id && "on")} disabled=${p.used || used.has(p.id)} onClick=${() => pick(p)}>
         <i>${j + 1}</i><b>${p.name}</b></button>`)}</div>` : null}
   </div>`;
 }
@@ -173,8 +198,8 @@ export function ChatSheet({ m, openStands, openViewer }) {
 export function ReviewDecision({ m, review }) {
   const r = review;
   if (!r) return null;
-  const row = rows[Math.floor(r.cell / 3)], col = columns[r.cell % 3];
-  const nm = byId[r.playerId].name;
+  const row = m.rows[Math.floor(r.cell / 3)], col = m.cols[r.cell % 3];
+  const nm = r.name ?? byId[r.playerId].name;
   const C = 2 * Math.PI * 21;
   return html`<div class="review">
     <div class="rv-top">
@@ -184,7 +209,7 @@ export function ReviewDecision({ m, review }) {
           stroke-dashoffset=${C * (1 - r.left / 20)} transform="rotate(-90 25 25)" /></svg><b>${r.left}</b></span>
     </div>
     <div class="rv-conds"><${ConditionIcon} icon=${col.icon} size=${24} /><b>${col.title}</b><i>×</i><${ConditionIcon} icon=${row.icon} size=${24} /><b>${row.title}</b></div>
-    <p>По базе: ${r.why.replace(nm + " ", "")}. Молчание — отказ.</p>
+    <p>${r.why ? `По базе: ${r.why.replace(nm + " ", "")}.` : "В базе это сочетание не подтверждено."} Молчание — отказ.</p>
     <div class="mm-actions">
       <button class="navy-btn" disabled=${m.review !== r} onClick=${() => { m.decideReview(false); store.changed(); }}>Не засчитывать</button>
       <button class="green-btn press" disabled=${m.review !== r} onClick=${() => { m.decideReview(true); store.changed(); }}>Зачесть</button>

@@ -9,10 +9,10 @@ export function ProfileSheet({ m, owner, viewer = null, close }) {
   const bot = !viewer && owner === 1 && m.opponent.isBot;
   const red = m.seat(owner) === 0;
   const me = viewer === m.myName;
-  const social = viewer ? !me : owner === 1 && !bot;
+  const social = !m.online && (viewer ? !me : owner === 1 && !bot);
   const rel = m.relationWith(viewer);
   const act = (f) => () => { f(); store.changed(); };
-  const t = rankTier(p.rating);
+  const t = rankTier(p.rating ?? 0);
   const h = !viewer && owner === 1 ? m.headToHead : null;
   const mine = m.mySeat === 0 ? "#FF5364" : "#32E5A1", theirs = m.mySeat === 0 ? "#32E5A1" : "#FF5364";
   return html`<div class="profile">
@@ -23,13 +23,13 @@ export function ProfileSheet({ m, owner, viewer = null, close }) {
         <span>${p.flag ? html`<i class="flag">${p.flag}</i>` : null}
           ${bot ? html`<small>Бот для тренировки</small>` : p.level ? html`<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>` : null}</span>
       </span>
-      <span class="pf-rating">
+      ${p.rating != null ? html`<span class="pf-rating">
         <b class="grad" style=${`${tierStyle(p.rating)};filter:drop-shadow(0 0 6px ${t.b}${Math.round(t.glow * 255).toString(16).padStart(2, "0")})`}>${p.rating}</b>
         ${p.rank ? html`<small><span class=${cx(placeStyle(p.rank) && "grad", p.rank <= 5 && "top")} style=${placeStyle(p.rank)}>${p.rank}</span> место в рейтинге</small>`
-          : html`<small>фиксированный рейтинг</small>`}
-      </span>
+          : html`<small>${bot ? "фиксированный рейтинг" : "рейтинг"}</small>`}
+      </span>` : m.online ? html`<span class="pf-rating"><small>${bot ? "бот" : owner === 0 ? "рейтинг после 5 игр" : "рейтинг на сайте"}</small></span>` : null}
     </div>
-    ${!bot ? html`<div class="pf-stats">
+    ${!bot && p.games != null ? html`<div class="pf-stats">
       <span><b>${p.games}</b><small>Игр</small></span><span><b>${p.winRate}%</b><small>Побед</small></span><span><b>${p.bestStreak}</b><small>Лучшая серия</small></span></div>` : null}
     ${h ? html`<div class="h2h">
       <div><small>Ваши встречи</small><span class="sp"></span><b>${h.w} : ${h.l}</b>${h.d ? html`<em>ничьих ${h.d}</em>` : null}</div>

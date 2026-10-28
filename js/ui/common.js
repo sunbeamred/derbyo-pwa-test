@@ -30,6 +30,7 @@ const paths = {
   home: "M4 11l8-7 8 7M6 10v10h12V10",
   plusSquare: "M12 8v8M8 12h8M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
   bubble: "M4 5h16v11H9l-5 4z",
+  profile: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1",
 };
 const solid = {
   eye: "M12 5C6.5 5 2.7 9.3 1.5 12c1.2 2.7 5 7 10.5 7s9.3-4.3 10.5-7C21.3 9.3 17.5 5 12 5zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0-2.2a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6z",
@@ -62,6 +63,7 @@ export const levelColor = (l) => (l < 10 ? "#A8B8CA" : l < 25 ? "#DDE6F0" : l < 
 
 /** Rating in its rank colour, then «(#place)», a top-five place in its own colour. */
 export function RatingTag({ flag, rating, rank, flagAfter = false, small = 9 }) {
+  if (rating == null) return html`<span class="rating-tag">${flag ? html`<span class="flag">${flag}</span>` : null}</span>`;
   const ps = rank ? placeStyle(rank) : null;
   return html`<span class="rating-tag">
     ${flag && !flagAfter ? html`<span class="flag">${flag}</span>` : null}
