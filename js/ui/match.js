@@ -15,6 +15,8 @@ export const raiseKeyboard = () => document.getElementById("kbd-proxy")?.focus()
 
 export function MatchScreen({ m, close, findNew, minimize }) {
   const [answerCell, setAnswerCell] = useState(null);
+  // On one phone the turn passes but stays «yours»: the answer sheet closes when the move is over.
+  const answerTurn = useRef(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOf, setProfileOf] = useState(null);
@@ -68,7 +70,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     prev.current = { landed: m.landed, miss: m.missSignal, turn: m.turn, away: m.oppAwayFor === null, alert: m.timerAlert, unread: m.unread, finish: m.finishSignal };
   });
   const closeAnswer = () => { m.cancelMismatch(); setAnswerCell(null); m.selected = null; store.changed(); };
-  const tapCell = (i) => { raiseKeyboard(); m.select(i); if (m.selected !== null) setAnswerCell(i); store.changed(); };
+  const tapCell = (i) => { raiseKeyboard(); m.select(i); if (m.selected !== null) { answerTurn.current = m.g?.turnVersion; setAnswerCell(i); } store.changed(); };
   // The review panel slides away once the decision is made (or the time runs out).
   // Only the player the dispute is addressed to decides it; the stands just watch.
   const [reviewShown, reviewShut, reviewGone] = useSheet(m.review?.owner === 1 && !m.watching);
@@ -133,7 +135,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     </div>
     ${finishing && !reduceMotion() ? html`<${FinishAtmosphere} winner=${m.roundWinner === null ? null : m.seat(m.roundWinner)} key=${finishing} />` : null}
     ${coins && !reduceMotion() ? html`<${CoinAtmosphere} key=${coins} done=${() => setCoins(0)} />` : null}
-    ${answerCell !== null ? html`<${Panel} onClose=${closeAnswer} shut=${m.turn !== 0 || m.roundOver} class="answer-panel">${(leave) => html`<${AnswerSheet} m=${m} cell=${answerCell} dismiss=${leave} />`}<//>` : null}
+    ${answerCell !== null ? html`<${Panel} onClose=${closeAnswer} shut=${m.turn !== 0 || m.roundOver || (m.hotseat && m.g?.turnVersion !== answerTurn.current)} class="answer-panel">${(leave) => html`<${AnswerSheet} m=${m} cell=${answerCell} dismiss=${leave} />`}<//>` : null}
     ${chatOpen ? html`<${Panel} onClose=${() => setChatOpen(false)} class="chat-panel">${(leave) => html`
       <${ChatSheet} m=${m} openStands=${() => { leave(); setStandsOpen(true); }} openViewer=${(v) => { leave(); setViewer(v); }} />`}<//>` : null}
     ${reviewShown ? html`<${Panel} closable=${false} shut=${reviewShut} onClose=${reviewGone}><${ReviewDecision} m=${m} review=${lastReview.current} /><//>` : null}
