@@ -254,7 +254,7 @@ export class OnlineMatch {
   get nextLevel() {
     if (Number.isFinite(this.state?.nextLevel)) return LEVELS[this.state.nextLevel - 1];
     const p = this.state?.settings?.roundPresets?.[this.round];
-    const lv = p ? { easy: 1, amateur: 2, medium: 3, hard: 4, encyclopedia: 5 }[p] : this.state?.settings?.progressive ? Math.min(4, (this.levelIndexNow ?? 1) + 2) : (this.levelIndexNow ?? 1) + 1;
+    const lv = p ? { easy: 1, amateur: 2, medium: 3, hard: 4, encyclopedia: 5 }[p] : this.state?.settings?.progressive ? Math.max((this.levelIndexNow ?? 1) + 1, Math.min(4, (this.levelIndexNow ?? 1) + 2)) : (this.levelIndexNow ?? 1) + 1;
     return LEVELS[(lv ?? 2) - 1];
   }
   /** «Снова ничья — сложнее?»: shown until you answer; the other side's offer is answered with the same buttons. */
@@ -262,7 +262,8 @@ export class OnlineMatch {
   levelOfRound(n) {
     const s = this.state?.settings ?? {}, byPreset = { easy: 1, amateur: 2, medium: 3, hard: 4, encyclopedia: 5 };
     if (s.roundPresets?.length) return byPreset[s.roundPresets[n - 1] ?? s.roundPresets.at(-1)] ?? s.level ?? 2;
-    return s.progressive ? Math.min(4, (s.level ?? 2) + n - 1) : s.level ?? 2;
+    // One up per round up to «Легенда»; a room that starts at «Энциклопедия» stays there (site, 29 Oct).
+    return s.progressive ? Math.max(s.level ?? 2, Math.min(4, (s.level ?? 2) + n - 1)) : s.level ?? 2;
   }
   /** Rising difficulty: the level before, the current one and the next; null when every round has the same level. */
   get levelChain() {
