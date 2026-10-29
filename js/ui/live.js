@@ -16,7 +16,7 @@ export function createBody(s) {
     level: s.level, seconds: s.seconds, tokens: s.tokens, progressive: s.progressive, theme: s.theme,
     winsRequired: s.format === "twoWins" ? 2 : undefined, tiebreak: s.format === "tiebreak", rounds: s.format === "rounds" ? s.rounds : 3,
   };
-  return { ...body, penaltiesOnDraw: false, lastChance: false,
+  return { ...body, penaltiesOnDraw: false, lastChance: false, spectators: s.spectators !== false, ...(s.chat === false ? { chat: false } : {}),
     accessType: s.closed ? "closed" : "open", ...(s.closed ? { password: s.password } : {}) };
 }
 /** The site's room settings in the settings screen's shape (for the summary and the rows). */
@@ -25,12 +25,12 @@ export function fromServer(x = {}, locked = false) {
   const preset = presets[0] ?? (PRESETS.some((p) => p.id === x.id) ? x.id : null);
   return newSettings({ preset, presets: preset ? (presets.length ? presets : [preset]) : [], level: x.level ?? 2, seconds: x.seconds ?? 60, tokens: x.tokens ?? 4, theme: x.theme ?? "mixed", progressive: !!x.progressive,
     format: x.winsRequired === 2 ? "twoWins" : x.tiebreak ? "tiebreak" : "rounds", rounds: x.rounds ?? 3,
-    penaltiesOnDraw: !!x.penaltiesOnDraw, penaltiesEachRound: x.penaltiesScope === "round", lastChance: !!x.lastChance, closed: locked, password: locked ? "••••" : "" });
+    penaltiesOnDraw: !!x.penaltiesOnDraw, penaltiesEachRound: x.penaltiesScope === "round", lastChance: !!x.lastChance, closed: locked, password: locked ? "••••" : "", spectators: x.spectators !== false, chat: x.chat !== false });
 }
 
 const STAGE = { lobby: "Ждёт игрока", playing: "В игре", paused: "Пауза", between: "Перерыв", complete: "Завершён" };
 
-const TINT = { 1: "#C9D5E3", 2: "#6FA8FF", 3: "#FFE45C", 4: "#E8B04A", 5: "#B194FF" };
+const TINT = { 1: "#C9D5E3", 2: "#6FA8FF", 3: "#FFE45C", 4: "#FF7A3D", 5: "#B194FF" };
 
 /** An open room as a match poster: both seats face each other; a free seat is the join button, a running match opens to watch. */
 function RoomTile({ r, enter }) {
@@ -50,9 +50,10 @@ function RoomTile({ r, enter }) {
       <small class=${cx("rt-state", r.stage === "playing" && "live", join && "wait")}><i></i>${STAGE[r.stage] ?? r.stage}</small>
       <span class="rt-flex"></span>
       ${r.locked ? html`<img class="rt-lock" src=${img("lock")} alt="С паролем" />` : null}
-      ${watch ? html`<span class="rt-watch" aria-label="Смотреть"><${Icon} name="eye" size="14" />${r.viewers || null}</span>` : null}
     </span>
-    <span class="rt-players">${seat(players[0], "l")}<i class="rt-vs">VS</i>${seat(players[1], "r")}</span>
+    <span class="rt-players">${seat(players[0], "l")}${watch
+      ? html`<span class="rt-watch" aria-label=${r.viewers ? `Смотреть, зрителей: ${r.viewers}` : "Смотреть"}><${Icon} name="eye" size="18" />${r.viewers ? html`<b>${r.viewers}</b>` : null}</span>`
+      : html`<i class="rt-vs">VS</i>`}${seat(players[1], "r")}</span>
   </button>`;
 }
 
@@ -197,7 +198,7 @@ export function OnlineRoom({ nav, app }) {
   const copy = async () => { try { await navigator.clipboard.writeText(code.replace(" ", "")); } catch {} setCopied(true); setTimeout(() => setCopied(false), 1500); };
   const friend = m?.them;
   const meReady = !!m?.me?.ready;
-  const ex = [extras(settings), settings.closed ? "🔒 по паролю" : ""].filter(Boolean).join(" · ");
+  const ex = [extras(settings), settings.closed ? "🔒 по паролю" : "", settings.spectators === false ? "без зрителей" : "", settings.chat === false ? "без чата" : ""].filter(Boolean).join(" · ");
   const p = presetOf(settings);
   return html`<div class="screen-with-bar"><div class="screen-scroll"><div class="page">
     <${LobbyHeader} title="Комната" back=${nav.back} />

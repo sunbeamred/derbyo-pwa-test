@@ -368,6 +368,8 @@ export class OnlineMatch {
   cameBack() {}
   addBot() { return this.act("add_bot", { seat: 1 - this.mySeat }); }
   settings(s) { return this.act("settings", { settings: s }); }
+  /** The host switched the room's chat off (sandbox): no chat button in the match. */
+  get chatOff() { return this.state?.settings?.chat === false; }
 
   /** Closes the screen's link; `leave` also leaves the room on the server (a live round is lost). */
   stop(leave = true) {

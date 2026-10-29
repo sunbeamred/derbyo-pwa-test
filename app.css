@@ -262,7 +262,11 @@ input { font-family: inherit; }
 .rt-state.live { color: #FF7A88; }
 .rt-state.live i { box-shadow: 0 0 6px var(--red); animation: rt-pulse 1.6s ease-in-out infinite; }
 .rt-state.wait { color: var(--mint); }
-.rt-watch { flex: none; display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; color: var(--soft); }
+/* The watch button between the players: a lit blue bubble with an eye, so it reads as something to tap. */
+.rt-watch { flex: none; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 44px; height: 36px; padding: 0 10px; border-radius: 18px;
+  color: #fff; background: linear-gradient(#5AA8FF, #2F6FE0); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 4px 14px rgba(60, 130, 255, .35); }
+.rt-watch b { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.room-tile:active .rt-watch { transform: scale(.94); }
 @keyframes rt-pulse { 50% { opacity: .35; } }
 .rt-players { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; }
 .rt-seat { min-width: 0; display: flex; align-items: center; gap: 8px; }
@@ -931,3 +935,12 @@ button.toggle-card { width: 100%; color: inherit; text-align: left; }
 .edit-profile .picker-row .picker { position: static; }
 .lvl { white-space: nowrap; flex: none; }
 .pf-name > span { flex-wrap: wrap; }
+/* The hidden flag: our globe picture, sized like an emoji flag. */
+img.globe { width: 1.5em; height: 1.5em; margin: -.25em -.1em; vertical-align: middle; object-fit: contain; }
+/* A bot (or any picture that is not a photo) sits inside a small avatar instead of filling it. */
+.pf-avatar.mini img:not(.photo) { width: 74%; height: 74%; object-fit: contain; }
+/* The room block in the settings: access, stands and chat as one grouped card. */
+.room-opts { border-radius: 18px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.ro-row { display: flex; align-items: center; gap: 12px; }
+.ro-seg button { height: 34px; }
+.ro-sep { height: 1px; background: rgba(255, 255, 255, .07); margin: 2px 0 2px 48px; }

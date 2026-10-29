@@ -1,6 +1,6 @@
 // The «Рейтинг» and «Профиль» tabs on the site's data: the leaderboard; your account (guest, login, register),
 // its photo and country (sandbox), friends, password and the phone's settings.
-import { html, useState, useEffect, useRef, cx, img, Icon, rankTier, tierStyle, placeStyle, levelColor, Prefs, vibrate } from "./common.js";
+import { html, useState, useEffect, useRef, cx, img, Icon, rankTier, tierStyle, placeStyle, levelColor, Prefs, vibrate, flagView } from "./common.js";
 import { account, leaderboard, playerProfile, social } from "../net.js";
 import { Sound } from "../sound.js";
 import { flagOf, flagOrGlobe } from "../online.js";
@@ -30,7 +30,7 @@ export function RatingTab({ visible }) {
       : !list.length ? html`<p class="placeholder">${period === "week" ? "На этой неделе ещё никто не набрал очков." : "Пока пусто."}</p>`
       : html`<div class="board-list glass">${list.map((e) => html`<button class=${cx("lb-row press", e.self && "self")} onClick=${() => setOpen(e.id)}>
           <b class=${cx("lb-place num", placeStyle(e.rank) && "grad")} style=${placeStyle(e.rank)}>#${e.rank}</b>
-          <${Face} name=${e.nickname} photo=${e.avatar} small=${true} /><span class="lb-name"><b>${flagOrGlobe(e.country) ? html`<i class="flag">${flagOrGlobe(e.country)}</i> ` : null}${e.nickname}</b><small>${e.games} игр · ${e.winRate}% побед</small></span>
+          <${Face} name=${e.nickname} photo=${e.avatar} small=${true} /><span class="lb-name"><b>${flagOrGlobe(e.country) ? html`<i class="flag">${flagView(flagOrGlobe(e.country))}</i> ` : null}${e.nickname}</b><small>${e.games} игр · ${e.winRate}% побед</small></span>
           <b class="lb-pts grad num" style=${tierStyle(e.rating ?? 0)}>${period === "week" ? (e.points > 0 ? "+" : "") + e.points : e.rating}</b>
         </button>`)}</div>
         <p class="hint-line small center">${data.total} игроков в рейтинге · рейтинг после 5 игр с двумя разными соперниками</p>`}
@@ -65,7 +65,7 @@ function PlayerCard({ id, onChange }) {
   return html`<div class="profile">
     <div class="pf-head">
       <${Face} name=${p.nickname} photo=${p.avatar} />
-      <span class="pf-name"><b>${p.nickname}</b><span>${flagOrGlobe(p.country) ? html`<i class="flag">${flagOrGlobe(p.country)}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>
+      <span class="pf-name"><b>${p.nickname}</b><span>${flagOrGlobe(p.country) ? html`<i class="flag">${flagView(flagOrGlobe(p.country))}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>
         ${p.presence ? html`<small>${PRESENCE[p.presence]}</small>` : null}</span></span>
       <span class="pf-rating">${p.rating != null ? html`<b class="grad" style=${`${tierStyle(p.rating)};filter:drop-shadow(0 0 6px ${t.b}80)`}>${p.rating}</b><small>${p.rank ? html`<${Place} n=${p.rank} />` : t.name}</small>`
         : html`<small>калибровка</small>`}</span>
@@ -100,7 +100,7 @@ function Friends({ open }) {
   const answer = async (id, action) => { try { await social.friend(id, action); vibrate(10); load(); } catch (x) { setErr(x.message); } };
   const row = (p, side) => html`<div class="fr-row">
     <button class="fr-who press" onClick=${() => open(p.id, load)}><${Face} name=${p.nickname} photo=${p.avatar} small=${true} />
-      <span class="lb-name"><b>${flagOrGlobe(p.country) ? html`<i class="flag">${flagOrGlobe(p.country)}</i> ` : null}${p.nickname}</b>
+      <span class="lb-name"><b>${flagOrGlobe(p.country) ? html`<i class="flag">${flagView(flagOrGlobe(p.country))}</i> ` : null}${p.nickname}</b>
         <small class=${cx(p.presence && "pres-" + p.presence)}>${p.presence ? PRESENCE[p.presence] : p.rating != null ? `рейтинг ${p.rating}` : `ур. ${p.level}`}</small></span></button>
     ${side}</div>`;
   if (!st) return html`<p class="hint-line pad">${err ?? "Загружаем друзей…"}</p>`;
@@ -186,7 +186,7 @@ function Settings() {
     <input type="checkbox" class="switch" checked=${on} onClick=${(e) => { set(e.target.checked); redraw((n) => n + 1); }} /></label>`;
   return html`<div class="settings-list">
     ${row(html`<img src=${img("sound")} alt="" />`, "Звук", "Ходы, таймер, победа", Sound.enabled, (v) => { Sound.enabled = v; if (v) Sound.play("turn"); })}
-    ${row(html`<${Icon} name="vibrate" size="19" weight="2" />`, "Вибрация", "Отклик на нажатия и ходы", Prefs.vibration, (v) => { Prefs.vibration = v; vibrate(15); })}
+    ${row(html`<img src=${img("vibrate")} alt="" />`, "Вибрация", "Отклик на нажатия и ходы", Prefs.vibration, (v) => { Prefs.vibration = v; vibrate(15); })}
   </div>`;
 }
 
@@ -241,7 +241,7 @@ export function ProfileTab({ children }) {
         ${editable ? html`<button class="face-btn press" disabled=${busy} aria-label=${p.avatar ? "Сменить фото" : "Добавить фото"} onClick=${() => file.current.click()}><${Face} name=${account.name} photo=${p.avatar} /><span class="face-edit"><${Icon} name="camera" size="15" /></span></button>
           <input ref=${file} type="file" accept="image/*" hidden onChange=${pickPhoto} />`
           : html`<${Face} name=${account.name} photo=${p.avatar} />`}
-        <span class="pf-name"><b>${account.name}</b><span>${p.showFlag === false ? html`<i class="flag">🌐</i>` : flagOrGlobe(p.country) ? html`<i class="flag">${flagOrGlobe(p.country)}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>${p.registered ? null : html`<small>гость</small>`}</span></span>
+        <span class="pf-name"><b>${account.name}</b><span>${p.showFlag === false ? html`<i class="flag">${flagView("🌐")}</i>` : flagOrGlobe(p.country) ? html`<i class="flag">${flagView(flagOrGlobe(p.country))}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>${p.registered ? null : html`<small>гость</small>`}</span></span>
         <span class="pf-rating">${p.rating != null ? html`<b class="grad" style=${`${tierStyle(p.rating)};filter:drop-shadow(0 0 6px ${t.b}80)`}>${p.rating}</b>
           <small>${p.rank ? html`<${Place} n=${p.rank} />` : t.name}</small>`
           : html`<small>${p.registered ? "рейтинг после 5 игр" : "рейтинг — после входа"}</small>`}</span>
@@ -249,7 +249,7 @@ export function ProfileTab({ children }) {
       <div class="pf-stats"><span><b>${p.games}</b><small>Игр</small></span><span><b>${p.games ? Math.round((p.wins / p.games) * 100) : 0}%</b><small>Побед</small></span><span><b>${p.bestStreak}</b><small>Лучшая серия</small></span></div>
       ${p.registered ? html`<div class="pf-stats small"><span><b>${p.wins}</b><small>Выиграно</small></span><span><b>${p.draws ?? 0}</b><small>Вничью</small></span><span><b>${p.losses ?? 0}</b><small>Проиграно</small></span></div>` : null}
       ${editable && "showFlag" in p ? html`<label class="flag-row">
-        <i class="flag">${p.showFlag ? flagOf(p.country ?? homeCountry()) ?? "🌐" : "🌐"}</i>
+        <i class="flag">${flagView(p.showFlag ? flagOf(p.country ?? homeCountry()) ?? "🌐" : "🌐")}</i>
         <span><b>Мой флаг</b><small>${p.showFlag ? "Другие игроки видят флаг твоей страны" : "Другие видят планету вместо флага"}</small></span>
         <input type="checkbox" class="switch" checked=${p.showFlag} onClick=${(e) => saveFlag(e.target.checked)} /></label>` : null}
     </div>
@@ -273,7 +273,7 @@ export function ProfileTab({ children }) {
     <h4 class="section">НАСТРОЙКИ</h4>
     <${Settings} />
     ${p.registered ? html`<div class="settings-list">
-      <button class="toggle-card press" onClick=${() => openSheet({ kind: "password" })}><span class="tc-ic"><img src=${img("lock")} alt="" /></span>
+      <button class="toggle-card press" onClick=${() => openSheet({ kind: "password" })}><span class="tc-ic"><img src=${img("key")} alt="" /></span>
         <span class="tc-t"><b>Сменить пароль</b><small>Нужен текущий пароль</small></span><${Icon} name="right" size="14" style="opacity:.4" /></button>
       ${editable && p.avatar ? html`<button class="text-btn muted" disabled=${busy} onClick=${dropPhoto}>Убрать фото профиля</button>` : null}
       <button class="navy-btn" disabled=${busy} onClick=${logout}>Выйти из аккаунта</button></div>` : null}

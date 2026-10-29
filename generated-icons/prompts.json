@@ -1,16 +1,16 @@
 {
   "generator": "built-in image_gen",
-  "date": "2026-10-29",
+  "date": "2026-10-30",
   "size": "192x192",
   "background": "transparent",
   "items": [
     {
       "name": "vibrate.png",
-      "prompt": "Use case: stylized-concept. Create ONE production icon for DERBYO mobile game. The supplied sound.png is the strict style reference. Match its shallow, almost-flat 2.5D relief, matte muted slate-blue surface, broad simple shapes, small softly rounded bevel and very gentle upper-left light. Frontal orthographic view. Restrained soft shading, no thick sides, no deep extrusion, no dramatic perspective, no shiny chrome, no reflective silver, no hot white highlights, no ornamental detail. This is a quiet functional icon matching the speaker reference at small size. Centered square composition; full subject occupies ~80% of canvas. True transparent background, no tile, no ground, no external shadow, no text, no logo or watermark. Subject: a smartphone with two curved vibration arcs on each side. ",
+      "prompt": "Generate a new refined version of the provided DERBYO vibration icon. Change the smartphone to a CURRENT MODERN BEZEL-LESS SMARTPHONE. Absolutely no home button, no circular button, no bottom chin, no thick top forehead, no front speaker slot. The large blank screen extends nearly edge-to-edge on all four sides, with equal very thin rounded bezels and rounded corners; a tiny discreet camera dot at the top is optional. Keep the same phone outer silhouette, centered straight-on view, muted matte slate-blue material, shallow almost-flat relief and soft upper-left light. Keep the existing vibration layout exactly: on each side a LONG straight vertical rounded bar immediately beside the phone and a SHORT straight vertical rounded bar further out. Tight spacing, compact width, left-right symmetry. Preserve positions, relative dimensions, colors and material of all four bars. No UI content on screen, no text, no logo, no background tile, no ground or external shadow. True transparent square PNG background. Full subject contained within canvas with padding. Main required change: edge-to-edge modern display, NO HOME BUTTON.",
       "references": [
-        "../img/sound.png"
+        "v5-originals/vibrate.png"
       ],
-      "original": "v3-originals/vibrate.png"
+      "original": "v6-originals/vibrate.png"
     },
     {
       "name": "camera.png",
@@ -124,5 +124,5 @@
       "original": "v3-originals/hand.png"
     }
   ],
-  "revision": 3
+  "revision": 6
 }

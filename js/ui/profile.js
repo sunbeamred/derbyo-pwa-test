@@ -1,6 +1,6 @@
 // A player's profile (port of ProfileSheet.swift): who they are, how strong, your record against them, and
 // — for a human — friendship, report and block.
-import { html, useState, cx, img, Icon, Alert, rankTier, tierStyle, placeStyle, levelColor } from "./common.js";
+import { html, useState, cx, img, Icon, Alert, rankTier, tierStyle, placeStyle, levelColor, flagView } from "./common.js";
 import { store } from "../model.js";
 
 export function ProfileSheet({ m, owner, viewer = null, close }) {
@@ -20,7 +20,7 @@ export function ProfileSheet({ m, owner, viewer = null, close }) {
       <span class=${cx("pf-avatar", viewer ? "neutral" : red ? "red" : "green")}>${bot ? html`<img src=${img("bot")} alt="" />` : p.photo ? html`<img class="photo" src=${p.photo} alt="" />` : p.name.slice(0, 2).toUpperCase()}</span>
       <span class="pf-name">
         <b>${p.name}</b>
-        <span>${p.flag ? html`<i class="flag">${p.flag}</i>` : null}
+        <span>${p.flag ? html`<i class="flag">${flagView(p.flag)}</i>` : null}
           ${bot ? html`<small>Бот для тренировки</small>` : p.level ? html`<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>` : null}</span>
       </span>
       ${p.rating != null ? html`<span class="pf-rating">

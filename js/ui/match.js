@@ -178,9 +178,9 @@ function Scoreboard({ m, openProfile, openStands }) {
 
 /** Under the score: the ratings at the edges and the level in the middle. When the difficulty rises from round to
  * round it reads «Новичок • Любитель • Знаток»: the current level always under the score, the one before and the next
- * beside it, fading out towards the ratings. A level that never changes reads «ур. Любитель». */
+ * beside it, fading out towards the ratings. A level that never changes shows just its name. */
 // The site's difficulty colours (foundation.css, .difficulty-*), the same as on the difficulty cards.
-const LEVEL_COLORS = { "Новичок": "#80e6b6", "Любитель": "#89c9f5", "Знаток": "#e4ee54", "Легенда": "#ff8594", "Энциклопедия": "#bc8cff" };
+const LEVEL_COLORS = { "Новичок": "#80e6b6", "Любитель": "#89c9f5", "Знаток": "#e4ee54", "Легенда": "#FF7A3D", "Энциклопедия": "#bc8cff" };
 const lvColor = (name) => LEVEL_COLORS[name] ? `--lc:${LEVEL_COLORS[name]}` : null;
 
 function LevelRow({ m, live }) {
@@ -189,7 +189,7 @@ function LevelRow({ m, live }) {
   return html`<div class="level-row">
     <span class="lr-side"><span class=${cx("fade", live(0) && "on")}><${SideTag} m=${m} owner=${0} /></span>
       ${chain ? html`<span class="lv-side lv-prev">${chain.prev ? html`<span>${chain.prev}<i>•</i></span>` : null}</span>` : null}</span>
-    <span class="level-path">${chain ? null : html`ур. `}<span class="cur" style=${lvColor(cur)}>${cur}</span></span>
+    <span class="level-path"><span class="cur" style=${lvColor(cur)}>${cur}</span></span>
     <span class="lr-side end">${chain ? html`<span class="lv-side lv-next">${chain.next ? html`<span><i>•</i>${chain.next}</span>` : null}</span>` : null}
       <span class=${cx("fade", live(1) && "on")}><${SideTag} m=${m} owner=${1} /></span></span>
   </div>`;
@@ -394,9 +394,9 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
         : html`<span class="tray-label"><b style=${`color:${color}`}>${title}</b>${sub}</span>`}`}
     </div>
     <div class="tray tools-tray glass">
-      <button class="tool press" onClick=${openChat} aria-label=${m.unread ? `Чат, новых сообщений: ${m.unread}` : "Чат"}>
+      ${m.chatOff ? null : html`<button class="tool press" onClick=${openChat} aria-label=${m.unread ? `Чат, новых сообщений: ${m.unread}` : "Чат"}>
         <img src=${img("chat")} alt="" />${m.unread ? html`<b class="badge">${m.unread}</b>` : null}</button>
-      <i class="tool-sep"></i>
+      <i class="tool-sep"></i>`}
       <button class="tool press" onClick=${openMenu} aria-label="Меню матча"><img src=${img("menu")} alt="" /></button>
     </div>
   </div>`;

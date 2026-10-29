@@ -3,7 +3,9 @@ import { html, useState, useEffect, useRef, cx, img, Icon, PickMark, BottomBar, 
 import { Match, Opponent, MAX_VIEWERS, store } from "../model.js";
 import { has, rand } from "../data.js";
 import { Sound } from "../sound.js";
-import { ONLINE, siteStats } from "../net.js";
+import { ONLINE, siteStats, account } from "../net.js";
+/** Only the sandbox server takes a room's chat switch (it is the server that also has flag settings). */
+const chatSetting = () => !!account.profile && "showFlag" in account.profile;
 import { ProfileSheet } from "./profile.js";
 import { ViewerList } from "./sheets.js";
 
@@ -24,7 +26,7 @@ export const THEMES = [["mixed", "Разные условия"], ["clubs", "Кл
   ["club-history", "Клуб × трофеи, тренеры, одноклубники"], ["national-trophy", "Сборная × трофеи"]];
 
 export const newSettings = (o = {}) => ({ preset: "amateur", presets: ["amateur"], level: 2, seconds: 60, tokens: 6, format: "twoWins", rounds: 3, theme: "mixed",
-  progressive: false, penaltiesOnDraw: false, penaltiesEachRound: false, lastChance: false, closed: false, password: "", ...o });
+  progressive: false, penaltiesOnDraw: false, penaltiesEachRound: false, lastChance: false, closed: false, password: "", spectators: true, chat: true, ...o });
 export const presetOf = (s) => PRESETS.find((p) => p.id === s.preset);
 /** The ready levels a room plays, easy to hard; two or more go round by round, as in the quick game. */
 export const presetsOf = (s) => (s.presets?.length ? PRESETS.filter((p) => s.presets.includes(p.id)) : presetOf(s) ? [presetOf(s)] : []);
@@ -47,6 +49,8 @@ export function settingRows(s) {
     ["Условия поля", p ? "Разные условия" : THEMES.find((t) => t[0] === s.theme)?.[1] ?? s.theme],
   ];
   out.push(["Доступ", s.closed ? "🔒 по паролю" : "открытая"]);
+  out.push(["Трибуны", s.spectators === false ? "закрыты" : "открыты"]);
+  if (s.chat === false) out.push(["Чат", "выключен"]);
   return out;
 }
 export function extras(s) {
@@ -430,11 +434,28 @@ export function MatchSettingsView({ nav, settings: initial, set = () => {}, kind
         if (ids.length) upd({ presets: ids, preset: ids[0] });
       }} />
       <p class="hint-line small pad">${presetsOf(s).length > 1 ? "Раунды идут от простого к сложному" : "Отметь несколько — раунды пойдут от простого к сложному"} · 60 секунд на ход · до двух побед</p>`}
-    ${start ? null : html`<${Section} t="ДОСТУП В КОМНАТУ" />
-    ${seg("closed", "Открытая", "🔒 Закрытая")}
-    ${s.closed ? html`<label class=${cx("pw-field", !passwordOK(s) && "bad")}><${Icon} name="lock" size="16" style="color:#F6D482" />
-      <input type="password" placeholder="Пароль · минимум 4 символа" value=${s.password} autocomplete="new-password" onInput=${(e) => upd({ password: e.target.value })} /></label>` : null}
-    <p class="hint-line small pad">${s.closed ? "Видна в списке комнат с замком. Войти можно только с паролем — и игроку, и зрителю." : "Видна в списке комнат. Любой может присоединиться или смотреть."}</p>`}
+    ${start ? null : html`<${Section} t="КОМНАТА" />
+    <div class="room-opts glass">
+      <div class="ro-row">
+        <span class="tc-ic"><img src=${img(s.closed ? "lock" : "people")} alt="" /></span>
+        <span class="tc-t"><b>Вход</b><small>${s.closed ? "Только по паролю — и игроку, и зрителю" : "Любой из списка комнат"}</small></span>
+      </div>
+      <div class="segmented ro-seg">
+        <button class=${!s.closed ? "on" : ""} onClick=${() => upd({ closed: false })}>Открытая</button>
+        <button class=${s.closed ? "on" : ""} onClick=${() => upd({ closed: true })}>С паролем</button></div>
+      ${s.closed ? html`<label class=${cx("pw-field", !passwordOK(s) && "bad")}><${Icon} name="lock" size="16" style="color:#F6D482" />
+        <input type="password" placeholder="Пароль · минимум 4 символа" value=${s.password} autocomplete="new-password" onInput=${(e) => upd({ password: e.target.value })} /></label>` : null}
+      <i class="ro-sep"></i>
+      <label class="ro-row">
+        <span class="tc-ic"><img src=${img("eye")} alt="" /></span>
+        <span class="tc-t"><b>Трибуны</b><small>${s.spectators !== false ? "Зрители могут смотреть матч" : "Смотреть матч никто не сможет"}</small></span>
+        <input type="checkbox" class="switch" checked=${s.spectators !== false} onClick=${(e) => upd({ spectators: e.target.checked })} /></label>
+      ${chatSetting() ? html`<i class="ro-sep"></i>
+      <label class="ro-row">
+        <span class="tc-ic"><img src=${img("chat")} alt="" /></span>
+        <span class="tc-t"><b>Чат</b><small>${s.chat !== false ? "Игроки и зрители переписываются" : "Сообщения в матче выключены"}</small></span>
+        <input type="checkbox" class="switch" checked=${s.chat !== false} onClick=${(e) => upd({ chat: e.target.checked })} /></label>` : null}
+    </div>`}
   </div></div>
   ${start ? html`<${BottomBar}><button class="primary-btn" disabled=${busy} onClick=${async () => { setBusy(true); try { await start(latest.current); } finally { setBusy(false); } }}>
     ${busy ? html`<span class="spinner"></span>` : html`<img src=${img(kind === "bot" ? "bot" : "bolt")} alt="" />Играть`}</button><//>` : null}

@@ -5,6 +5,8 @@ export { html, useState, useEffect, useRef };
 
 export const cx = (...a) => a.filter(Boolean).join(" ");
 export const img = (n) => `img/${n}.png`;
+/** A flag emoji as text; the hidden flag («🌐») as our globe picture. */
+export const flagView = (f) => (f === "🌐" ? html`<img class="globe" src=${img("globe-flag")} alt="флаг скрыт" />` : f);
 
 /** Stand-ins for the SF Symbols the app uses: 24-unit line icons. */
 const paths = {
@@ -64,13 +66,13 @@ export const levelColor = (l) => (l < 10 ? "#A8B8CA" : l < 25 ? "#DDE6F0" : l < 
 
 /** Rating in its rank colour, then «(#place)», a top-five place in its own colour. */
 export function RatingTag({ flag, rating, rank, flagAfter = false, small = 9 }) {
-  if (rating == null) return html`<span class="rating-tag">${flag ? html`<span class="flag">${flag}</span>` : null}</span>`;
+  if (rating == null) return html`<span class="rating-tag">${flag ? html`<span class="flag">${flagView(flag)}</span>` : null}</span>`;
   const ps = rank ? placeStyle(rank) : null;
   return html`<span class="rating-tag">
-    ${flag && !flagAfter ? html`<span class="flag">${flag}</span>` : null}
+    ${flag && !flagAfter ? html`<span class="flag">${flagView(flag)}</span>` : null}
     <b class="grad num" style=${tierStyle(rating)}>${rating}</b>
     ${rank ? html`<span class="place" style=${`font-size:${small}px`}>(#<span class=${cx(ps && "grad", rank <= 5 && "top")} style=${ps}>${rank}</span>)</span>` : null}
-    ${flag && flagAfter ? html`<span class="flag">${flag}</span>` : null}
+    ${flag && flagAfter ? html`<span class="flag">${flagView(flag)}</span>` : null}
   </span>`;
 }
 
