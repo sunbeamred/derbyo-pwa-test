@@ -31,6 +31,9 @@ function proxy(req, res) {
   const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket.remoteAddress;
   headers["x-forwarded-for"] = ip;
   delete headers["x-forwarded-host"]; delete headers["x-forwarded-proto"];
+  // The sandbox server takes the phone's address (for its country) only with this key; a client can never send its own.
+  delete headers["x-derbyo-proxy-key"]; delete headers["x-derbyo-client-ip"];
+  if (process.env.PROXY_KEY) { headers["x-derbyo-proxy-key"] = process.env.PROXY_KEY; headers["x-derbyo-client-ip"] = String(req.headers["x-real-ip"] || ip); }
   // A plain-http upstream is a local copy of the server, for testing.
   const up = (UPSTREAM.protocol === "http:" ? http : https).request({ host: UPSTREAM.hostname, port: UPSTREAM.port || (UPSTREAM.protocol === "http:" ? 80 : 443), path: req.url, method: req.method, headers }, (r) => {
     const out = { ...r.headers };
