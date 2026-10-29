@@ -28,7 +28,7 @@ export function fromServer(x = {}, locked = false) {
     penaltiesOnDraw: !!x.penaltiesOnDraw, penaltiesEachRound: x.penaltiesScope === "round", lastChance: !!x.lastChance, closed: locked, password: locked ? "••••" : "" });
 }
 
-const STAGE = { lobby: "Ждёт игрока", playing: "В игре", paused: "Пауза", between: "Между раундами", complete: "Матч окончен" };
+const STAGE = { lobby: "Ждёт игрока", playing: "В игре", paused: "Пауза", between: "Перерыв", complete: "Завершён" };
 
 const TINT = { 1: "#C9D5E3", 2: "#6FA8FF", 3: "#FFE45C", 4: "#E8B04A", 5: "#B194FF" };
 
@@ -36,23 +36,21 @@ const TINT = { 1: "#C9D5E3", 2: "#6FA8FF", 3: "#FFE45C", 4: "#E8B04A", 5: "#B194
 function RoomTile({ r, enter }) {
   const lv = PRESETS.find((p) => p.level === (r.level ?? 2)) ?? PRESETS[1];
   const pens = r.mode === "penalties";
-  const playing = r.stage === "playing" || r.stage === "paused";
   const join = r.openSeats > 0 && r.stage === "lobby";
   const watch = !join && r.canWatch;
   const players = r.players?.length ? r.players : [{ name: r.host ?? "Игрок" }, null];
   const seat = (p, side) => (p ? html`<span class=${cx("rt-seat", side)}>${p.bot ? html`<span class="pf-avatar neutral mini"><img src=${img("bot")} alt="" /></span>` : html`<${Face} name=${p.name} photo=${p.avatar} small=${true} />`}<b>${p.name}</b></span>`
     : html`<span class=${cx("rt-seat free", side, join && "open")}><span class="rt-plus">+</span><b>${join ? "Сесть" : "свободно"}</b></span>`);
-  const meta = r.round ? `раунд ${r.round}` : "";
   return html`<button class=${cx("room-tile press", join && "joinable")} style=${`--tint:${pens ? "#FF5364" : TINT[lv.level]}`} disabled=${!join && !watch}
     onClick=${() => (join || watch) && enter(r, !join)}>
     <span class="rt-top">
       <img class="rt-level" src=${img(pens ? "whistle" : lv.icon)} alt="" />
       <b class="rt-name">${pens ? "Пенальти" : lv.name}</b>
-      ${meta ? html`<small class="rt-meta">${meta}</small>` : null}
+      ${r.round ? html`<small class="rt-meta">раунд ${r.round}</small>` : null}
+      <small class=${cx("rt-state", r.stage === "playing" && "live", join && "wait")}><i></i>${STAGE[r.stage] ?? r.stage}</small>
       <span class="rt-flex"></span>
       ${r.locked ? html`<img class="rt-lock" src=${img("lock")} alt="С паролем" />` : null}
-      ${watch ? html`<span class=${cx("rt-watch", r.stage === "playing" && "live")} aria-label=${`${STAGE[r.stage] ?? ""}, смотреть`}><i></i><${Icon} name="eye" size="14" />${r.viewers || null}</span>`
-        : html`<span class=${cx("rt-state", playing && "live")}><i></i>${STAGE[r.stage] ?? r.stage}</span>`}
+      ${watch ? html`<span class="rt-watch" aria-label="Смотреть"><${Icon} name="eye" size="14" />${r.viewers || null}</span>` : null}
     </span>
     <span class="rt-players">${seat(players[0], "l")}<i class="rt-vs">VS</i>${seat(players[1], "r")}</span>
   </button>`;
