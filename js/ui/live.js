@@ -4,6 +4,7 @@ import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeade
 import { PRESETS, LEVELS, QuickChoice, Section, RoomPassword, SeatCard, Collapsible, summary, settingRows, extras, passwordOK, newSettings, presetOf, presetsOf } from "./lobby.js";
 import { ViewerList } from "./sheets.js";
 import { ProfileSheet } from "./profile.js";
+import { Face } from "./account.js";
 import { openRooms, quick, createRoom, account } from "../net.js";
 import { OnlineMatch } from "../online.js";
 
@@ -28,6 +29,29 @@ export function fromServer(x = {}, locked = false) {
 }
 
 const STAGE = { lobby: "Ждёт игрока", playing: "В игре", paused: "Пауза", between: "Между раундами", complete: "Матч окончен" };
+
+/** An open room as on the site's list, shorter: the level's icon, its state, then both seats with photos and names. */
+function RoomTile({ r, enter }) {
+  const lv = PRESETS.find((p) => p.level === (r.level ?? 2)) ?? PRESETS[1];
+  const playing = r.stage === "playing" || r.stage === "paused";
+  const seat = (p) => (p ? html`<span class="rt-seat">${p.bot ? html`<span class="pf-avatar neutral mini"><img src=${img("bot")} alt="" /></span>` : html`<${Face} name=${p.name} photo=${p.avatar} small=${true} />`}<b>${p.name}</b></span>`
+    : html`<span class="rt-seat vacant"><span class="pf-avatar mini empty">+</span><b>свободно</b></span>`);
+  const players = r.players?.length ? r.players : [{ name: r.host ?? "Игрок" }, null];
+  return html`<div class="room-tile glass">
+    <div class="rt-top">
+      <img class="rt-level" src=${img(r.mode === "penalties" ? "whistle" : lv.icon)} alt="" />
+      <span class="rt-t"><b>${r.mode === "penalties" ? "Пенальти" : lv.name}${r.progressive ? html` <img class="rt-up" src=${img("arrow")} alt="растёт" />` : null}</b>
+        <small><i class=${cx("rt-dot", playing && "on")}></i>${STAGE[r.stage] ?? r.stage}${r.round ? ` · раунд ${r.round}` : ""}${r.seconds ? ` · ${r.seconds} с` : ""}</small></span>
+      ${r.locked ? html`<span class="rt-lock"><img src=${img("lock")} alt="С паролем" /></span>` : null}
+      ${r.viewers ? html`<span class="rt-view"><${Icon} name="eye" size="12" />${r.viewers}</span>` : null}
+    </div>
+    <div class="rt-bottom">
+      <span class="rt-players">${seat(players[0])}<i class="rt-vs">×</i>${seat(players[1])}</span>
+      ${r.openSeats > 0 && r.stage === "lobby" ? html`<button class="join-btn press" onClick=${() => enter(r, false)}>Войти</button>`
+        : r.canWatch ? html`<button class="navy-btn small watch" onClick=${() => enter(r, true)}>Смотреть</button>` : null}
+    </div>
+  </div>`;
+}
 
 /** One game's screen with the site's open rooms (refreshed every 10 s). */
 export function OnlineLobby({ nav, app }) {
@@ -63,13 +87,7 @@ export function OnlineLobby({ nav, app }) {
     ${err ? html`<p class="hint-line small pad">${err}</p>`
       : !rooms ? html`<p class="hint-line small pad">Загружаем комнаты…</p>`
       : !rooms.length ? html`<p class="hint-line small pad">Сейчас открытых комнат нет. Создай свою — и позови друга по коду.</p>`
-      : html`<div class="rooms glass">${rooms.map((r) => html`<div class="room-row">
-      <span class="sq-av">${(r.host ?? "?").slice(0, 2).toUpperCase()}</span>
-      <span class="rr-t"><b>${r.host ?? "Комната"}${r.locked ? html` <${Icon} name="lock" size="11" style="color:#F6D482" />` : null}</b>
-        <small>${LEVELS[(r.level ?? 2) - 1]} · ${STAGE[r.stage] ?? r.stage}${r.round ? ` · раунд ${r.round}` : ""}${r.viewers ? ` · 👁 ${r.viewers}` : ""}</small></span>
-      ${r.openSeats > 0 && r.stage === "lobby" ? html`<button class="join-btn press" onClick=${() => enter(r, false)}>Войти</button>`
-        : r.canWatch ? html`<button class="navy-btn small watch" onClick=${() => enter(r, true)}>Смотреть</button>` : null}
-    </div>`)}</div>`}
+      : html`<div class="room-tiles">${rooms.map((r) => html`<${RoomTile} r=${r} enter=${enter} />`)}</div>`}
   </div>
   ${locked ? html`<${RoomPassword} room=${`Комната ${locked.r.host ?? ""}`} cancel=${() => setLocked(null)}
     check=${async (pw) => { const ok = await app.joinRoom(locked.r.code, { role: locked.watch ? "spectator" : "player", password: pw }); if (ok !== false) setLocked(null); return ok !== false; }} />` : null}

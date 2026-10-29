@@ -236,6 +236,26 @@ input { font-family: inherit; }
 .mode-t b { font-size: 16px; }
 .soon-mode { opacity: .5; }
 .rooms { border-radius: 16px; padding: 0 14px; }
+.room-tiles { display: flex; flex-direction: column; gap: 10px; }
+.room-tile { border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.rt-top { display: flex; align-items: center; gap: 10px; }
+.rt-level { flex: none; width: 40px; height: 40px; object-fit: contain; }
+.rt-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rt-t b { font-size: 15px; display: flex; align-items: center; gap: 4px; }
+.rt-t small { color: var(--soft); font-size: 12px; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rt-up { width: 16px; height: 16px; }
+.rt-dot { width: 7px; height: 7px; border-radius: 50%; background: #F6D482; flex: none; }
+.rt-dot.on { background: var(--mint); box-shadow: 0 0 6px var(--mint); }
+.rt-lock img { width: 20px; height: 20px; display: block; }
+.rt-view { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--soft); }
+.rt-bottom { display: flex; align-items: center; gap: 10px; }
+.rt-players { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.rt-seat { flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.rt-seat b { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rt-seat.vacant b { color: var(--soft); font-weight: 500; }
+.rt-seat .pf-avatar.mini { flex: none; }
+.pf-avatar.mini.empty { border: 1.5px dashed rgba(255, 255, 255, .25); background: none; color: var(--soft); font-size: 15px; }
+.rt-vs { flex: none; font-style: normal; color: var(--soft); font-size: 12px; }
 .room-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
 .room-row + .room-row { border-top: 1px solid #1F3247; }
 .sq-av { flex: none; width: 34px; height: 34px; border-radius: 10px; background: #1E3349; border: 1px solid var(--navy-line); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
@@ -355,6 +375,8 @@ input { font-family: inherit; }
 .switch:checked::after { transform: translateX(20px); }
 .toggle-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: var(--navy); border: 1px solid var(--navy-line); }
 .tc-ic { flex: none; width: 36px; height: 36px; border-radius: 10px; background: rgba(255, 255, 255, .05); display: grid; place-items: center; color: var(--gold); }
+.tc-ic img { width: 24px; height: 24px; object-fit: contain; }
+.tc-ic .flag.big { font-style: normal; font-size: 20px; line-height: 1; }
 .tc-t { flex: 1; }
 .tc-t b { display: block; font-size: 15px; font-weight: 600; }
 .tc-t small { display: block; font-size: 12px; color: var(--muted); }
@@ -409,20 +431,20 @@ input { font-family: inherit; }
 .pside.theirs { justify-content: flex-end; }
 .pinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 3px; }
 .pside.theirs .pinfo { align-items: flex-end; text-align: right; }
-.pname { height: 32px; display: flex; align-items: flex-end; font-size: 13px; font-weight: 600; line-height: 16px; overflow: hidden; overflow-wrap: anywhere; max-width: 100%; }
-.pstatus { display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 11px; font-weight: 500; max-width: 100%; min-width: 0; overflow: hidden; }
+.pname { height: 34px; display: flex; align-items: flex-end; font-size: 14px; font-weight: 700; line-height: 16px; overflow: hidden; overflow-wrap: anywhere; max-width: 100%; }
+.pstatus { display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 12.5px; font-weight: 700; max-width: 100%; min-width: 0; overflow: hidden; }
 .pstatus .st { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .pstatus .tokens { flex: none; }
 /* A narrow side keeps the green dot and drops the words «в игре», so the tokens never reach the score. */
 .pinfo { container-type: inline-size; }
 /* «в игре» never loses its words: a narrow side scales the row down (iOS minimumScaleFactor 0.7). */
-@container (max-width: 79px) { .pstatus { font-size: 10px; gap: 4px; } .pstatus .tokens { font-size: 10.5px; } .pstatus .tokens img { width: 12px; height: 12px; } }
-@container (max-width: 68px) { .pstatus { font-size: 8.5px; gap: 3px; } }
+@container (max-width: 79px) { .pstatus { font-size: 11px; gap: 4px; } .pstatus .tokens { font-size: 10.5px; } .pstatus .tokens img { width: 12px; height: 12px; } }
+@container (max-width: 68px) { .pstatus { font-size: 9.5px; gap: 3px; } }
 .st.in { color: var(--mint); }
 .st.left { color: #FF9AA8; }
 .st.idle { color: #FFB37A; }
 .st.missed, .st.away { color: var(--soft); }
-.tokens { display: inline-flex; align-items: center; gap: 3px; color: rgba(244, 247, 252, .85); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tokens { display: inline-flex; align-items: center; gap: 3px; color: rgba(244, 247, 252, .9); font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .tokens img { width: 14px; height: 14px; }
 .pavatar { position: relative; flex: none; padding: 3px; border-radius: 13px; box-shadow: inset 0 0 0 1.5px transparent; transition: box-shadow .2s; }
 .pavatar .face { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
@@ -810,7 +832,7 @@ input { font-family: inherit; }
 .lb-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 0; }
 .lb-row + .lb-row { border-top: 1px solid #1F3247; }
 .lb-row.self { background: rgba(246, 212, 130, .08); margin: 0 -12px; padding: 10px 12px; width: calc(100% + 24px); }
-.lb-place { flex: none; width: 30px; text-align: center; font-size: 16px; font-weight: 800; color: var(--muted); }
+.lb-place { flex: none; min-width: 34px; text-align: center; font-size: 15px; font-weight: 800; color: var(--muted); }
 .lb-name { flex: 1; min-width: 0; }
 .lb-name b { display: block; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lb-name small { display: block; font-size: 12px; color: var(--muted); }
@@ -849,7 +871,7 @@ input { font-family: inherit; }
 .pf-avatar img.photo, .pavatar .face img.photo { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .pf-avatar.mini { width: 34px; height: 34px; border-radius: 11px; font-size: 12px; }
 .face-btn { position: relative; flex: none; padding: 0; background: none; border: 0; color: inherit; }
-.face-edit { position: absolute; right: -4px; bottom: -4px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-style: normal; background: var(--gold); color: #10213A; box-shadow: 0 0 0 2px #0E1B2B; }
+.face-edit { position: absolute; right: -6px; bottom: -6px; width: 26px; height: 26px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .55)); }
 .pf-stats.small b { font-size: 15px; }
 .account-card .navy-btn.small { width: 100%; }
 

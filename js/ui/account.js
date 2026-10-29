@@ -1,9 +1,9 @@
 // The «Рейтинг» and «Профиль» tabs on the site's data: the leaderboard; your account (guest, login, register),
 // its photo and country (sandbox), friends, password and the phone's settings.
-import { html, useState, useEffect, useRef, cx, Icon, rankTier, tierStyle, placeStyle, levelColor, Prefs, vibrate } from "./common.js";
+import { html, useState, useEffect, useRef, cx, img, Icon, rankTier, tierStyle, placeStyle, levelColor, Prefs, vibrate } from "./common.js";
 import { account, leaderboard, playerProfile, social } from "../net.js";
 import { Sound } from "../sound.js";
-import { flagOf } from "../online.js";
+import { flagOf, flagOrGlobe } from "../online.js";
 import { Panel } from "./common.js";
 
 const PERIODS = [["rating", "Рейтинг"], ["week", "Неделя"], ["friends", "Друзья"]];
@@ -29,8 +29,8 @@ export function RatingTab({ visible }) {
       : data.requiresLogin ? html`<p class="placeholder">Друзья видны после входа в аккаунт — вкладка «Профиль».</p>`
       : !list.length ? html`<p class="placeholder">${period === "week" ? "На этой неделе ещё никто не набрал очков." : "Пока пусто."}</p>`
       : html`<div class="board-list glass">${list.map((e) => html`<button class=${cx("lb-row press", e.self && "self")} onClick=${() => setOpen(e.id)}>
-          <b class=${cx("lb-place num", placeStyle(e.rank) && "grad")} style=${placeStyle(e.rank)}>${e.rank}</b>
-          <${Face} name=${e.nickname} photo=${e.avatar} small=${true} /><span class="lb-name"><b>${flagOf(e.country) ? html`<i class="flag">${flagOf(e.country)}</i> ` : null}${e.nickname}</b><small>${e.games} игр · ${e.winRate}% побед</small></span>
+          <b class=${cx("lb-place num", placeStyle(e.rank) && "grad")} style=${placeStyle(e.rank)}>#${e.rank}</b>
+          <${Face} name=${e.nickname} photo=${e.avatar} small=${true} /><span class="lb-name"><b>${flagOrGlobe(e.country) ? html`<i class="flag">${flagOrGlobe(e.country)}</i> ` : null}${e.nickname}</b><small>${e.games} игр · ${e.winRate}% побед</small></span>
           <b class="lb-pts grad num" style=${tierStyle(e.rating ?? 0)}>${period === "week" ? (e.points > 0 ? "+" : "") + e.points : e.rating}</b>
         </button>`)}</div>
         <p class="hint-line small center">${data.total} игроков в рейтинге · рейтинг после 5 игр с двумя разными соперниками</p>`}
@@ -65,9 +65,9 @@ function PlayerCard({ id, onChange }) {
   return html`<div class="profile">
     <div class="pf-head">
       <${Face} name=${p.nickname} photo=${p.avatar} />
-      <span class="pf-name"><b>${p.nickname}</b><span>${flagOf(p.country) ? html`<i class="flag">${flagOf(p.country)}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>
+      <span class="pf-name"><b>${p.nickname}</b><span>${flagOrGlobe(p.country) ? html`<i class="flag">${flagOrGlobe(p.country)}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>
         ${p.presence ? html`<small>${PRESENCE[p.presence]}</small>` : null}</span></span>
-      <span class="pf-rating">${p.rating != null ? html`<b class="grad" style=${`${tierStyle(p.rating)};filter:drop-shadow(0 0 6px ${t.b}80)`}>${p.rating}</b><small>${t.name}</small>`
+      <span class="pf-rating">${p.rating != null ? html`<b class="grad" style=${`${tierStyle(p.rating)};filter:drop-shadow(0 0 6px ${t.b}80)`}>${p.rating}</b><small>${p.rank ? html`<${Place} n=${p.rank} />` : t.name}</small>`
         : html`<small>калибровка</small>`}</span>
     </div>
     <div class="pf-stats"><span><b>${p.games}</b><small>Игр</small></span><span><b>${p.winRate}%</b><small>Побед</small></span><span><b>${p.bestStreak}</b><small>Лучшая серия</small></span></div>
@@ -100,7 +100,7 @@ function Friends({ open }) {
   const answer = async (id, action) => { try { await social.friend(id, action); vibrate(10); load(); } catch (x) { setErr(x.message); } };
   const row = (p, side) => html`<div class="fr-row">
     <button class="fr-who press" onClick=${() => open(p.id, load)}><${Face} name=${p.nickname} photo=${p.avatar} small=${true} />
-      <span class="lb-name"><b>${flagOf(p.country) ? html`<i class="flag">${flagOf(p.country)}</i> ` : null}${p.nickname}</b>
+      <span class="lb-name"><b>${flagOrGlobe(p.country) ? html`<i class="flag">${flagOrGlobe(p.country)}</i> ` : null}${p.nickname}</b>
         <small class=${cx(p.presence && "pres-" + p.presence)}>${p.presence ? PRESENCE[p.presence] : p.rating != null ? `рейтинг ${p.rating}` : `ур. ${p.level}`}</small></span></button>
     ${side}</div>`;
   if (!st) return html`<p class="hint-line pad">${err ?? "Загружаем друзей…"}</p>`;
@@ -122,12 +122,22 @@ function Friends({ open }) {
     ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}`;
 }
 
-// Countries for the flag: the codes, named in Russian by the browser; the nearest ones first.
-const NEAR = ["KZ", "RU", "UZ", "KG", "TJ", "TM", "AZ", "AM", "GE", "BY", "UA", "MD", "TR"];
-const WORLD = "AD AE AF AG AL AO AR AT AU BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FR GA GB GD GH GM GN GQ GR GT GW GY HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KH KM KN KP KR KW LA LB LC LI LK LR LS LT LU LV LY MA MC ME MG MK ML MM MN MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NZ OM PA PE PG PH PK PL PS PT PY QA RO RS RW SA SC SD SE SG SI SK SL SM SN SO SR SS SV SY SZ TD TG TH TL TN TO TT TW TZ UG US UY VA VC VE VN YE ZA ZM ZW".split(" ");
-let regionNames = null;
-const countryName = (c) => { try { regionNames ??= new Intl.DisplayNames(["ru"], { type: "region" }); return regionNames.of(c); } catch { return c; } };
-const countries = () => [...NEAR, ...WORLD.filter((c) => !NEAR.includes(c)).sort((a, b) => countryName(a).localeCompare(countryName(b), "ru"))];
+// The flag comes from the phone's time zone (the region of its language as a fallback); there is no country picker.
+const ZONES = { KZ: ["Almaty", "Qostanay", "Aqtobe", "Aqtau", "Atyrau", "Oral", "Qyzylorda"], UZ: ["Tashkent", "Samarkand"], KG: ["Bishkek"], TJ: ["Dushanbe"],
+  TM: ["Ashgabat"], AZ: ["Baku"], AM: ["Yerevan"], GE: ["Tbilisi"], BY: ["Minsk"], UA: ["Kyiv", "Kiev"], MD: ["Chisinau"], TR: ["Istanbul"],
+  RU: ["Moscow", "Kaliningrad", "Samara", "Volgograd", "Saratov", "Ulyanovsk", "Astrakhan", "Kirov", "Yekaterinburg", "Omsk", "Novosibirsk", "Barnaul", "Tomsk",
+    "Novokuznetsk", "Krasnoyarsk", "Irkutsk", "Chita", "Yakutsk", "Vladivostok", "Sakhalin", "Magadan", "Srednekolymsk", "Kamchatka", "Anadyr"] };
+export function homeCountry() {
+  try {
+    const city = Intl.DateTimeFormat().resolvedOptions().timeZone?.split("/").pop();
+    for (const [c, list] of Object.entries(ZONES)) if (list.includes(city)) return c;
+  } catch {}
+  const region = (navigator.language || "").split("-")[1]?.toUpperCase();
+  return /^[A-Z]{2}$/.test(region ?? "") ? region : null;
+}
+
+/** «#12», a top-five place in its own colour. */
+const Place = ({ n }) => html`<span class=${cx(placeStyle(n) && "grad")} style=${placeStyle(n)}>#${n}</span>`;
 
 /** A square photo, cropped to the middle and shrunk until it fits the server's 48 KB. */
 async function squarePhoto(file) {
@@ -143,50 +153,6 @@ async function squarePhoto(file) {
     }
     throw new Error("Фото слишком большое.");
   } finally { URL.revokeObjectURL(url); }
-}
-
-/** Your nickname, country and photo (the sandbox server keeps them; the site has no such editing). */
-function EditProfile({ done }) {
-  const p = account.profile;
-  const [nick, setNick] = useState(p.nickname);
-  const [country, setCountry] = useState(p.country ?? "");
-  const [photo, setPhoto] = useState(p.avatar);
-  const [newPhoto, setNewPhoto] = useState(undefined);
-  const [err, setErr] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const file = useRef();
-  const pick = async (e) => {
-    const f = e.target.files?.[0]; e.target.value = "";
-    if (!f) return;
-    setErr(null);
-    try { const d = await squarePhoto(f); setNewPhoto(d); setPhoto(d); } catch (x) { setErr(x.message); }
-  };
-  const save = async () => {
-    setBusy(true); setErr(null);
-    try {
-      await account.send("profile", { ...(nick.trim() !== p.nickname ? { nickname: nick.trim() } : {}), country: country || null, ...(newPhoto !== undefined ? { avatar: newPhoto } : {}) });
-      vibrate(10); done();
-    } catch (x) { setErr(x.message); setBusy(false); }
-  };
-  return html`<div class="profile edit-profile">
-    <h3 class="sheet-title">Профиль</h3>
-    <div class="ep-photo">
-      <${Face} name=${nick} photo=${photo} />
-      <span class="ep-btns"><button class="chip-btn press" onClick=${() => file.current.click()}>${photo ? "Сменить фото" : "Выбрать фото"}</button>
-        ${photo ? html`<button class="text-btn muted" onClick=${() => { setPhoto(null); setNewPhoto(null); }}>Убрать</button>` : null}</span>
-      <input ref=${file} type="file" accept="image/*" hidden onChange=${pick} />
-    </div>
-    <h4 class="section">НИК</h4>
-    <label class="pw-field"><${Icon} name="profile" size="16" /><input value=${nick} maxlength="20" onInput=${(e) => setNick(e.target.value)} autocapitalize="off" autocorrect="off" spellcheck="false" /></label>
-    <h4 class="section">СТРАНА</h4>
-    <label class="picker-row glass"><span>${country ? html`<i class="flag">${flagOf(country)}</i> ${countryName(country)}` : "Не указана"}</span>
-      <span class="picker"><${Icon} name="down" size="11" weight="3" />
-        <select value=${country} onChange=${(e) => setCountry(e.target.value)}>
-          <option value="">Не указана</option>
-          ${countries().map((c) => html`<option value=${c}>${flagOf(c)} ${countryName(c)}</option>`)}</select></span></label>
-    ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
-    <button class="primary-btn" disabled=${busy || nick.trim().length < 3} onClick=${save}>${busy ? html`<span class="spinner"></span>` : "Сохранить"}</button>
-  </div>`;
 }
 
 /** The site's password change: the current one, then the new one twice. */
@@ -211,16 +177,21 @@ function ChangePassword({ done }) {
   </form>`;
 }
 
-/** Sound, vibration: kept on this phone. */
-function Settings() {
+/** Sound and vibration are kept on this phone; the flag and the photo on the account (sandbox server only). */
+function Settings({ onError }) {
   const [, redraw] = useState(0);
+  const p = account.profile;
   const row = (icon, title, detail, on, set) => html`<label class="toggle-card">
-    <span class="tc-ic"><${Icon} name=${icon} size="18" weight="2" /></span>
+    <span class="tc-ic">${icon}</span>
     <span class="tc-t"><b>${title}</b><small>${detail}</small></span>
     <input type="checkbox" class="switch" checked=${on} onChange=${(e) => { set(e.target.checked); redraw((n) => n + 1); }} /></label>`;
+  const save = (body) => account.send("profile", body).then(() => vibrate(10)).catch((x) => onError(x.message));
   return html`<div class="settings-list">
-    ${row("sparkles", "Звук", "Ходы, таймер, победа", Sound.enabled, (v) => { Sound.enabled = v; if (v) Sound.play("turn"); })}
-    ${row("phone", "Вибрация", "Отклик на нажатия и ходы", Prefs.vibration, (v) => { Prefs.vibration = v; vibrate(15); })}
+    ${row(html`<img src=${img("sound")} alt="" />`, "Звук", "Ходы, таймер, победа", Sound.enabled, (v) => { Sound.enabled = v; if (v) Sound.play("turn"); })}
+    ${row(html`<${Icon} name="vibrate" size="19" weight="2" />`, "Вибрация", "Отклик на нажатия и ходы", Prefs.vibration, (v) => { Prefs.vibration = v; vibrate(15); })}
+    ${p.registered && "showFlag" in p ? row(html`<i class="flag big">${p.showFlag ? flagOf(p.country ?? homeCountry()) ?? "🌐" : "🌐"}</i>`, "Показывать флаг",
+        p.showFlag ? "Флаг страны рядом с ником" : "Вместо флага — планета", p.showFlag,
+        (v) => save(v ? { showFlag: true, ...(p.country ? {} : { country: homeCountry() }) } : { showFlag: false })) : null}
   </div>`;
 }
 
@@ -238,6 +209,20 @@ export function ProfileTab({ children }) {
   const [shut, setShut] = useState(false);
   const [friendsKey, setFriendsKey] = useState(0);
   const openSheet = (s) => { setShut(false); setSheet(s); };
+  const file = useRef();
+  // The plus on the photo opens the phone's gallery; the chosen photo is cropped and saved at once.
+  const pickPhoto = async (e) => {
+    const f = e.target.files?.[0]; e.target.value = "";
+    if (!f) return;
+    setBusy(true); setErr(null);
+    try { await account.send("profile", { avatar: await squarePhoto(f) }); vibrate(10); } catch (x) { setErr(x.message); }
+    setBusy(false);
+  };
+  const dropPhoto = async () => { setBusy(true); try { await account.send("profile", { avatar: null }); } catch (x) { setErr(x.message); } setBusy(false); };
+  // A new account's flag: the country is taken from the phone once, while the flag is on.
+  useEffect(() => {
+    if (p?.registered && p.showFlag && !p.country && homeCountry()) account.send("profile", { country: homeCountry() }).catch(() => {});
+  }, [p?.id, p?.showFlag]);
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true); setErr(null);
@@ -256,16 +241,16 @@ export function ProfileTab({ children }) {
     <h1 class="big-title">Профиль</h1>
     <div class="profile glass account-card">
       <div class="pf-head">
-        ${editable ? html`<button class="face-btn press" aria-label="Изменить профиль" onClick=${() => openSheet({ kind: "edit" })}><${Face} name=${account.name} photo=${p.avatar} /><i class="face-edit"><${Icon} name="plusSquare" size="12" weight="2.5" /></i></button>`
+        ${editable ? html`<button class="face-btn press" disabled=${busy} aria-label=${p.avatar ? "Сменить фото" : "Добавить фото"} onClick=${() => file.current.click()}><${Face} name=${account.name} photo=${p.avatar} /><img class="face-edit" src=${img("plus")} alt="" /></button>
+          <input ref=${file} type="file" accept="image/*" hidden onChange=${pickPhoto} />`
           : html`<${Face} name=${account.name} photo=${p.avatar} />`}
-        <span class="pf-name"><b>${account.name}</b><span>${flagOf(p.country) ? html`<i class="flag">${flagOf(p.country)}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>${p.registered ? null : html`<small>гость</small>`}</span></span>
+        <span class="pf-name"><b>${account.name}</b><span>${p.showFlag === false ? html`<i class="flag">🌐</i>` : flagOrGlobe(p.country) ? html`<i class="flag">${flagOrGlobe(p.country)}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>${p.registered ? null : html`<small>гость</small>`}</span></span>
         <span class="pf-rating">${p.rating != null ? html`<b class="grad" style=${`${tierStyle(p.rating)};filter:drop-shadow(0 0 6px ${t.b}80)`}>${p.rating}</b>
-          <small>${p.rank ? html`<span class=${cx(placeStyle(p.rank) && "grad")} style=${placeStyle(p.rank)}>${p.rank}</span> место` : t.name}</small>`
+          <small>${p.rank ? html`<${Place} n=${p.rank} />` : t.name}</small>`
           : html`<small>${p.registered ? "рейтинг после 5 игр" : "рейтинг — после входа"}</small>`}</span>
       </div>
       <div class="pf-stats"><span><b>${p.games}</b><small>Игр</small></span><span><b>${p.games ? Math.round((p.wins / p.games) * 100) : 0}%</b><small>Побед</small></span><span><b>${p.bestStreak}</b><small>Лучшая серия</small></span></div>
       ${p.registered ? html`<div class="pf-stats small"><span><b>${p.wins}</b><small>Выиграно</small></span><span><b>${p.draws ?? 0}</b><small>Вничью</small></span><span><b>${p.losses ?? 0}</b><small>Проиграно</small></span></div>` : null}
-      ${editable ? html`<button class="navy-btn small" onClick=${() => openSheet({ kind: "edit" })}>Изменить профиль</button>` : null}
     </div>
     ${recovery ? html`<div class="info-card"><div class="ic-title"><${Icon} name="lock" size="15" style="color:#F6D482" /><b>Код восстановления</b></div>
       <p>Сохрани его: только он вернёт аккаунт, если забудешь пароль. Больше он не покажется.</p>
@@ -285,17 +270,17 @@ export function ProfileTab({ children }) {
         <h4 class="section">ИМЯ ГОСТЯ</h4>
         <label class="pw-field"><input value=${guest} maxlength="24" onInput=${(e) => setGuest(e.target.value)} onBlur=${() => { const v = guest.trim(); if (v) account.guestName = v; else setGuest(account.name); }} /></label>`}
     <h4 class="section">НАСТРОЙКИ</h4>
-    <${Settings} />
+    <${Settings} onError=${setErr} />
     ${p.registered ? html`<div class="settings-list">
       <button class="toggle-card press" onClick=${() => openSheet({ kind: "password" })}><span class="tc-ic"><${Icon} name="lock" size="18" weight="2" /></span>
         <span class="tc-t"><b>Сменить пароль</b><small>Нужен текущий пароль</small></span><${Icon} name="right" size="14" style="opacity:.4" /></button>
+      ${editable && p.avatar ? html`<button class="text-btn muted" disabled=${busy} onClick=${dropPhoto}>Убрать фото профиля</button>` : null}
       <button class="navy-btn" disabled=${busy} onClick=${logout}>Выйти из аккаунта</button></div>` : null}
     ${err && !mode ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
     ${children}
   </div>
   ${sheet ? html`<${Panel} shut=${shut} onClose=${() => setSheet(null)}>
-    ${sheet.kind === "edit" ? html`<${EditProfile} done=${() => setShut(true)} />`
-      : sheet.kind === "password" ? html`<${ChangePassword} done=${() => setShut(true)} />`
+    ${sheet.kind === "password" ? html`<${ChangePassword} done=${() => setShut(true)} />`
       : html`<${PlayerCard} id=${sheet.id} onChange=${() => setFriendsKey((k) => k + 1)} />`}<//>` : null}
   </div>`;
 }

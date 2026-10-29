@@ -111,8 +111,8 @@ export class OnlineMatch {
     const me = st.players[this.mySeat], them = st.players[1 - this.mySeat];
     this.me = me; this.them = them;
     this.myName = me?.name ?? account.name;
-    this.myFlag = flagOf(me?.card?.country);
-    this.opponent = { name: them?.name ?? "Ждём соперника", isBot: !!them?.bot, flag: flagOf(them?.card?.country), rating: them?.card?.rating ?? null, rank: them?.card?.rank ?? null, present: !!them };
+    this.myFlag = account.profile?.showFlag === false ? "🌐" : flagOrGlobe(me?.card?.country ?? account.profile?.country);
+    this.opponent = { name: them?.name ?? "Ждём соперника", isBot: !!them?.bot, flag: them && !them.bot ? flagOrGlobe(them.card?.country) : null, rating: them?.card?.rating ?? null, rank: them?.card?.rank ?? null, present: !!them };
     // Newer servers (the sandbox) add rematch offers, harder rounds, free leave, reactions; on others these stay off.
     this.rematchOffer = st.rematch ?? null;
     this.rematchAsked = this.rematchOffer?.by === this.mySeat;
@@ -288,7 +288,7 @@ export class OnlineMatch {
   profile(owner) {
     const m = owner === 0 ? this.me : this.them;
     const c = m?.card;
-    if (c && (c.games || c.rating != null)) return { name: m.name, photo: c.avatar ?? null, flag: flagOf(c.country), rating: c.rating, rank: c.rank, level: c.level, games: c.games, winRate: c.games ? Math.round((c.wins / c.games) * 100) : 0, bestStreak: c.bestStreak };
+    if (c && (c.games || c.rating != null)) return { name: m.name, photo: c.avatar ?? null, flag: flagOrGlobe(c.country), rating: c.rating, rank: c.rank, level: c.level, games: c.games, winRate: c.games ? Math.round((c.wins / c.games) * 100) : 0, bestStreak: c.bestStreak };
     if (owner === 0 && account.profile && !this.watching) {
       const p = account.profile;
       return { name: this.leftName, flag: null, rating: p.rating, rank: p.rank, level: p.level, games: p.games, winRate: p.games ? Math.round((p.wins / p.games) * 100) : 0, bestStreak: p.bestStreak };
@@ -379,6 +379,8 @@ export class OnlineMatch {
 
 /** An ISO country code as its flag emoji (KZ → 🇰🇿). */
 export const flagOf = (code) => (typeof code === "string" && /^[A-Z]{2}$/.test(code) ? String.fromCodePoint(...[...code].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)) : null);
+/** A player's flag; a globe when the server has flags (sandbox) but this player hides theirs or has none. */
+export const flagOrGlobe = (code) => flagOf(code) ?? (account.profile && "showFlag" in account.profile ? "🌐" : null);
 
 export const initials = (name) => {
   const parts = String(name).trim().split(/\s+/);

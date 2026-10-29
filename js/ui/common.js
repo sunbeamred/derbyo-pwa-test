@@ -30,6 +30,7 @@ const paths = {
   home: "M4 11l8-7 8 7M6 10v10h12V10",
   plusSquare: "M12 8v8M8 12h8M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
   bubble: "M4 5h16v11H9l-5 4z",
+  vibrate: "M9 3h6a1.5 1.5 0 0 1 1.5 1.5v15A1.5 1.5 0 0 1 15 21H9a1.5 1.5 0 0 1-1.5-1.5v-15A1.5 1.5 0 0 1 9 3zM4 8v8M20 8v8M1.5 10v4M22.5 10v4",
   profile: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1",
 };
 const solid = {
