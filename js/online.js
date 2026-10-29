@@ -164,6 +164,8 @@ export class OnlineMatch {
     this.level = LEVELS[(g.level ?? 2) - 1] ?? "";
     this.levelIndexNow = (g.level ?? 2) - 1;
     this.nextAsked = this.roundOver && !this.matchOver && !!me?.ready;
+    // A Legend board in place of the planned Encyclopedia: say why once, when the round starts.
+    if (this.breather && !this.roundOver && this.breatherShown !== g.id) { this.breatherShown = g.id; this.show("Легенда — передышка после ничьей на Энциклопедии", true); }
     this.events(g, before);
     this.clock();
     this.firstState = false;
@@ -257,7 +259,14 @@ export class OnlineMatch {
     for (let k = from; k <= Math.min(last, from + 2); k++) out.push({ name: LEVELS[k], current: k === i });
     return out;
   }
+  /** The ready level planned for round n (a quick game or a room with several levels). */
+  plannedPreset(n) { const p = this.state?.settings?.roundPresets; return p?.[n - 1] ?? p?.at(-1) ?? null; }
+  /** The site plays a Legend board after a drawn Encyclopedia round, never two such boards in a row. This round is one. */
+  get breather() { return this.plannedPreset(this.round) === "encyclopedia" && this.g?.level === 4; }
+  /** …and the next round will be one: this Encyclopedia round ended in a draw. */
+  get nextBreather() { return this.roundOver && !this.matchOver && this.roundWinner === null && this.g?.level === 5 && this.plannedPreset(this.round + 1) === "encyclopedia"; }
   get nextLevel() {
+    if (this.nextBreather) return LEVELS[3];
     if (Number.isFinite(this.state?.nextLevel)) return LEVELS[this.state.nextLevel - 1];
     const p = this.state?.settings?.roundPresets?.[this.round];
     const lv = p ? { easy: 1, amateur: 2, medium: 3, hard: 4, encyclopedia: 5 }[p] : this.state?.settings?.progressive ? Math.max((this.levelIndexNow ?? 1) + 1, Math.min(4, (this.levelIndexNow ?? 1) + 2)) : (this.levelIndexNow ?? 1) + 1;
@@ -278,7 +287,7 @@ export class OnlineMatch {
     if (!rises) return null;
     const cur = this.g?.level ?? this.levelOfRound(Math.max(1, this.round));
     const prev = this.round > 1 ? this.levelOfRound(this.round - 1) : null;
-    const next = Number.isFinite(this.state?.nextLevel) ? this.state.nextLevel : this.levelOfRound(this.round + 1);
+    const next = this.nextBreather ? 4 : Number.isFinite(this.state?.nextLevel) ? this.state.nextLevel : this.levelOfRound(this.round + 1);
     return { prev: prev && prev !== cur ? LEVELS[prev - 1] : null, cur: LEVELS[cur - 1], next: next && next !== cur ? LEVELS[next - 1] : null };
   }
   get offerRaise() { return !!this.state?.canRaise && this.raise?.by !== this.mySeat; }

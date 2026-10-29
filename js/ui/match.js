@@ -423,7 +423,7 @@ function RoundButton({ m, findNew }) {
   const acceptLeft = accept && m.rematchOffer ? Math.max(0, Math.ceil((m.rematchOffer.until - m.now()) / 1000)) : 0;
   const title = gone || offerNew ? "Новый соперник" : waiting ? (m.online && !m.readyLeft ? `Ждём ${opp}` : `Ждём ${opp} · ${m.readyLeft} с`) : accept ? "Принять реванш" : done ? "Реванш" : "Следующий раунд";
   const detail = m.watching ? "начнут игроки" : gone ? `${opp} покинул матч` : accept ? `${opp} предлагает · ${acceptLeft} с` : offerNew ? `${opp} не отвечает · ${m.readyLeft} с`
-    : waiting ? (m.rematchAsked ? "реванш предложен" : `ты готов к раунду ${m.round + 1}`) : done ? `ещё матч с ${opp}` : `раунд ${m.round + 1} · ${m.nextLevel}`;
+    : waiting ? (m.rematchAsked ? "реванш предложен" : `ты готов к раунду ${m.round + 1}`) : done ? `ещё матч с ${opp}` : `раунд ${m.round + 1} · ${m.nextLevel}${m.nextBreather ? " после ничьей" : ""}`;
   const kind = waiting ? "wait" : done && !gone && !offerNew ? "gold" : "green";
   return html`<button class=${cx("round-btn press", kind)} disabled=${m.watching} aria-label=${`${title}, ${detail}`}
     onClick=${() => { gone || offerNew ? findNew() : done ? m.rematch() : m.askNextRound(); store.changed(); }}>

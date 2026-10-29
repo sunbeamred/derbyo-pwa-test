@@ -1,7 +1,42 @@
 // A player's profile (port of ProfileSheet.swift): who they are, how strong, your record against them, and
 // — for a human — friendship, report and block.
-import { html, useState, cx, img, Icon, Alert, rankTier, tierStyle, placeStyle, levelColor, flagView } from "./common.js";
+import { html, useState, useEffect, cx, img, Icon, Alert, rankTier, tierStyle, placeStyle, levelColor, flagView, vibrate } from "./common.js";
 import { store } from "../model.js";
+import { account, social as siteSocial, playerProfile } from "../net.js";
+
+/** Friendship with a real player in an online match: the sandbox gives their profile id; the site is searched by nickname. */
+function OnlineFriend({ m, owner, viewer, name, close }) {
+  const [person, setPerson] = useState(undefined);
+  const [busy, setBusy] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  useEffect(() => {
+    let live = true;
+    const id = viewer ? null : (owner === 0 ? m.me : m.them)?.card?.profileId;
+    const find = id ? playerProfile(id) : siteSocial.search(name).then((list) => list.find((x) => x.nickname.toLowerCase() === name.toLowerCase()) ?? null);
+    find.then((p) => live && setPerson(p ?? null)).catch(() => live && setPerson(null));
+    return () => { live = false; };
+  }, [name]);
+  if (person === undefined) return html`<div class="pf-actions"><div class="settled"><span class="spinner muted"></span>Ищем игрока…</div></div>`;
+  if (!person) return html`<div class="pf-actions"><div class="settled"><${Icon} name="profile" size="16" />Гость — в друзья только с аккаунтом</div></div>`;
+  const act = async (action) => {
+    setBusy(true);
+    try { const r = await siteSocial.friend(person.id, action); setPerson({ ...person, relationship: r.relationship }); vibrate(10); } catch {}
+    setBusy(false);
+  };
+  const rel = person.relationship;
+  return html`<div class="pf-actions">
+    ${rel === "none" ? html`<button class="green-btn press" disabled=${busy} onClick=${() => act("request")}><${Icon} name="friendAdd" size="17" />Добавить в друзья</button>`
+      : rel === "incoming" ? html`<button class="green-btn press" disabled=${busy} onClick=${() => act("accept")}><${Icon} name="friendAdd" size="17" />Принять заявку</button>`
+      : html`<div class="settled"><${Icon} name=${rel === "outgoing" ? "clock" : rel === "friends" ? "friends" : "hand"} size="16" />
+          ${rel === "outgoing" ? "Заявка отправлена" : rel === "friends" ? "В друзьях" : "Заблокирован"}</div>`}
+    ${rel === "outgoing" ? html`<div class="pf-quiet"><button disabled=${busy} onClick=${() => act("cancel")}>Отменить заявку</button></div>`
+      : rel !== "blocked" ? html`<div class="pf-quiet"><button class="red" onClick=${() => setConfirmBlock(true)}>Заблокировать</button></div>`
+      : html`<div class="pf-quiet"><button disabled=${busy} onClick=${() => act("unblock")}>Разблокировать</button></div>`}
+    ${confirmBlock ? html`<${Alert} title=${`Заблокировать ${name}?`} message="Он не сможет звать тебя в друзья и приглашать в игру."
+      onClose=${() => setConfirmBlock(false)}
+      actions=${[{ title: "Отмена", run: () => setConfirmBlock(false) }, { title: "Заблокировать", kind: "destructive", run: () => { setConfirmBlock(false); act("block"); } }]} />` : null}
+  </div>`;
+}
 
 export function ProfileSheet({ m, owner, viewer = null, close }) {
   const [confirmBlock, setConfirmBlock] = useState(false);
@@ -10,6 +45,8 @@ export function ProfileSheet({ m, owner, viewer = null, close }) {
   const red = m.seat(owner) === 0;
   const me = viewer === m.myName;
   const social = !m.online && (viewer ? !me : owner === 1 && !bot);
+  // Online: friends need your own account; not for yourself, a bot or the other phone's «Игрок 2».
+  const onlineSocial = m.online && !m.hotseat && !!account.profile?.registered && (viewer ? !me : owner === 1 && !bot);
   const rel = m.relationWith(viewer);
   const act = (f) => () => { f(); store.changed(); };
   const t = rankTier(p.rating ?? 0);
@@ -43,6 +80,7 @@ export function ProfileSheet({ m, owner, viewer = null, close }) {
       ${rel !== "blocked" ? html`<div class="pf-quiet"><button onClick=${act(() => m.report())}>Пожаловаться</button>
         <button class="red" onClick=${() => setConfirmBlock(true)}>Заблокировать</button></div>` : null}
     </div>` : null}
+    ${onlineSocial ? html`<${OnlineFriend} m=${m} owner=${owner} viewer=${viewer} name=${viewer ?? p.name} close=${close} />` : null}
     ${confirmBlock ? html`<${Alert} title=${`Заблокировать ${p.name}?`} message="Его сообщения скроются, в друзья он не сможет позвать."
       onClose=${() => setConfirmBlock(false)}
       actions=${[{ title: "Отмена", run: () => setConfirmBlock(false) }, { title: "Заблокировать", kind: "destructive", run: () => { setConfirmBlock(false); m.block(viewer); store.changed(); close(); } }]} />` : null}
