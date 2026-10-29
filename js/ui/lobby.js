@@ -188,8 +188,8 @@ export function PeopleSwitches({ s, set, rated = true }) {
     <input type="checkbox" class="switch" checked=${s[key] !== false} onClick=${(e) => set({ [key]: e.target.checked })} /></label>`;
   return html`<${Section} t="ВОПРОСЫ" />
     <div class="room-opts glass">
-      ${row("coaches", "coach", "Тренеры", "«Тренер: …» — с уровня Знаток", "Вопросов о тренерах не будет")}
-      ${row("teammates", "teammates", "Одноклубники", "«Одноклубник: …» — с уровня Знаток", "Вопросов об одноклубниках не будет")}
+      ${row("coaches", "coach", "Тренеры", "Вопросы с уровня Знаток", "Вопросов о тренерах не будет")}
+      ${row("teammates", "teammates", "Одноклубники", "Вопросы с уровня Знаток", "Вопросов об одноклубниках не будет")}
       ${off && rated ? html`<p class="people-note">За каждую выключенную тему рейтинг тому, кто её выключил, считается с пониженным коэффициентом.</p>` : null}
     </div>`;
 }
