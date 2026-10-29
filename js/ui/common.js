@@ -38,6 +38,7 @@ const solid = {
   lock: "M7 10V7a5 5 0 0 1 10 0v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zm2 0h6V7a3 3 0 0 0-6 0z",
   pause: "M7 4h3.5v16H7zM13.5 4H17v16h-3.5z",
   play: "M7 4l13 8-13 8z",
+  camera: "M9.2 4h5.6l1.5 2.2H19a2.5 2.5 0 0 1 2.5 2.5v8.8A2.5 2.5 0 0 1 19 20H5a2.5 2.5 0 0 1-2.5-2.5V8.7A2.5 2.5 0 0 1 5 6.2h2.7zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0-2a2 2 0 1 1 0-4 2 2 0 0 1 0 4z",
 };
 export function Icon({ name, size = 16, weight = 2.4, class: c, style }) {
   const s = solid[name];

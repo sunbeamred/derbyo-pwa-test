@@ -169,13 +169,23 @@ function App() {
     join: (name) => open(new Match(Opponent.human(name), false)),
     watch: (name) => open(new Match(Opponent.human(name), true)),
     /** A practice match on the real board: your room, a bot in the other seat, ready at once. */
-    bot: async () => {
+    bot: async (body = { preset: QUICK_BOT_PRESET() }) => {
       if (busyNow()) { setBusy(true); return; }
       try {
-        const m = watchClose(new OnlineMatch(await createRoom({ preset: QUICK_BOT_PRESET() })));
+        const m = watchClose(new OnlineMatch(await createRoom(body)));
         open(m);
         for (let i = 0; i < 50 && !m.state && m.alive; i++) await new Promise((r) => setTimeout(r, 100));
         await m.addBot(); await m.ready();
+      } catch (e) { alert(e.message); }
+    },
+    /** Two people on one phone (sandbox server): «Игрок 2» sits in the room already, one «готов» starts it. */
+    hotseat: async (body) => {
+      if (busyNow()) { setBusy(true); return; }
+      try {
+        const m = watchClose(new OnlineMatch(await createRoom({ ...body, hotseat: true, accessType: "open" })));
+        open(m);
+        for (let i = 0; i < 50 && !m.state && m.alive; i++) await new Promise((r) => setTimeout(r, 100));
+        await m.ready();
       } catch (e) { alert(e.message); }
     },
     /** Joins a room by code: a seat goes to the room screen, the stands straight to the match. Resolves false on a wrong password. */

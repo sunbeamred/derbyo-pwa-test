@@ -106,13 +106,19 @@ export class OnlineMatch {
     this.state = st;
     this.offset = st.serverNow - Date.now();
     this.watching = st.role !== "player";
-    this.mySeat = st.seat ?? 0;
+    // One phone (sandbox): the left side is whoever is to move; a disputed answer is shown to the side deciding it.
+    this.hotseat = !!st.hotseat;
+    this.mySeat = this.hotseat && st.game?.stage === "play" ? (st.game.review ? 1 - st.game.review.owner : st.game.turn ?? 0) : st.seat ?? 0;
     this.isHost = st.isHost;
     const me = st.players[this.mySeat], them = st.players[1 - this.mySeat];
     this.me = me; this.them = them;
-    this.myName = me?.name ?? account.name;
-    this.myFlag = account.profile?.showFlag === false ? "🌐" : flagOrGlobe(me?.card?.country ?? account.profile?.country);
-    this.opponent = { name: them?.name ?? "Ждём соперника", isBot: !!them?.bot, flag: them && !them.bot ? flagOrGlobe(them.card?.country) : null, rating: them?.card?.rating ?? null, rank: them?.card?.rank ?? null, present: !!them };
+    // A spectator keeps each seat's last name: a player who leaves stays named, never replaced by the viewer's own nick.
+    this.seatNames ??= [];
+    st.players.forEach((p, i) => { if (p) this.seatNames[i] = p.name; });
+    this.myName = me?.name ?? (this.watching ? this.seatNames[this.mySeat] ?? "Игрок" : account.name);
+    this.meLeft = this.watching && !me && st.round > 0;
+    this.myFlag = this.hotseat ? null : this.watching ? (me && !me.bot ? flagOrGlobe(me.card?.country) : null) : account.profile?.showFlag === false ? "🌐" : flagOrGlobe(me?.card?.country ?? account.profile?.country);
+    this.opponent = { name: them?.name ?? this.seatNames[1 - this.mySeat] ?? "Ждём соперника", isBot: !!them?.bot, flag: them && !them.bot ? flagOrGlobe(them.card?.country) : null, rating: them?.card?.rating ?? null, rank: them?.card?.rank ?? null, present: !!them };
     // Newer servers (the sandbox) add rematch offers, harder rounds, free leave, reactions; on others these stay off.
     this.rematchOffer = st.rematch ?? null;
     this.rematchAsked = this.rematchOffer?.by === this.mySeat;
@@ -289,14 +295,14 @@ export class OnlineMatch {
     const m = owner === 0 ? this.me : this.them;
     const c = m?.card;
     if (c && (c.games || c.rating != null)) return { name: m.name, photo: c.avatar ?? null, flag: flagOrGlobe(c.country), rating: c.rating, rank: c.rank, level: c.level, games: c.games, winRate: c.games ? Math.round((c.wins / c.games) * 100) : 0, bestStreak: c.bestStreak };
-    if (owner === 0 && account.profile && !this.watching) {
+    if (owner === 0 && account.profile && !this.watching && !this.hotseat) {
       const p = account.profile;
       return { name: this.leftName, flag: null, rating: p.rating, rank: p.rank, level: p.level, games: p.games, winRate: p.games ? Math.round((p.wins / p.games) * 100) : 0, bestStreak: p.bestStreak };
     }
     return { name: m?.name ?? "—", flag: null, rating: null, rank: null, level: null, games: null, winRate: null, bestStreak: null };
   }
   /** A player's profile photo (the sandbox stores them); the site has none. */
-  avatarOf(owner) { return (owner === 0 ? this.me : this.them)?.card?.avatar ?? (owner === 0 && !this.watching ? account.profile?.avatar : null) ?? null; }
+  avatarOf(owner) { return (owner === 0 ? this.me : this.them)?.card?.avatar ?? (owner === 0 && !this.watching && !this.hotseat ? account.profile?.avatar : null) ?? null; }
   viewerProfile(v) { return { name: v, flag: null, rating: null, rank: null, level: null, games: null, winRate: null, bestStreak: null }; }
   get headToHead() { return null; }
   relationWith() { return "none"; }

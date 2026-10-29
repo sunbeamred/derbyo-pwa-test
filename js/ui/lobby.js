@@ -388,8 +388,10 @@ export function LockerRoom({ nav, app, host }) {
   </div>`;
 }
 
-/** The settings of a room you created: ready levels as cards, or a manual setup; then extras and access. */
-export function MatchSettingsView({ nav, settings: initial, set }) {
+/** The settings of a room you created: ready levels as cards, or a manual setup; then access.
+ * The same screen starts a game with a bot or on one phone (`start`): no access block, a «Играть» button instead. */
+const PRACTICE = { bot: "Игра с ботом", hotseat: "На одном телефоне" };
+export function MatchSettingsView({ nav, settings: initial, set = () => {}, kind = null, start = null }) {
   const [s, setS] = useState(initial);
   const latest = useRef(initial);
   const [manual, setManual] = useState(initial.preset === null);
@@ -406,14 +408,17 @@ export function MatchSettingsView({ nav, settings: initial, set }) {
   const seg = (key, a, b) => html`<div class="segmented">
     <button class=${!s[key] ? "on" : ""} onClick=${() => upd({ [key]: false })}>${a}</button>
     <button class=${s[key] ? "on" : ""} onClick=${() => upd({ [key]: true })}>${b}</button></div>`;
-  return html`<div class="screen-scroll"><div class="page">
-    <${LobbyHeader} title="Настройки матча" back=${nav.back} />
+  const [busy, setBusy] = useState(false);
+  return html`<div class=${cx(start && "screen-with-bar")}><div class="screen-scroll"><div class="page">
+    <${LobbyHeader} title=${PRACTICE[kind] ?? "Настройки матча"} back=${nav.back} />
+    ${kind === "hotseat" ? html`<p class="hint-line small pad">Двое за одним телефоном: «Игрок 1» и «Игрок 2» ходят по очереди, телефон передаёте друг другу. Без рейтинга.</p>`
+      : kind === "bot" ? html`<p class="hint-line small pad">Тренировка с учебным ботом на настоящем поле. Без рейтинга.</p>` : null}
     <div class="set-head"><small class="cap">${manual ? "РУЧНАЯ НАСТРОЙКА" : "СЛОЖНОСТЬ"}</small>
       <button class="chip-btn press" onClick=${flipManual}><img src=${img("settings")} alt="" />${manual ? "Готовые уровни" : "Настроить вручную"}</button></div>
     ${manual ? html`<div class="manual glass">
       ${select(s.progressive ? "Начальная сложность" : "Сложность", "level", [1, 2, 3, 4, 5], (l) => LEVELS[l - 1])}
       <label class="picker-row"><span><span>Усложнять каждый раунд</span><small>Новичок → Любитель → Знаток → Легенда</small></span>
-        <input type="checkbox" class="switch" checked=${s.progressive} onChange=${(e) => upd({ progressive: e.target.checked })} /></label>
+        <input type="checkbox" class="switch" checked=${s.progressive} onClick=${(e) => upd({ progressive: e.target.checked })} /></label>
       ${select("На ход", "seconds", SECONDS, (x) => (x === 0 ? "Без таймера" : `${x} секунд`))}
       ${select("Жетонов на раунд", "tokens", [0, 1, 2, 3, 4, 5, 6, 7, 8], String)}
       ${select("Формат", "format", ["twoWins", "rounds", "tiebreak"], (f) => ({ twoWins: "До двух побед", rounds: "Число раундов", tiebreak: "2 раунда + решающий" })[f])}
@@ -425,10 +430,13 @@ export function MatchSettingsView({ nav, settings: initial, set }) {
         if (ids.length) upd({ presets: ids, preset: ids[0] });
       }} />
       <p class="hint-line small pad">${presetsOf(s).length > 1 ? "Раунды идут от простого к сложному" : "Отметь несколько — раунды пойдут от простого к сложному"} · 60 секунд на ход · до двух побед</p>`}
-    <${Section} t="ДОСТУП В КОМНАТУ" />
+    ${start ? null : html`<${Section} t="ДОСТУП В КОМНАТУ" />
     ${seg("closed", "Открытая", "🔒 Закрытая")}
     ${s.closed ? html`<label class=${cx("pw-field", !passwordOK(s) && "bad")}><${Icon} name="lock" size="16" style="color:#F6D482" />
       <input type="password" placeholder="Пароль · минимум 4 символа" value=${s.password} autocomplete="new-password" onInput=${(e) => upd({ password: e.target.value })} /></label>` : null}
-    <p class="hint-line small pad">${s.closed ? "Видна в списке комнат с замком. Войти можно только с паролем — и игроку, и зрителю." : "Видна в списке комнат. Любой может присоединиться или смотреть."}</p>
-  </div></div>`;
+    <p class="hint-line small pad">${s.closed ? "Видна в списке комнат с замком. Войти можно только с паролем — и игроку, и зрителю." : "Видна в списке комнат. Любой может присоединиться или смотреть."}</p>`}
+  </div></div>
+  ${start ? html`<${BottomBar}><button class="primary-btn" disabled=${busy} onClick=${async () => { setBusy(true); try { await start(latest.current); } finally { setBusy(false); } }}>
+    ${busy ? html`<span class="spinner"></span>` : html`<img src=${img(kind === "bot" ? "bot" : "bolt")} alt="" />Играть`}</button><//>` : null}
+  </div>`;
 }

@@ -177,21 +177,16 @@ function ChangePassword({ done }) {
   </form>`;
 }
 
-/** Sound and vibration are kept on this phone; the flag and the photo on the account (sandbox server only). */
-function Settings({ onError }) {
+/** Sound and vibration, kept on this phone. */
+function Settings() {
   const [, redraw] = useState(0);
-  const p = account.profile;
   const row = (icon, title, detail, on, set) => html`<label class="toggle-card">
     <span class="tc-ic">${icon}</span>
     <span class="tc-t"><b>${title}</b><small>${detail}</small></span>
-    <input type="checkbox" class="switch" checked=${on} onChange=${(e) => { set(e.target.checked); redraw((n) => n + 1); }} /></label>`;
-  const save = (body) => account.send("profile", body).then(() => vibrate(10)).catch((x) => onError(x.message));
+    <input type="checkbox" class="switch" checked=${on} onClick=${(e) => { set(e.target.checked); redraw((n) => n + 1); }} /></label>`;
   return html`<div class="settings-list">
     ${row(html`<img src=${img("sound")} alt="" />`, "Звук", "Ходы, таймер, победа", Sound.enabled, (v) => { Sound.enabled = v; if (v) Sound.play("turn"); })}
     ${row(html`<${Icon} name="vibrate" size="19" weight="2" />`, "Вибрация", "Отклик на нажатия и ходы", Prefs.vibration, (v) => { Prefs.vibration = v; vibrate(15); })}
-    ${p.registered && "showFlag" in p ? row(html`<i class="flag big">${p.showFlag ? flagOf(p.country ?? homeCountry()) ?? "🌐" : "🌐"}</i>`, "Показывать флаг",
-        p.showFlag ? "Флаг страны рядом с ником" : "Вместо флага — планета", p.showFlag,
-        (v) => save(v ? { showFlag: true, ...(p.country ? {} : { country: homeCountry() }) } : { showFlag: false })) : null}
   </div>`;
 }
 
@@ -218,6 +213,8 @@ export function ProfileTab({ children }) {
     try { await account.send("profile", { avatar: await squarePhoto(f) }); vibrate(10); } catch (x) { setErr(x.message); }
     setBusy(false);
   };
+  const saveFlag = (v) => account.send("profile", v ? { showFlag: true, ...(p.country ? {} : { country: homeCountry() }) } : { showFlag: false })
+    .then(() => vibrate(10)).catch((x) => setErr(x.message));
   const dropPhoto = async () => { setBusy(true); try { await account.send("profile", { avatar: null }); } catch (x) { setErr(x.message); } setBusy(false); };
   // A new account's flag: the country is taken from the phone once, while the flag is on.
   useEffect(() => {
@@ -241,7 +238,7 @@ export function ProfileTab({ children }) {
     <h1 class="big-title">Профиль</h1>
     <div class="profile glass account-card">
       <div class="pf-head">
-        ${editable ? html`<button class="face-btn press" disabled=${busy} aria-label=${p.avatar ? "Сменить фото" : "Добавить фото"} onClick=${() => file.current.click()}><${Face} name=${account.name} photo=${p.avatar} /><img class="face-edit" src=${img("plus")} alt="" /></button>
+        ${editable ? html`<button class="face-btn press" disabled=${busy} aria-label=${p.avatar ? "Сменить фото" : "Добавить фото"} onClick=${() => file.current.click()}><${Face} name=${account.name} photo=${p.avatar} /><span class="face-edit"><${Icon} name="camera" size="15" /></span></button>
           <input ref=${file} type="file" accept="image/*" hidden onChange=${pickPhoto} />`
           : html`<${Face} name=${account.name} photo=${p.avatar} />`}
         <span class="pf-name"><b>${account.name}</b><span>${p.showFlag === false ? html`<i class="flag">🌐</i>` : flagOrGlobe(p.country) ? html`<i class="flag">${flagOrGlobe(p.country)}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>${p.registered ? null : html`<small>гость</small>`}</span></span>
@@ -251,6 +248,10 @@ export function ProfileTab({ children }) {
       </div>
       <div class="pf-stats"><span><b>${p.games}</b><small>Игр</small></span><span><b>${p.games ? Math.round((p.wins / p.games) * 100) : 0}%</b><small>Побед</small></span><span><b>${p.bestStreak}</b><small>Лучшая серия</small></span></div>
       ${p.registered ? html`<div class="pf-stats small"><span><b>${p.wins}</b><small>Выиграно</small></span><span><b>${p.draws ?? 0}</b><small>Вничью</small></span><span><b>${p.losses ?? 0}</b><small>Проиграно</small></span></div>` : null}
+      ${editable && "showFlag" in p ? html`<label class="flag-row">
+        <i class="flag">${p.showFlag ? flagOf(p.country ?? homeCountry()) ?? "🌐" : "🌐"}</i>
+        <span><b>Мой флаг</b><small>${p.showFlag ? "Другие игроки видят флаг твоей страны" : "Другие видят планету вместо флага"}</small></span>
+        <input type="checkbox" class="switch" checked=${p.showFlag} onClick=${(e) => saveFlag(e.target.checked)} /></label>` : null}
     </div>
     ${recovery ? html`<div class="info-card"><div class="ic-title"><${Icon} name="lock" size="15" style="color:#F6D482" /><b>Код восстановления</b></div>
       <p>Сохрани его: только он вернёт аккаунт, если забудешь пароль. Больше он не покажется.</p>
@@ -270,9 +271,9 @@ export function ProfileTab({ children }) {
         <h4 class="section">ИМЯ ГОСТЯ</h4>
         <label class="pw-field"><input value=${guest} maxlength="24" onInput=${(e) => setGuest(e.target.value)} onBlur=${() => { const v = guest.trim(); if (v) account.guestName = v; else setGuest(account.name); }} /></label>`}
     <h4 class="section">НАСТРОЙКИ</h4>
-    <${Settings} onError=${setErr} />
+    <${Settings} />
     ${p.registered ? html`<div class="settings-list">
-      <button class="toggle-card press" onClick=${() => openSheet({ kind: "password" })}><span class="tc-ic"><${Icon} name="lock" size="18" weight="2" /></span>
+      <button class="toggle-card press" onClick=${() => openSheet({ kind: "password" })}><span class="tc-ic"><img src=${img("lock")} alt="" /></span>
         <span class="tc-t"><b>Сменить пароль</b><small>Нужен текущий пароль</small></span><${Icon} name="right" size="14" style="opacity:.4" /></button>
       ${editable && p.avatar ? html`<button class="text-btn muted" disabled=${busy} onClick=${dropPhoto}>Убрать фото профиля</button>` : null}
       <button class="navy-btn" disabled=${busy} onClick=${logout}>Выйти из аккаунта</button></div>` : null}

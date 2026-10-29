@@ -160,7 +160,7 @@ function Scoreboard({ m, openProfile, openStands }) {
     </div>
     <div class="score-row">
       <${PlayerSide} name=${m.leftName} photo=${m.avatarOf?.(0)} mark=${m.mark(0)} red=${m.mySeat === 0} tokens=${m.tokens} active=${live(0)} mine=${true}
-        reaction=${m.myReaction} onClick=${() => openProfile(0)} />
+        reaction=${m.myReaction} left=${!!m.meLeft} onClick=${() => openProfile(0)} />
       <div class="scorebug" aria-label=${`Счёт ${m.score[0]}:${m.score[1]}, раунд ${m.round}`}>
         <div class="digits"><b class="digit">${m.score[0]}</b><span class="colon">:</span><b class="digit">${m.score[1]}</b></div>
         <${RoundSteps} results=${m.roundResults.map((r) => (r === null ? null : m.seat(r)))} current=${m.round} live=${!m.roundOver} />

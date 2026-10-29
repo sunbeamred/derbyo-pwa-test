@@ -64,23 +64,32 @@ export function OnlineLobby({ nav, app }) {
     return () => { live = false; clearInterval(t); };
   }, []);
   const remembered = QuickChoice.remember;
+  // One phone needs the sandbox server (it seats «Игрок 2»); the site shows it as coming soon.
+  const hotseat = !!account.profile && "showFlag" in account.profile;
+  // Bot and one-phone games take the same settings as a room.
+  const practice = (kind) => nav.push("settings", { settings: newSettings(), kind,
+    start: (s) => { nav.back(); return kind === "bot" ? app.bot(createBody(s)) : app.hotseat(createBody(s)); } });
   const enter = (r, watch) => (r.locked ? setLocked({ r, watch }) : app.joinRoom(r.code, { role: watch ? "spectator" : "player" }));
-  const mode = (icon, title, detail, run) => html`<button class=${cx("mode press", !run && "soon-mode")} disabled=${!run} onClick=${run}>
+  const mode = (icon, title, detail, run) => html`<button class=${cx("mode flat press", !run && "soon-mode")} disabled=${!run} onClick=${run}>
     <span class="mode-ic">${icon ? html`<img src=${img(icon)} alt="" />` : html`<${Icon} name="phone" size="18" weight="1.8" />`}</span>
     <span class="mode-t"><b>${title}</b><small>${detail}</small></span>
     ${run ? html`<${Icon} name="right" size="13" weight="3" class="chev" />` : null}</button>`;
   return html`<div class="screen-scroll"><div class="page">
     <${LobbyHeader} title="Футбольные крестики-нолики" back=${nav.back} />
-    <${Section} t="ОНЛАЙН" />
-    <button class="primary-btn" onClick=${() => (remembered && QuickChoice.presets.length ? app.quick() : nav.push("quickPick"))}><img src=${img("bolt")} alt="" />Быстрая игра</button>
-    ${remembered ? html`<button class="remembered" onClick=${() => nav.push("quickPick")}>${QuickChoice.summary}<b>  ·  изменить</b></button>` : null}
-    <div class="two">
-      <button class="navy-btn tall" onClick=${() => nav.push("room")}><img src=${img("invite")} alt="" />Создать</button>
-      <button class="mint-btn tall press" onClick=${() => nav.push("code")}><img src=${img("arrow")} alt="" />По коду</button>
-    </div>
-    <${Section} t="ОФЛАЙН" />
-    ${mode("bot", "С ботом", "Тренировка на настоящем поле", () => app.bot())}
-    ${mode(null, "На одном телефоне", "Скоро", null)}
+    <section class="mode-group glass">
+      <h4 class="mg-head"><i class="mg-dot on"></i>Онлайн<small>соперники с derbyo.online</small></h4>
+      <button class="primary-btn" onClick=${() => (remembered && QuickChoice.presets.length ? app.quick() : nav.push("quickPick"))}><img src=${img("bolt")} alt="" />Быстрая игра</button>
+      ${remembered ? html`<button class="remembered" onClick=${() => nav.push("quickPick")}>${QuickChoice.summary}<b>  ·  изменить</b></button>` : null}
+      <div class="two">
+        <button class="navy-btn tall" onClick=${() => nav.push("room")}><img src=${img("invite")} alt="" />Создать</button>
+        <button class="mint-btn tall press" onClick=${() => nav.push("code")}><img src=${img("arrow")} alt="" />По коду</button>
+      </div>
+    </section>
+    <section class="mode-group glass">
+      <h4 class="mg-head"><i class="mg-dot"></i>Офлайн<small>без рейтинга</small></h4>
+      ${mode("bot", "С ботом", "Тренировка на настоящем поле", () => practice("bot"))}
+      ${mode(null, "На одном телефоне", hotseat ? "Игрок 1 против Игрока 2" : "Скоро", hotseat ? () => practice("hotseat") : null)}
+    </section>
     <${Section} t="ОТКРЫТЫЕ КОМНАТЫ" />
     ${err ? html`<p class="hint-line small pad">${err}</p>`
       : !rooms ? html`<p class="hint-line small pad">Загружаем комнаты…</p>`
