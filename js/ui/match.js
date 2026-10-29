@@ -177,14 +177,18 @@ function Scoreboard({ m, openProfile, openStands }) {
 /** Under the score: the ratings at the edges and the level in the middle. When the difficulty rises from round to
  * round it reads «Новичок • Любитель • Знаток»: the current level always under the score, the one before and the next
  * beside it, fading out towards the ratings. A level that never changes reads «ур. Любитель». */
+// The site's difficulty colours (foundation.css, .difficulty-*), the same as on the difficulty cards.
+const LEVEL_COLORS = { "Новичок": "#80e6b6", "Любитель": "#89c9f5", "Знаток": "#e4ee54", "Легенда": "#ff8594", "Энциклопедия": "#bc8cff" };
+const lvColor = (name) => LEVEL_COLORS[name] ? `--lc:${LEVEL_COLORS[name]}` : null;
+
 function LevelRow({ m, live }) {
   const chain = m.levelChain;
   const cur = chain?.cur ?? m.levelPath.find((s) => s.current)?.name ?? "";
   return html`<div class="level-row">
     <span class="lr-side"><span class=${cx("fade", live(0) && "on")}><${SideTag} m=${m} owner=${0} /></span>
-      ${chain ? html`<span class="lv-side lv-prev">${chain.prev ? html`<span>${chain.prev}<i>•</i></span>` : null}</span>` : null}</span>
-    <span class="level-path">${chain ? null : html`ур. `}<span class="cur">${cur}</span></span>
-    <span class="lr-side end">${chain ? html`<span class="lv-side lv-next">${chain.next ? html`<span><i>•</i>${chain.next}</span>` : null}</span>` : null}
+      ${chain ? html`<span class="lv-side lv-prev">${chain.prev ? html`<span><b style=${lvColor(chain.prev)}>${chain.prev}</b><i>•</i></span>` : null}</span>` : null}</span>
+    <span class="level-path">${chain ? null : html`ур. `}<span class="cur" style=${lvColor(cur)}>${cur}</span></span>
+    <span class="lr-side end">${chain ? html`<span class="lv-side lv-next">${chain.next ? html`<span><i>•</i><b style=${lvColor(chain.next)}>${chain.next}</b></span>` : null}</span>` : null}
       <span class=${cx("fade", live(1) && "on")}><${SideTag} m=${m} owner=${1} /></span></span>
   </div>`;
 }
