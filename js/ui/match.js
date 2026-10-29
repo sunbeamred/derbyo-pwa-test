@@ -353,8 +353,8 @@ export function TurnDial({ m, size = 52 }) {
         stroke-dasharray=${C2} stroke-dashoffset=${C2 * (1 - away.f)} transform="rotate(-90 50 50)" />` : null}
     </svg>
     <span class="dial-in">
-      ${m.roundOver ? html`<${Icon} name=${m.matchOver ? "flag" : "hourglass"} size="20" weight="2.2" style="color:#F6D482" />`
-        : m.paused ? html`<${Icon} name="pause" size="16" style="color:#A8B8CA" />`
+      ${m.roundOver ? html`<${Icon} name=${m.matchOver ? "finish" : "hourglass"} size="19" style="color:#F6D482" />`
+        : m.paused ? html`<${Icon} name="pause" size="17" style="color:#A8B8CA" />`
         : m.review ? html`<b style="color:#F6D482">${m.review.left}</b>`
         : html`<b style=${low ? `color:${tint}` : ""}>${m.seconds}</b>`}
     </span>
