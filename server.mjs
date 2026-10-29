@@ -31,7 +31,8 @@ function proxy(req, res) {
   const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket.remoteAddress;
   headers["x-forwarded-for"] = ip;
   delete headers["x-forwarded-host"]; delete headers["x-forwarded-proto"];
-  const up = https.request({ host: UPSTREAM.hostname, port: UPSTREAM.port || 443, path: req.url, method: req.method, headers }, (r) => {
+  // A plain-http upstream is a local copy of the server, for testing.
+  const up = (UPSTREAM.protocol === "http:" ? http : https).request({ host: UPSTREAM.hostname, port: UPSTREAM.port || (UPSTREAM.protocol === "http:" ? 80 : 443), path: req.url, method: req.method, headers }, (r) => {
     const out = { ...r.headers };
     // Cookies belong to this host: no Domain attribute pointing at the site.
     if (out["set-cookie"]) out["set-cookie"] = out["set-cookie"].map((c) => c.replace(/;\s*Domain=[^;]*/i, ""));

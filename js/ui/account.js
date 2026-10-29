@@ -258,13 +258,13 @@ export function ProfileTab({ children }) {
       <div class="pf-head">
         ${editable ? html`<button class="face-btn press" aria-label="Изменить профиль" onClick=${() => openSheet({ kind: "edit" })}><${Face} name=${account.name} photo=${p.avatar} /><i class="face-edit"><${Icon} name="plusSquare" size="12" weight="2.5" /></i></button>`
           : html`<${Face} name=${account.name} photo=${p.avatar} />`}
-        <span class="pf-name"><b>${account.name}</b><span>${flagOf(p.country) ? html`<i class="flag">${flagOf(p.country)}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em><small>${p.registered ? "аккаунт derbyo.online" : "гость"}</small></span></span>
+        <span class="pf-name"><b>${account.name}</b><span>${flagOf(p.country) ? html`<i class="flag">${flagOf(p.country)}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>${p.registered ? null : html`<small>гость</small>`}</span></span>
         <span class="pf-rating">${p.rating != null ? html`<b class="grad" style=${`${tierStyle(p.rating)};filter:drop-shadow(0 0 6px ${t.b}80)`}>${p.rating}</b>
           <small>${p.rank ? html`<span class=${cx(placeStyle(p.rank) && "grad")} style=${placeStyle(p.rank)}>${p.rank}</span> место` : t.name}</small>`
           : html`<small>${p.registered ? "рейтинг после 5 игр" : "рейтинг — после входа"}</small>`}</span>
       </div>
       <div class="pf-stats"><span><b>${p.games}</b><small>Игр</small></span><span><b>${p.games ? Math.round((p.wins / p.games) * 100) : 0}%</b><small>Побед</small></span><span><b>${p.bestStreak}</b><small>Лучшая серия</small></span></div>
-      ${p.registered ? html`<div class="pf-stats small"><span><b>${p.wins}</b><small>Побед</small></span><span><b>${p.draws ?? 0}</b><small>Ничьих</small></span><span><b>${p.losses ?? 0}</b><small>Поражений</small></span></div>` : null}
+      ${p.registered ? html`<div class="pf-stats small"><span><b>${p.wins}</b><small>Выиграно</small></span><span><b>${p.draws ?? 0}</b><small>Вничью</small></span><span><b>${p.losses ?? 0}</b><small>Проиграно</small></span></div>` : null}
       ${editable ? html`<button class="navy-btn small" onClick=${() => openSheet({ kind: "edit" })}>Изменить профиль</button>` : null}
     </div>
     ${recovery ? html`<div class="info-card"><div class="ic-title"><${Icon} name="lock" size="15" style="color:#F6D482" /><b>Код восстановления</b></div>

@@ -876,3 +876,5 @@ button.toggle-card { width: 100%; color: inherit; text-align: left; }
 .edit-profile .picker-row .flag { font-style: normal; }
 .edit-profile .picker-row { position: relative; }
 .edit-profile .picker-row .picker { position: static; }
+.lvl { white-space: nowrap; flex: none; }
+.pf-name > span { flex-wrap: wrap; }
