@@ -1,7 +1,7 @@
 // The «Играть» screens on the site's server: open rooms, the quick game's search, your room, joining by code,
 // someone's room before the start. Same look as the offline prototype's (lobby.js), real data underneath.
-import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel } from "./common.js";
-import { PRESETS, LEVELS, QuickChoice, Section, RoomPassword, SeatCard, Collapsible, summary, settingRows, extras, passwordOK, newSettings, presetOf, presetsOf } from "./lobby.js";
+import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel, RatingTag } from "./common.js";
+import { PRESETS, LEVELS, QuickChoice, Section, RoomPassword, Collapsible, summary, settingRows, extras, passwordOK, newSettings, presetOf, presetsOf } from "./lobby.js";
 import { ViewerList } from "./sheets.js";
 import { ProfileSheet } from "./profile.js";
 import { Face } from "./account.js";
@@ -16,7 +16,7 @@ export function createBody(s) {
     level: s.level, seconds: s.seconds, tokens: s.tokens, progressive: s.progressive, theme: s.theme,
     winsRequired: s.format === "twoWins" ? 2 : undefined, tiebreak: s.format === "tiebreak", rounds: s.format === "rounds" ? s.rounds : 3,
   };
-  return { ...body, penaltiesOnDraw: false, lastChance: false, spectators: s.spectators !== false, ...(s.chat === false ? { chat: false } : {}),
+  return { ...body, penaltiesOnDraw: false, lastChance: false,
     accessType: s.closed ? "closed" : "open", ...(s.closed ? { password: s.password } : {}) };
 }
 /** The site's room settings in the settings screen's shape (for the summary and the rows). */
@@ -25,7 +25,7 @@ export function fromServer(x = {}, locked = false) {
   const preset = presets[0] ?? (PRESETS.some((p) => p.id === x.id) ? x.id : null);
   return newSettings({ preset, presets: preset ? (presets.length ? presets : [preset]) : [], level: x.level ?? 2, seconds: x.seconds ?? 60, tokens: x.tokens ?? 4, theme: x.theme ?? "mixed", progressive: !!x.progressive,
     format: x.winsRequired === 2 ? "twoWins" : x.tiebreak ? "tiebreak" : "rounds", rounds: x.rounds ?? 3,
-    penaltiesOnDraw: !!x.penaltiesOnDraw, penaltiesEachRound: x.penaltiesScope === "round", lastChance: !!x.lastChance, closed: locked, password: locked ? "••••" : "", spectators: x.spectators !== false, chat: x.chat !== false });
+    penaltiesOnDraw: !!x.penaltiesOnDraw, penaltiesEachRound: x.penaltiesScope === "round", lastChance: !!x.lastChance, closed: locked, password: locked ? "••••" : "" });
 }
 
 const STAGE = { lobby: "Ждёт игрока", playing: "В игре", paused: "Пауза", between: "Перерыв", complete: "Завершён" };
@@ -49,11 +49,10 @@ function RoomTile({ r, enter }) {
       ${r.round ? html`<small class="rt-meta">раунд ${r.round}</small>` : null}
       <small class=${cx("rt-state", r.stage === "playing" && "live", join && "wait")}><i></i>${STAGE[r.stage] ?? r.stage}</small>
       <span class="rt-flex"></span>
-      ${r.locked ? html`<img class="rt-lock" src=${img("lock")} alt="С паролем" />` : null}
+      ${r.locked && !watch ? html`<img class="rt-lock" src=${img("lock")} alt="С паролем" />` : null}
+      ${watch ? html`<span class="rt-watch" aria-label=${(r.locked ? "С паролем. " : "") + (r.viewers ? `Смотреть, зрителей: ${r.viewers}` : "Смотреть")}><${Icon} name="eye" size="15" />${r.viewers ? html`<b>${r.viewers}</b>` : null}${r.locked ? html`<img class="rt-watch-lock" src=${img("lock")} alt="" />` : null}</span>` : null}
     </span>
-    <span class="rt-players">${seat(players[0], "l")}${watch
-      ? html`<span class="rt-watch" aria-label=${r.viewers ? `Смотреть, зрителей: ${r.viewers}` : "Смотреть"}><${Icon} name="eye" size="18" />${r.viewers ? html`<b>${r.viewers}</b>` : null}</span>`
-      : html`<i class="rt-vs">VS</i>`}${seat(players[1], "r")}</span>
+    <span class="rt-players">${seat(players[0], "l")}<i class="rt-vs">VS</i>${seat(players[1], "r")}</span>
   </button>`;
 }
 
@@ -75,7 +74,8 @@ export function OnlineLobby({ nav, app }) {
   // Bot and one-phone games take the same settings as a room.
   const practice = (kind) => nav.push("settings", { settings: newSettings(), kind,
     start: (s) => { nav.back(); return kind === "bot" ? app.bot(createBody(s)) : app.hotseat(createBody(s)); } });
-  const enter = (r, watch) => (r.locked ? setLocked({ r, watch }) : app.joinRoom(r.code, { role: watch ? "spectator" : "player" }));
+  // A sandbox admin (tester1) watches any room unseen, a locked one too, without the password.
+  const enter = (r, watch) => (r.locked && !(watch && account.profile?.admin) ? setLocked({ r, watch }) : app.joinRoom(r.code, { role: watch ? "spectator" : "player" }));
   const mode = (icon, title, detail, run) => html`<button class=${cx("mode flat press", !run && "soon-mode")} disabled=${!run} onClick=${run}>
     <span class="mode-ic">${icon ? html`<img src=${img(icon)} alt="" />` : html`<${Icon} name="phone" size="18" weight="1.8" />`}</span>
     <span class="mode-t"><b>${title}</b><small>${detail}</small></span>
@@ -160,6 +160,53 @@ export function OnlineSearch({ done }) {
   </div>`;
 }
 
+/** One player in the duel bubble: photo, name, flag with rating and place, readiness. */
+function DuelSide({ p, red, side }) {
+  if (!p) return html`<div class=${cx("ds free", side)}><span class="ds-av wait"><i></i><${Icon} name="question" size="22" weight="2" /></span>
+    <b class="ds-name">Ждём игрока</b><small class="ds-none">место свободно</small></div>`;
+  return html`<button class=${cx("ds press", side)} onClick=${p.open} aria-label=${`${p.name}, открыть профиль`}>
+    <span class=${cx("ds-av", red ? "red" : "green", p.ready && "ready", p.gone && "gone")}>
+      ${p.bot ? html`<img class="bot" src=${img("bot")} alt="" />` : p.photo ? html`<img class="photo" src=${p.photo} alt="" />` : html`<b>${p.name.slice(0, 2).toUpperCase()}</b>`}</span>
+    <b class="ds-name">${p.name}</b>
+    ${p.rating != null || p.flag ? html`<${RatingTag} flag=${p.flag} rating=${p.rating} rank=${p.rank} small=${11} />` : html`<small class="ds-none">${p.bot ? "учебный бот" : "без рейтинга"}</small>`}
+    <span class=${cx("status-pill", p.gone ? "gone" : p.ready ? "ready" : "")}><i></i>${p.gone ? p.note : p.ready ? "Готов" : "Не готов"}</span>
+  </button>`;
+}
+
+/** Both players in one bubble, face to face, with the VS emblem between them. */
+const Duel = ({ left, right, leftRed = true, children }) => html`<div class="duel glass">
+  <div class="duel-row">
+    <${DuelSide} p=${left} red=${leftRed} side="l" />
+    <span class="duel-vs" aria-hidden="true"><i>VS</i></span>
+    <${DuelSide} p=${right} red=${!leftRed} side="r" />
+  </div>${children}</div>`;
+
+/** The room's chat and stands as two tabs of one card. */
+function RoomTalk({ m }) {
+  const [tab, setTab] = useState("chat");
+  const [draft, setDraft] = useState("");
+  const list = useRef();
+  const chat = m?.chat ?? [], viewers = m?.viewers ?? [];
+  useEffect(() => { if (list.current) list.current.scrollTop = list.current.scrollHeight; }, [chat.length, tab]);
+  const send = (e) => { e.preventDefault(); const t = draft.trim(); if (!t || !m) return; m.send(t); setDraft(""); };
+  return html`<div class="talk glass">
+    <div class="segmented talk-tabs">
+      <button class=${tab === "chat" ? "on" : ""} onClick=${() => setTab("chat")}><img src=${img("chat")} alt="" />Чат${chat.length ? html` <i>${chat.length}</i>` : null}</button>
+      <button class=${tab === "stands" ? "on" : ""} onClick=${() => setTab("stands")}><img src=${img("eye")} alt="" />Трибуна <i>${viewers.length}</i></button>
+    </div>
+    ${tab === "chat" ? html`
+      ${chat.length ? html`<div class="chat-list inline talk-list" ref=${list}>${chat.map((x) => html`<div class=${cx("msg", x.who === "Ты" && "me", x.spectator && "spec")}>
+        <span class="who"><span>${x.who}</span>${x.spectator ? html`<i> · зритель</i>` : null}</span><span class="text">${x.text}</span></div>`)}</div>`
+        : html`<p class="talk-empty">Пока тихо — напиши первым</p>`}
+      <form class="mini-field" onSubmit=${send} action="#">
+        <input value=${draft} onInput=${(e) => setDraft(e.target.value)} placeholder="Сообщение" enterkeyhint="send" autocomplete="off" disabled=${!m} />
+        <button type="submit" class=${cx("send", draft.trim() && "on")} disabled=${!draft.trim()} aria-label="Отправить"><${Icon} name="up" size="16" weight="3" /></button>
+      </form>`
+      : viewers.length ? html`<${ViewerList} viewers=${viewers} open=${() => {}} />`
+      : html`<p class="talk-empty">На трибуне пока никого. Третий по коду сядет сюда.</p>`}
+  </div>`;
+}
+
 /** «Готов. Ждём …» with «Отменить», when the server can take readiness back (the sandbox can, older servers cannot). */
 const ReadyWait = ({ m, who }) => html`<div class="waiting-bar"><span class="spinner muted"></span>
   <span class="wb-t"><b>Готов. Ждём ${who}…</b><small>матч начнётся, когда оба готовы</small></span>
@@ -198,31 +245,27 @@ export function OnlineRoom({ nav, app }) {
   const copy = async () => { try { await navigator.clipboard.writeText(code.replace(" ", "")); } catch {} setCopied(true); setTimeout(() => setCopied(false), 1500); };
   const friend = m?.them;
   const meReady = !!m?.me?.ready;
-  const ex = [extras(settings), settings.closed ? "🔒 по паролю" : "", settings.spectators === false ? "без зрителей" : "", settings.chat === false ? "без чата" : ""].filter(Boolean).join(" · ");
+  const ex = [extras(settings), settings.closed ? "🔒 по паролю" : ""].filter(Boolean).join(" · ");
   const p = presetOf(settings);
   return html`<div class="screen-with-bar"><div class="screen-scroll"><div class="page">
     <${LobbyHeader} title="Комната" back=${nav.back} />
-    <div class="code-card glass">
-      <small class="cap">КОД КОМНАТЫ</small>
-      <b class="room-code">${code}</b>
-      <div class="two">
-        <button class="primary-btn" disabled=${!m} onClick=${share}><${Icon} name="share" size="17" />Поделиться</button>
-        <button class="navy-btn tall code-copy" disabled=${!m} onClick=${copy}><${Icon} name=${copied ? "check" : "copy"} size="16" />${copied ? "Скопирован" : "Код"}</button>
-      </div>
-      <p class="hint-line small center">${err ?? "Отправь код другу: он войдёт из приложения или на derbyo.online. Третий и дальше попадут на трибуну."}</p>
+    <div class="code-bar glass">
+      <span class="cb-t"><small class="cap">КОД КОМНАТЫ</small><b class="cb-code">${code}</b></span>
+      <button class="cb-btn press" disabled=${!m} onClick=${copy} aria-label="Скопировать код"><${Icon} name=${copied ? "check" : "copy"} size="18" /></button>
+      <button class="cb-btn main press" disabled=${!m} onClick=${share} aria-label="Поделиться"><${Icon} name="share" size="18" /></button>
     </div>
-    <div class="seats">
-      <${SeatCard} name=${m?.leftName ?? account.name} red=${(m?.mySeat ?? 0) === 0} ready=${meReady} />
-      <b class="vs">vs</b>
-      ${friend ? html`<${SeatCard} name=${friend.name} red=${(m?.mySeat ?? 0) === 1} ready=${!!friend.ready} />`
-        : html`<div class="seat-wait"><span class="pulse-av"><i></i><${Icon} name="question" size="20" weight="2" /></span><b>Ждём друга…</b><small>место свободно</small></div>`}
-    </div>
+    <p class="hint-line small pad">${err ?? (copied ? "Скопировано — отправь другу" : "Друг войдёт по коду из приложения или на derbyo.online. Третий и дальше — на трибуну.")}</p>
+    <${Duel} leftRed=${(m?.mySeat ?? 0) === 0}
+      left=${{ name: m?.leftName ?? account.name, photo: m?.avatarOf(0) ?? account.profile?.avatar ?? null, flag: m?.myFlag, rating: m?.myRating ?? account.profile?.rating ?? null, rank: m?.myRank ?? null, ready: meReady, open: () => {} }}
+      right=${friend ? { name: friend.name, bot: !!friend.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!friend.ready, open: () => {} } : null}>
+      ${!friend && m ? html`<button class="chip-btn duel-bot press" onClick=${() => m.addBot().catch(() => {})}><img src=${img("bot")} alt="" />Посадить бота</button>` : null}
+    <//>
     <button class="settings-card press" onClick=${() => nav.push("settings", { settings, set: setSettings })}>
       <img src=${img(p?.icon ?? "settings")} alt="" />
       <span><small>Настройки матча</small><b>${summary(settings)}</b>${ex ? html`<em>${ex}</em>` : null}</span>
       <${Icon} name="right" size="13" weight="3" class="chev" />
     </button>
-    ${!friend && m ? html`<button class="navy-btn" onClick=${() => m.addBot().catch(() => {})}><img src=${img("bot")} alt="" />Посадить бота</button>` : null}
+    <${RoomTalk} m=${m} />
   </div></div>
   <${BottomBar}>${meReady || waiting ? html`<${ReadyWait} m=${m} who=${friend?.name ?? "второго игрока"} />`
     : html`<button class="primary-btn" disabled=${!m || !friend || !passwordOK(settings)} onClick=${() => { setWaiting(true); m.ready().catch(() => setWaiting(false)); }}>
@@ -269,8 +312,7 @@ export function OnlineJoinCode({ nav, app }) {
 
 /** «Раздевалка»: your seat in someone's room before the start; the match begins when both press «Я готов». */
 export function OnlineLocker({ nav, app, m }) {
-  const [open, setOpen] = useState({ settings: true, chat: true, stands: false });
-  const [draft, setDraft] = useState("");
+  const [open, setOpen] = useState({ settings: false });
   const [profile, setProfile] = useState(null);
   const handed = useRef(false);
   useEffect(() => () => { if (!handed.current) m.stop(); }, []);
@@ -279,33 +321,17 @@ export function OnlineLocker({ nav, app, m }) {
   const host = m.them;
   const settings = fromServer(st?.settings, st?.locked);
   const flip = (k) => setOpen({ ...open, [k]: !open[k] });
-  const send = (e) => { e.preventDefault(); const t = draft.trim(); if (!t) return; m.send(t); setDraft(""); };
-  const last = m.chat[m.chat.length - 1];
   const meReady = !!m.me?.ready;
   return html`<div class="screen-with-bar"><div class="screen-scroll"><div class="page">
     <${LobbyHeader} title=${`Комната ${m.code}`} back=${nav.back} />
     <div class="locker-title"><small class="cap gold">РАЗДЕВАЛКА</small><h2>${m.closed ? "Комната закрыта" : !host ? "Ждём второго игрока" : "Оба на месте. Пора играть."}</h2></div>
-    <div class="seats">
-      ${host ? html`<${SeatCard} name=${host.name} red=${m.mySeat === 1} ready=${!!host.ready} gone=${!host.online} note="не в сети" open=${() => setProfile({ owner: 1 })} />`
-        : html`<div class="seat-wait"><span class="pulse-av"><i></i><${Icon} name="question" size="20" weight="2" /></span><b>Место свободно</b><small>ждём игрока</small></div>`}
-      <b class="vs">vs</b>
-      <${SeatCard} name=${m.leftName} red=${m.mySeat === 0} ready=${meReady} open=${() => setProfile({ owner: 0 })} />
-    </div>
+    <${Duel} leftRed=${m.mySeat === 0}
+      left=${{ name: m.leftName, photo: m.avatarOf(0), flag: m.myFlag, rating: m.myRating, rank: m.myRank, ready: meReady, open: () => setProfile({ owner: 0 }) }}
+      right=${host ? { name: host.name, bot: !!host.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!host.ready, gone: !host.online, note: "не в сети", open: () => setProfile({ owner: 1 }) } : null} />
     <${Collapsible} title="НАСТРОЙКИ МАТЧА" summary=${summary(settings)} open=${open.settings} toggle=${() => flip("settings")}>
       <div class="set-rows">${settingRows(settings).map(([k, v]) => html`<div><span>${k}</span><b>${v}</b></div>`)}</div>
     <//>
-    <${Collapsible} title="ЧАТ КОМНАТЫ" summary=${last ? `${last.who}: ${last.text}` : "пока тихо"} open=${open.chat} toggle=${() => flip("chat")}>
-      <div class="chat-list inline">${m.chat.map((x) => html`<div class=${cx("msg", x.who === "Ты" && "me", x.spectator && "spec")}>
-        <span class="who"><span>${x.who}</span>${x.spectator ? html`<i> · зритель</i>` : null}</span>
-        <span class="text">${x.text}</span></div>`)}</div>
-      <form class="mini-field" onSubmit=${send} action="#">
-        <input value=${draft} onInput=${(e) => setDraft(e.target.value)} placeholder="Напиши сообщение" enterkeyhint="send" autocomplete="off" />
-        <button type="submit" class=${cx("send", draft.trim() && "on")} disabled=${!draft.trim()} aria-label="Отправить"><${Icon} name="up" size="16" weight="3" /></button>
-      </form>
-    <//>
-    <${Collapsible} title=${`ТРИБУНА · ${m.viewers.length} / 24`} summary=${m.viewers.join(", ") || "никого"} open=${open.stands} toggle=${() => flip("stands")}>
-      <${ViewerList} viewers=${m.viewers} open=${() => {}} />
-    <//>
+    <${RoomTalk} m=${m} />
     <p class="hint-line small">Первый ход — ×. Подсказки и поле общие для всех подключившихся.</p>
   </div></div>
   <${BottomBar}>

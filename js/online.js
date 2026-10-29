@@ -117,7 +117,7 @@ export class OnlineMatch {
     st.players.forEach((p, i) => { if (p) this.seatNames[i] = p.name; });
     this.myName = me?.name ?? (this.watching ? this.seatNames[this.mySeat] ?? "Игрок" : account.name);
     this.meLeft = this.watching && !me && st.round > 0;
-    this.myFlag = this.hotseat ? null : this.watching ? (me && !me.bot ? flagOrGlobe(me.card?.country) : null) : account.profile?.showFlag === false ? "🌐" : flagOrGlobe(me?.card?.country ?? account.profile?.country);
+    this.myFlag = this.hotseat ? null : this.watching ? (me && !me.bot ? flagOrGlobe(me.card?.country) : null) : account.profile?.registered === false ? null : account.profile?.showFlag === false ? "🌐" : flagOrGlobe(me?.card?.country ?? account.profile?.country);
     this.opponent = { name: them?.name ?? this.seatNames[1 - this.mySeat] ?? "Ждём соперника", isBot: !!them?.bot, flag: them && !them.bot ? flagOrGlobe(them.card?.country) : null, rating: them?.card?.rating ?? null, rank: them?.card?.rank ?? null, present: !!them };
     // Newer servers (the sandbox) add rematch offers, harder rounds, free leave, reactions; on others these stay off.
     this.rematchOffer = st.rematch ?? null;
