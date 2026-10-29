@@ -39,13 +39,14 @@ export function AnswerSheet({ m, cell, dismiss }) {
   useEffect(() => { const el = wrap.current; if (el) el.scrollTop = el.scrollHeight; });
 
   const type = (q) => { setQuery(q); if (q && q !== picked?.name) { setPicked(null); setScoutOpen(false); } };
-  const choose = (p) => { setPicked(p); setQuery(p.name); field.current?.focus({ preventScroll: true }); };
+  // A tap on a player in a list is the answer itself: no extra press on «отправить».
+  const choose = (p) => { setPicked(p); setQuery(p.name); submit(null, p); };
   const shake = () => field.current?.parentElement?.animate([{ transform: "translateX(0)" }, { transform: "translateX(8px)" }, { transform: "translateX(-8px)" }, { transform: "translateX(5px)" }, { transform: "none" }], { duration: 300 });
-  const submit = async (e) => {
+  const submit = async (e, chosen = picked) => {
     e?.preventDefault();
-    if (!picked || busy) return;
+    if (!chosen || busy) return;
     setBusy(true);
-    const r = await m.answer(picked);
+    const r = await m.answer(chosen);
     setBusy(false);
     if (r === "used" || r === "unknown") shake();
     else if (r === "mismatch") field.current?.blur();
