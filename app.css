@@ -459,7 +459,6 @@ input { font-family: inherit; }
 .lv-side i { font-style: normal; padding: 0 2px; color: rgba(168, 184, 202, .6); }
 .lv-side { display: flex; }
 .lv-side > span { flex: none; }
-.lv-side b { font-weight: 500; color: color-mix(in srgb, var(--lc, #a8b8ca) 75%, transparent); }
 /* flex-end makes a long name overflow on the left, so the «•» next to the current level is never cut. */
 .lv-prev { justify-content: flex-end; -webkit-mask-image: linear-gradient(to right, transparent, #000 75%); mask-image: linear-gradient(to right, transparent, #000 75%); }
 .lv-next { text-align: left; -webkit-mask-image: linear-gradient(to left, transparent, #000 75%); mask-image: linear-gradient(to left, transparent, #000 75%); }

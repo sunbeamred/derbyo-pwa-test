@@ -186,9 +186,9 @@ function LevelRow({ m, live }) {
   const cur = chain?.cur ?? m.levelPath.find((s) => s.current)?.name ?? "";
   return html`<div class="level-row">
     <span class="lr-side"><span class=${cx("fade", live(0) && "on")}><${SideTag} m=${m} owner=${0} /></span>
-      ${chain ? html`<span class="lv-side lv-prev">${chain.prev ? html`<span><b style=${lvColor(chain.prev)}>${chain.prev}</b><i>•</i></span>` : null}</span>` : null}</span>
+      ${chain ? html`<span class="lv-side lv-prev">${chain.prev ? html`<span>${chain.prev}<i>•</i></span>` : null}</span>` : null}</span>
     <span class="level-path">${chain ? null : html`ур. `}<span class="cur" style=${lvColor(cur)}>${cur}</span></span>
-    <span class="lr-side end">${chain ? html`<span class="lv-side lv-next">${chain.next ? html`<span><i>•</i><b style=${lvColor(chain.next)}>${chain.next}</b></span>` : null}</span>` : null}
+    <span class="lr-side end">${chain ? html`<span class="lv-side lv-next">${chain.next ? html`<span><i>•</i>${chain.next}</span>` : null}</span>` : null}
       <span class=${cx("fade", live(1) && "on")}><${SideTag} m=${m} owner=${1} /></span></span>
   </div>`;
 }
