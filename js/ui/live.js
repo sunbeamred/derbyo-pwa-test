@@ -16,7 +16,7 @@ export function createBody(s) {
     level: s.level, seconds: s.seconds, tokens: s.tokens, progressive: s.progressive, theme: s.theme,
     winsRequired: s.format === "twoWins" ? 2 : undefined, tiebreak: s.format === "tiebreak", rounds: s.format === "rounds" ? s.rounds : 3,
   };
-  return { ...body, penaltiesOnDraw: false, lastChance: false, ...(s.coaches === false ? { coaches: false } : {}), ...(s.teammates === false ? { teammates: false } : {}),
+  return { ...body, penaltiesOnDraw: false, lastChance: false, ...(s.coaches === false ? { coaches: false } : {}), ...(s.teammates === false ? { teammates: false } : {}), ...(s.awayTimer === false ? { awayTimer: false } : {}),
     accessType: s.closed ? "closed" : "open", ...(s.closed ? { password: s.password } : {}) };
 }
 /** The site's room settings in the settings screen's shape (for the summary and the rows). */
@@ -25,7 +25,7 @@ export function fromServer(x = {}, locked = false) {
   const preset = presets[0] ?? (PRESETS.some((p) => p.id === x.id) ? x.id : null);
   return newSettings({ preset, presets: preset ? (presets.length ? presets : [preset]) : [], level: x.level ?? 2, seconds: x.seconds ?? 60, tokens: x.tokens ?? 4, theme: x.theme ?? "mixed", progressive: !!x.progressive,
     format: x.winsRequired === 2 ? "twoWins" : x.tiebreak ? "tiebreak" : "rounds", rounds: x.rounds ?? 3,
-    penaltiesOnDraw: !!x.penaltiesOnDraw, penaltiesEachRound: x.penaltiesScope === "round", lastChance: !!x.lastChance, closed: locked, password: locked ? "••••" : "", coaches: x.coaches !== false, teammates: x.teammates !== false });
+    penaltiesOnDraw: !!x.penaltiesOnDraw, penaltiesEachRound: x.penaltiesScope === "round", lastChance: !!x.lastChance, closed: locked, password: locked ? "••••" : "", coaches: x.coaches !== false, teammates: x.teammates !== false, awayTimer: x.awayTimer !== false });
 }
 
 const STAGE = { lobby: "Ждёт игрока", playing: "В игре", paused: "Пауза", between: "Перерыв", complete: "Завершён" };

@@ -47,6 +47,7 @@ export function settingRows(s) {
     ["Условия поля", p ? "Разные условия" : THEMES.find((t) => t[0] === s.theme)?.[1] ?? s.theme],
   ];
   if (s.coaches === false || s.teammates === false) out.push(["Вопросы", [s.coaches !== false && "тренеры", s.teammates !== false && "одноклубники"].filter(Boolean).join(", ") || "без тренеров и одноклубников"]);
+  if (s.awayTimer === false) out.push(["Таймер сворачивания", "выключен"]);
   out.push(["Доступ", s.closed ? "🔒 по паролю" : "открытая"]);
   return out;
 }
@@ -54,6 +55,7 @@ export function extras(s) {
   const parts = [];
   if (s.progressive && !presetOf(s)) parts.push("сложность растёт");
   if (s.coaches === false) parts.push("без тренеров");
+  if (s.awayTimer === false) parts.push("без таймера сворачивания");
   if (s.teammates === false) parts.push("без одноклубников");
   return parts.join(" · ");
 }
@@ -74,7 +76,7 @@ export const Section = ({ t }) => html`<h4 class="section">${t}</h4>`;
 /** The «Играть» tab: DERBYO as a collection of games; each game is one card with one «Играть». */
 export function HomeView({ nav }) {
   const [sound, setSound] = useState(Sound.enabled);
-  // Online: the site's own count of open browsers.
+  // Online: the site's own count of open browsers; a small crowd (under 40) is not shown.
   const [visitors, setVisitors] = useState(null);
   useEffect(() => { if (ONLINE) siteStats().then((s) => setVisitors(s.visitors)).catch(() => {}); }, []);
   return html`<div class="screen-scroll"><div class="page">
@@ -83,7 +85,7 @@ export function HomeView({ nav }) {
       <button class="sound-btn glass press" aria-label=${sound ? "Выключить звук" : "Включить звук"}
         onClick=${() => { Sound.enabled = !sound; setSound(!sound); Sound.play("turn"); }}>
         <img src=${img("sound")} alt="" class=${sound ? "" : "off"} />${sound ? null : html`<i class="slash"></i>`}</button>
-      <span class="online-pill"><i></i>${ONLINE ? visitors ?? "…" : 41} онлайн</span>
+      ${!ONLINE || visitors >= 40 ? html`<span class="online-pill"><i></i>${ONLINE ? visitors : 41} онлайн</span>` : null}
     </div>
     <${Section} t="ИГРЫ" />
     <div class="game-card">
@@ -186,9 +188,9 @@ export function PeopleSwitches({ s, set, rated = true }) {
     <input type="checkbox" class="switch" checked=${s[key] !== false} onClick=${(e) => set({ [key]: e.target.checked })} /></label>`;
   return html`<${Section} t="ВОПРОСЫ" />
     <div class="room-opts glass">
-      ${row("coaches", "coach", "Тренеры", "«Играл у тренера…» — с уровня Знаток", "Вопросов о тренерах не будет")}
-      ${row("teammates", "teammates", "Одноклубники", "«Играл вместе с…» — с уровня Знаток", "Вопросов об одноклубниках не будет")}
-      ${off && rated ? html`<p class="people-note">Рейтинг за раунды от Знатока будет считаться по пониженному коэффициенту: ×0,85 за каждую выключенную тему. Если выключил только соперник — тебе ×0,93.</p>` : null}
+      ${row("coaches", "coach", "Тренеры", "«Тренер: …» — с уровня Знаток", "Вопросов о тренерах не будет")}
+      ${row("teammates", "teammates", "Одноклубники", "«Одноклубник: …» — с уровня Знаток", "Вопросов об одноклубниках не будет")}
+      ${off && rated ? html`<p class="people-note">За каждую выключенную тему рейтинг тому, кто её выключил, считается с пониженным коэффициентом.</p>` : null}
     </div>`;
 }
 
@@ -459,6 +461,10 @@ export function MatchSettingsView({ nav, settings: initial, set = () => {}, kind
         <button class=${s.closed ? "on" : ""} onClick=${() => upd({ closed: true })}>С паролем</button></div>
       ${s.closed ? html`<label class=${cx("pw-field", !passwordOK(s) && "bad")}><${Icon} name="lock" size="16" style="color:#F6D482" />
         <input type="password" placeholder="Пароль · минимум 4 символа" value=${s.password} autocomplete="new-password" onInput=${(e) => upd({ password: e.target.value })} /></label>` : null}
+      ${peopleSetting() ? html`<label class="ro-row">
+        <span class="tc-ic"><img src=${img("stopwatch")} alt="" /></span>
+        <span class="tc-t"><b>Таймер сворачивания</b><small>${s.awayTimer !== false ? "Свернул игру надолго — теряешь ход" : "Сворачивать можно без штрафа"}</small></span>
+        <input type="checkbox" class="switch" checked=${s.awayTimer !== false} onClick=${(e) => upd({ awayTimer: e.target.checked })} /></label>` : null}
     </div>`}
   </div></div>
   ${start ? html`<${BottomBar}><button class="primary-btn" disabled=${busy} onClick=${async () => { setBusy(true); try { await start(latest.current); } finally { setBusy(false); } }}>
