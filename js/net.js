@@ -95,7 +95,7 @@ export const joinRoom = (code, { password, role = "player" } = {}) => admit("/ap
 
 /** The quick game's search: a ticket polled every second until the server pairs it. */
 export const quick = {
-  start: (presets, allowBot = false) => admit("/api/quick", { name: account.name, presets, allowBot }),
+  start: (presets, allowBot = false, people = {}) => admit("/api/quick", { name: account.name, presets, allowBot, ...(people.coaches === false ? { coaches: false } : {}), ...(people.teammates === false ? { teammates: false } : {}) }),
   status: (ticket) => api("/api/quick/status", { ticket }),
   cancel: (ticket) => api("/api/quick/cancel", { ticket }).catch(() => null),
 };

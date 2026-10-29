@@ -16,7 +16,7 @@ export function createBody(s) {
     level: s.level, seconds: s.seconds, tokens: s.tokens, progressive: s.progressive, theme: s.theme,
     winsRequired: s.format === "twoWins" ? 2 : undefined, tiebreak: s.format === "tiebreak", rounds: s.format === "rounds" ? s.rounds : 3,
   };
-  return { ...body, penaltiesOnDraw: false, lastChance: false,
+  return { ...body, penaltiesOnDraw: false, lastChance: false, ...(s.coaches === false ? { coaches: false } : {}), ...(s.teammates === false ? { teammates: false } : {}),
     accessType: s.closed ? "closed" : "open", ...(s.closed ? { password: s.password } : {}) };
 }
 /** The site's room settings in the settings screen's shape (for the summary and the rows). */
@@ -25,7 +25,7 @@ export function fromServer(x = {}, locked = false) {
   const preset = presets[0] ?? (PRESETS.some((p) => p.id === x.id) ? x.id : null);
   return newSettings({ preset, presets: preset ? (presets.length ? presets : [preset]) : [], level: x.level ?? 2, seconds: x.seconds ?? 60, tokens: x.tokens ?? 4, theme: x.theme ?? "mixed", progressive: !!x.progressive,
     format: x.winsRequired === 2 ? "twoWins" : x.tiebreak ? "tiebreak" : "rounds", rounds: x.rounds ?? 3,
-    penaltiesOnDraw: !!x.penaltiesOnDraw, penaltiesEachRound: x.penaltiesScope === "round", lastChance: !!x.lastChance, closed: locked, password: locked ? "••••" : "" });
+    penaltiesOnDraw: !!x.penaltiesOnDraw, penaltiesEachRound: x.penaltiesScope === "round", lastChance: !!x.lastChance, closed: locked, password: locked ? "••••" : "", coaches: x.coaches !== false, teammates: x.teammates !== false });
 }
 
 const STAGE = { lobby: "Ждёт игрока", playing: "В игре", paused: "Пауза", between: "Перерыв", complete: "Завершён" };
@@ -68,7 +68,6 @@ export function OnlineLobby({ nav, app }) {
     const t = setInterval(load, 10000);
     return () => { live = false; clearInterval(t); };
   }, []);
-  const remembered = QuickChoice.remember;
   // One phone needs the sandbox server (it seats «Игрок 2»); the site shows it as coming soon.
   const hotseat = !!account.profile && "showFlag" in account.profile;
   // Bot and one-phone games take the same settings as a room.
@@ -84,8 +83,7 @@ export function OnlineLobby({ nav, app }) {
     <${LobbyHeader} title="Футбольные крестики-нолики" back=${nav.back} />
     <section class="mode-group glass">
       <h4 class="mg-head"><i class="mg-dot on"></i>Онлайн<small>соперники с derbyo.online</small></h4>
-      <button class="primary-btn" onClick=${() => (remembered && QuickChoice.presets.length ? app.quick() : nav.push("quickPick"))}><img src=${img("bolt")} alt="" />Быстрая игра</button>
-      ${remembered ? html`<button class="remembered" onClick=${() => nav.push("quickPick")}>${QuickChoice.summary}<b>  ·  изменить</b></button>` : null}
+      <button class="primary-btn" onClick=${() => nav.push("quickPick")}><img src=${img("bolt")} alt="" />Быстрая игра</button>
       <div class="two">
         <button class="navy-btn tall" onClick=${() => nav.push("room")}><img src=${img("invite")} alt="" />Создать</button>
         <button class="mint-btn tall press" onClick=${() => nav.push("code")}><img src=${img("arrow")} alt="" />По коду</button>
@@ -123,12 +121,12 @@ export function OnlineSearch({ done }) {
       try {
         const r = await quick.status(ticket.current);
         if (r.status === "matched" && r.session) return finish(r.session);
-        if (r.status === "restart") { const n = await quick.start(QuickChoice.presets); ticket.current = n.ticket; }
+        if (r.status === "restart") { const n = await quick.start(QuickChoice.presets, false, QuickChoice.people); ticket.current = n.ticket; }
         setS(Math.round(r.elapsed ?? 0));
       } catch (e) { setErr(e.message); return; }
       timer = setTimeout(poll, 1000);
     };
-    quick.start(QuickChoice.presets).then((r) => {
+    quick.start(QuickChoice.presets, false, QuickChoice.people).then((r) => {
       ticket.current = r.ticket;
       if (r.status === "matched" && r.session) finish(r.session); else timer = setTimeout(poll, 1000);
     }).catch((e) => setErr(e.message));
@@ -197,9 +195,9 @@ function RoomTalk({ m }) {
     ${tab === "chat" ? html`
       ${chat.length ? html`<div class="chat-list inline talk-list" ref=${list}>${chat.map((x) => html`<div class=${cx("msg", x.who === "Ты" && "me", x.spectator && "spec")}>
         <span class="who"><span>${x.who}</span>${x.spectator ? html`<i> · зритель</i>` : null}</span><span class="text">${x.text}</span></div>`)}</div>`
-        : html`<p class="talk-empty">Пока тихо — напиши первым</p>`}
+        : null}
       <form class="mini-field" onSubmit=${send} action="#">
-        <input value=${draft} onInput=${(e) => setDraft(e.target.value)} placeholder="Сообщение" enterkeyhint="send" autocomplete="off" disabled=${!m} />
+        <input value=${draft} onInput=${(e) => setDraft(e.target.value)} placeholder=${chat.length ? "Сообщение" : "Пока тихо — напиши первым"} enterkeyhint="send" autocomplete="off" disabled=${!m} />
         <button type="submit" class=${cx("send", draft.trim() && "on")} disabled=${!draft.trim()} aria-label="Отправить"><${Icon} name="up" size="16" weight="3" /></button>
       </form>`
       : viewers.length ? html`<${ViewerList} viewers=${viewers} open=${() => {}} />`

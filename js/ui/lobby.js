@@ -3,7 +3,7 @@ import { html, useState, useEffect, useRef, cx, img, Icon, PickMark, BottomBar, 
 import { Match, Opponent, MAX_VIEWERS, store } from "../model.js";
 import { has, rand } from "../data.js";
 import { Sound } from "../sound.js";
-import { ONLINE, siteStats } from "../net.js";
+import { ONLINE, siteStats, account } from "../net.js";
 import { ProfileSheet } from "./profile.js";
 import { ViewerList } from "./sheets.js";
 
@@ -46,21 +46,24 @@ export function settingRows(s) {
     ["Формат", p ? "до двух побед" : fmtOf(s)],
     ["Условия поля", p ? "Разные условия" : THEMES.find((t) => t[0] === s.theme)?.[1] ?? s.theme],
   ];
+  if (s.coaches === false || s.teammates === false) out.push(["Вопросы", [s.coaches !== false && "тренеры", s.teammates !== false && "одноклубники"].filter(Boolean).join(", ") || "без тренеров и одноклубников"]);
   out.push(["Доступ", s.closed ? "🔒 по паролю" : "открытая"]);
   return out;
 }
 export function extras(s) {
   const parts = [];
   if (s.progressive && !presetOf(s)) parts.push("сложность растёт");
+  if (s.coaches === false) parts.push("без тренеров");
+  if (s.teammates === false) parts.push("без одноклубников");
   return parts.join(" · ");
 }
 
-/** The quick game's choice of levels, kept on the phone when the player asks to remember it. */
+/** The quick game's last choice of levels and questions: the next search starts from it. */
 export const QuickChoice = {
+  get people() { try { return { coaches: true, teammates: true, ...JSON.parse(localStorage.getItem("quickPeople")) }; } catch { return { coaches: true, teammates: true }; } },
+  set people(v) { try { localStorage.setItem("quickPeople", JSON.stringify(v)); } catch {} },
   get presets() { try { return JSON.parse(localStorage.getItem("quickPresets")) ?? ["amateur", "medium"]; } catch { return ["amateur", "medium"]; } },
   set presets(v) { try { localStorage.setItem("quickPresets", JSON.stringify(v)); } catch {} },
-  get remember() { try { return localStorage.getItem("quickRemember") === "1"; } catch { return false; } },
-  set remember(v) { try { localStorage.setItem("quickRemember", v ? "1" : "0"); } catch {} },
   get summary() { const c = QuickChoice.presets; return PRESETS.filter((p) => c.includes(p.id)).map((p) => p.name).join(" · "); },
 };
 
@@ -108,7 +111,6 @@ const ROOMS = [
 /** One game's screen: online (quick game, with a friend) or offline (bot, one phone), and open rooms. */
 export function GameLobby({ nav, app }) {
   const [locked, setLocked] = useState(null);
-  const remembered = QuickChoice.remember;
   const mode = (icon, title, detail, run) => html`<button class=${cx("mode press", !run && "soon-mode")} disabled=${!run} onClick=${run}>
     <span class="mode-ic">${icon ? html`<img src=${img(icon)} alt="" />` : html`<${Icon} name="phone" size="18" weight="1.8" />`}</span>
     <span class="mode-t"><b>${title}</b><small>${detail}</small></span>
@@ -116,8 +118,7 @@ export function GameLobby({ nav, app }) {
   return html`<div class="screen-scroll"><div class="page">
     <${LobbyHeader} title="Футбольные крестики-нолики" back=${nav.back} />
     <${Section} t="ОНЛАЙН" />
-    <button class="primary-btn" onClick=${() => (remembered && QuickChoice.presets.length ? app.quick() : nav.push("quickPick"))}><img src=${img("bolt")} alt="" />Быстрая игра</button>
-    ${remembered ? html`<button class="remembered" onClick=${() => nav.push("quickPick")}>${QuickChoice.summary}<b>  ·  изменить</b></button>` : null}
+    <button class="primary-btn" onClick=${() => nav.push("quickPick")}><img src=${img("bolt")} alt="" />Быстрая игра</button>
     <div class="two">
       <button class="navy-btn tall" onClick=${() => nav.push("room")}><img src=${img("invite")} alt="" />Создать</button>
       <button class="mint-btn tall press" onClick=${() => nav.push("code")}><img src=${img("arrow")} alt="" />По коду</button>
@@ -174,22 +175,38 @@ export function LevelCards({ chosen, set }) {
   });
 }
 
+/** Coach and teammate questions, on or off (only the sandbox server takes them). A rated game warns what switching off costs. */
+export const peopleSetting = () => !!account.profile && "showFlag" in account.profile;
+export function PeopleSwitches({ s, set, rated = true }) {
+  if (!peopleSetting()) return null;
+  const off = s.coaches === false || s.teammates === false;
+  const row = (key, icon, title, on, offText) => html`<label class="ro-row">
+    <span class="tc-ic"><img src=${img(icon)} alt="" /></span>
+    <span class="tc-t"><b>${title}</b><small>${s[key] !== false ? on : offText}</small></span>
+    <input type="checkbox" class="switch" checked=${s[key] !== false} onClick=${(e) => set({ [key]: e.target.checked })} /></label>`;
+  return html`<${Section} t="ВОПРОСЫ" />
+    <div class="room-opts glass">
+      ${row("coaches", "coach", "Тренеры", "«Играл у тренера…» — с уровня Знаток", "Вопросов о тренерах не будет")}
+      ${row("teammates", "teammates", "Одноклубники", "«Играл вместе с…» — с уровня Знаток", "Вопросов об одноклубниках не будет")}
+      ${off && rated ? html`<p class="people-note">Рейтинг за раунды от Знатока будет считаться по пониженному коэффициенту: ×0,85 за каждую выключенную тему. Если выключил только соперник — тебе ×0,93.</p>` : null}
+    </div>`;
+}
+
 export function QuickPickView({ nav, app }) {
   const [chosen, setChosen] = useState(new Set(QuickChoice.presets));
-  const [remember, setRemember] = useState(QuickChoice.remember);
+  const [people, setPeople] = useState(QuickChoice.people);
   return html`<div class="screen-with-bar"><div class="screen-scroll"><div class="page">
     <${LobbyHeader} title="Быстрая игра" back=${nav.back} />
     <p class="lead-text">Выбери сложности — найдём соперника.</p>
     <${Section} t="ПОДХОДЯЩИЕ СЛОЖНОСТИ" />
     <${LevelCards} chosen=${chosen} set=${setChosen} />
     <p class="center-note">От простого к сложному · 60 секунд на ход</p>
+    <${PeopleSwitches} s=${people} set=${(o) => setPeople({ ...people, ...o })} />
   </div></div>
   <${BottomBar}>
-    <button class="remember" onClick=${() => setRemember(!remember)}><${PickMark} on=${remember} size=${22} />
-      <span><b>Запомнить выбор</b><small>В следующий раз «Быстрая игра» сразу начнёт поиск</small></span></button>
     <button class="primary-btn" disabled=${!chosen.size} onClick=${() => {
       QuickChoice.presets = PRESETS.map((p) => p.id).filter((id) => chosen.has(id));
-      QuickChoice.remember = remember;
+      QuickChoice.people = people;
       nav.back(app.quick);
     }}><img src=${img("bolt")} alt="" />Найти соперника</button>
   <//></div>`;
@@ -430,6 +447,7 @@ export function MatchSettingsView({ nav, settings: initial, set = () => {}, kind
         if (ids.length) upd({ presets: ids, preset: ids[0] });
       }} />
       <p class="hint-line small pad">${presetsOf(s).length > 1 ? "Раунды идут от простого к сложному" : "Отметь несколько — раунды пойдут от простого к сложному"} · 60 секунд на ход · до двух побед</p>`}
+    <${PeopleSwitches} s=${s} set=${upd} rated=${!start} />
     ${start ? null : html`<${Section} t="КОМНАТА" />
     <div class="room-opts glass">
       <div class="ro-row">
