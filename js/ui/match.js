@@ -375,7 +375,7 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
   const mine = m.turn === 0;
   const title = m.watching ? (m.paused ? "Пауза" : m.review ? `Зачёт · решает ${m.name(1 - m.review.owner)}` : `Ходит ${m.name(m.turn)}`)
     : m.review?.owner === 0 ? "Ждём решение" : m.review?.owner === 1 ? "Твоё решение"
-    : m.paused ? "Пауза — часы стоят" : mine ? "Твой ход" : m.oppSelected !== null ? `${opp} думает…` : `Ходит ${opp}`;
+    : m.paused ? "Пауза — часы стоят" : mine ? (m.hotseat ? `Ходит ${m.leftName}` : "Твой ход") : m.oppSelected !== null ? `${opp} думает…` : `Ходит ${opp}`;
   const color = m.review ? GOLD : m.paused ? MUTED : m.seat(m.turn) === 0 ? "#FFB3C1" : "#91FFD3";
   const sub = m.watching ? html`<small>${m.review ? `${m.review.name ?? ""} · ${m.review.left} с` : m.paused ? "игроки взяли паузу" : "ты на трибуне"}</small>`
     : m.review ? html`<small>зачёт: ${m.review.name ?? byId[m.review.playerId].name}</small>`
