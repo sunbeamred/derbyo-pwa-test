@@ -44,12 +44,10 @@ function RoomTile({ r, enter }) {
         <small><i class=${cx("rt-dot", playing && "on")}></i>${STAGE[r.stage] ?? r.stage}${r.round ? ` · раунд ${r.round}` : ""}${r.seconds ? ` · ${r.seconds} с` : ""}</small></span>
       ${r.locked ? html`<span class="rt-lock"><img src=${img("lock")} alt="С паролем" /></span>` : null}
       ${r.viewers ? html`<span class="rt-view"><${Icon} name="eye" size="12" />${r.viewers}</span>` : null}
-    </div>
-    <div class="rt-bottom">
-      <span class="rt-players">${seat(players[0])}<i class="rt-vs">×</i>${seat(players[1])}</span>
       ${r.openSeats > 0 && r.stage === "lobby" ? html`<button class="join-btn press" onClick=${() => enter(r, false)}>Войти</button>`
         : r.canWatch ? html`<button class="navy-btn small watch" onClick=${() => enter(r, true)}>Смотреть</button>` : null}
     </div>
+    <span class="rt-players">${seat(players[0])}<i class="rt-vs">×</i>${seat(players[1])}</span>
   </div>`;
 }
 

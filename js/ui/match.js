@@ -215,21 +215,19 @@ function PlayerSide({ name, photo, mark, red, tokens, active, mine, isBot, react
     : missed > 0 && away === null ? html`<span class=${cx("st", missed >= 2 ? "idle" : "missed")}>${missed >= 2 ? "⏱ не отвечает" : "⏱ пропустил ход"}</span>`
     : away !== null ? html`<span class="st away">◒ свернул ${away} с</span>`
     : html`<span class="st in">● в игре</span>`;
-  const tokenCount = html`<span class="tokens"><img src=${img("coin")} alt="" /><b>${tokens}</b></span>`;
+  // The coins sit on the photo's corner, so the status line has the side's whole width for bigger words.
+  const tokenCount = html`<span class="tokens ptokens"><img src=${img("coin")} alt="" /><b>${tokens}</b></span>`;
   const gone = away !== null || left;
   const avatar = html`<span class=${cx("pavatar", red ? "red" : "green", active && "active", !mine && gone && "gone", mine ? "mine" : "theirs")}>
     <span class="face">${isBot ? html`<img class="bot" src=${img("bot")} alt="" />` : photo ? html`<img class="photo" src=${photo} alt="" />` : name.slice(0, 2).toUpperCase()}</span>
     <img class="pmark" src=${img(mark)} alt="" />
+    ${tokenCount}
   </span>`;
   return html`<button class=${cx("pside", mine ? "mine" : "theirs", active && "active")} onClick=${onClick} aria-label=${`${name}, открыть профиль`}>
     ${mine ? avatar : null}
     <span class="pinfo">
       <span class="pname">${breakable(name)}</span>
-      <span class="pstatus">
-        ${!mine && away === null && !left && missed === 0 ? tokenCount : null}
-        ${status}
-        ${mine && away === null ? tokenCount : null}
-      </span>
+      <span class="pstatus">${status}</span>
     </span>
     ${!mine ? avatar : null}
     ${echo ? html`<span class="reaction-echo" key=${echo.n}><i></i><i></i><b>${echo.e}</b></span>` : null}
