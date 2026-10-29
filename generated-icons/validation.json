@@ -1,92 +1,99 @@
-[
-  {
-    "file": "vibrate.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "camera.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "globe-flag.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "phone-duo.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "friend-add.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "friends.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "eye.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "search.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "share.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "key.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "logout.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "question.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "sparkles.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "pause.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
-  },
-  {
-    "file": "hand.png",
-    "width": 192,
-    "height": 192,
-    "alpha": true
+{
+  "revision": 3,
+  "checks": [
+    {
+      "file": "vibrate.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "camera.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "globe-flag.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "phone-duo.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "friend-add.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "friends.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "eye.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "search.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "share.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "key.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "logout.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "question.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "sparkles.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "pause.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    },
+    {
+      "file": "hand.png",
+      "width": 192,
+      "height": 192,
+      "alpha": true
+    }
+  ],
+  "unchanged": {
+    "friends.png": "037b53b3b5580eafb80510e5012352b8f9bf3bc1264f7895ed29a7ada4028e1c",
+    "globe-flag.png": "b79918d92bda549a838face7eccfd2897b8a5ed666b949a42ed2a00772fd6191"
   }
-]
+}

@@ -228,7 +228,7 @@ function PlayerSide({ name, photo, mark, red, tokens, active, mine, isBot, react
   return html`<button class=${cx("pside", mine ? "mine" : "theirs", active && "active")} onClick=${onClick} aria-label=${`${name}, открыть профиль`}>
     ${mine ? avatar : null}
     <span class="pinfo">
-      <span class="pname">${breakable(name)}</span>
+      <span class=${cx("pname", !/[\s_.-]/.test(name) && "one")} style=${`--n:${name.length}`}>${breakable(name)}</span>
       <span class="pstatus">${status}</span>
     </span>
     ${!mine ? avatar : null}
@@ -338,9 +338,8 @@ function Cell({ cell, cross, selected, locked, oppPick, clued, recent, disputed,
 export function TurnDial({ m, size = 52 }) {
   const mine = m.turn === 0;
   const low = mine && m.seconds <= 10 && !m.roundOver;
-  const ws = m.roundWinner === null ? null : m.seat(m.roundWinner);
   const reviewing = m.review && !m.roundOver;
-  const tint = m.roundOver ? (ws === 0 ? RED : ws === 1 ? MINT : GOLD) : reviewing ? GOLD : m.paused ? MUTED : low ? "#FF8B97" : m.seat(m.turn) === 0 ? RED : MINT;
+  const tint = m.roundOver ? GOLD : reviewing ? GOLD : m.paused ? MUTED : low ? "#FF8B97" : m.seat(m.turn) === 0 ? RED : MINT;
   const fill = m.roundOver ? 1 : reviewing ? m.review.left / 20 : Math.min(1, Math.max(0, m.seconds) / 60);
   const R = 50 - 5, C = 2 * Math.PI * R, r2 = 50 - 18, C2 = 2 * Math.PI * r2;
   const away = m.oppAwayFor !== null ? { f: m.oppAwayBudget / 45, c: m.mySeat === 1 ? RED : MINT } : m.awaySeconds < 45 ? { f: m.awaySeconds / 45, c: "rgba(201,213,227,.7)" } : null;
@@ -354,7 +353,7 @@ export function TurnDial({ m, size = 52 }) {
         stroke-dasharray=${C2} stroke-dashoffset=${C2 * (1 - away.f)} transform="rotate(-90 50 50)" />` : null}
     </svg>
     <span class="dial-in">
-      ${m.roundOver ? html`<img src=${img(m.roundWinner === null ? "trophy" : m.mark(m.roundWinner))} alt="" />`
+      ${m.roundOver ? html`<${Icon} name=${m.matchOver ? "flag" : "hourglass"} size="20" weight="2.2" style="color:#F6D482" />`
         : m.paused ? html`<${Icon} name="pause" size="16" style="color:#A8B8CA" />`
         : m.review ? html`<b style="color:#F6D482">${m.review.left}</b>`
         : html`<b style=${low ? `color:${tint}` : ""}>${m.seconds}</b>`}
@@ -373,17 +372,17 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
   else if (m.pauseAskLeft !== null) pause = { title: "Пауза предложена", detail: `ждём ${opp} · ${m.pauseAskLeft} с`, color: MUTED, run: () => {} };
 
   const mine = m.turn === 0;
-  const title = m.watching ? (m.paused ? "Пауза" : m.review ? `Зачёт · решает ${m.name(1 - m.review.owner)}` : `Ходит ${m.name(m.turn)}`)
+  const title = m.watching ? (m.paused ? "Пауза" : m.review ? `Решает ${m.name(1 - m.review.owner)}` : `Ходит ${m.name(m.turn)}`)
     : m.review?.owner === 0 ? "Ждём решение" : m.review?.owner === 1 ? "Твоё решение"
     : m.paused ? "Пауза — часы стоят" : mine ? (m.hotseat ? `Ходит ${m.leftName}` : "Твой ход") : m.oppSelected !== null ? `${opp} думает…` : `Ходит ${opp}`;
   const color = m.review ? GOLD : m.paused ? MUTED : m.seat(m.turn) === 0 ? "#FFB3C1" : "#91FFD3";
-  const sub = m.watching ? html`<small>${m.review ? `${m.review.name ?? ""} · ${m.review.left} с` : m.paused ? "игроки взяли паузу" : "ты на трибуне"}</small>`
+  const sub = m.watching ? html`<small>${m.review ? `зачёт: ${m.review.name ?? ""}` : m.paused ? "игроки взяли паузу" : "ты на трибуне"}</small>`
     : m.review ? html`<small>зачёт: ${m.review.name ?? byId[m.review.playerId].name}</small>`
     : m.oppAwayFor !== null ? html`<small style=${`color:${m.mySeat === 1 ? "#FFB3C1" : "#91FFD3"}`}>◒ ${opp} · ещё ${m.oppAwayBudget} с</small>`
     : m.awaySeconds < 45 ? html`<small>${m.awaySeconds > 0 ? `вне игры: ещё ${m.awaySeconds} с` : "время вне игры вышло"}</small>` : null;
 
   return html`<div class="tray-row">
-    <div class=${cx("tray turn-tray glass", m.roundOver && "over")}>
+    <div class=${cx("tray turn-tray glass", m.roundOver && !m.watching && "over")}>
       ${m.roundOver && m.watching ? html`<${TurnDial} m=${m} size=${48} /><${StandsBetween} m=${m} />`
       : m.roundOver ? html`<${RoundButton} m=${m} findNew=${findNew} />` : html`
         <${TurnDial} m=${m} size=${48} />
@@ -407,8 +406,8 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
 function StandsBetween({ m }) {
   const ready = m.online ? [m.me, m.them].filter((p) => p?.ready).length : 0;
   const title = m.matchOver ? "Матч окончен" : "Перерыв";
-  const detail = m.matchOver ? (m.rematchOffer ? "игроки договариваются о реванше" : "ждём, решат ли играть ещё")
-    : ready === 1 ? "один игрок готов · ждём второго" : `раунд ${m.round + 1} начнут игроки`;
+  const detail = m.matchOver ? (m.rematchOffer ? "предложен реванш" : "ждём решения игроков")
+    : ready === 1 ? "один игрок готов" : `дальше раунд ${m.round + 1}`;
   return html`<span class="tray-label"><b style=${`color:${GOLD}`}>${title}</b><small>${detail}</small></span>`;
 }
 

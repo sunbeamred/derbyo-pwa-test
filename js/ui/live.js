@@ -30,7 +30,7 @@ export function fromServer(x = {}, locked = false) {
 
 const STAGE = { lobby: "Ждёт игрока", playing: "В игре", paused: "Пауза", between: "Между раундами", complete: "Матч окончен" };
 
-const TINT = { 1: "#5FD497", 2: "#6FA8FF", 3: "#B194FF", 4: "#F6D482", 5: "#FF8FA3" };
+const TINT = { 1: "#C9D5E3", 2: "#6FA8FF", 3: "#FFE45C", 4: "#E8B04A", 5: "#B194FF" };
 
 /** An open room as a match poster: both seats face each other; a free seat is the join button, a running match opens to watch. */
 function RoomTile({ r, enter }) {
@@ -42,17 +42,16 @@ function RoomTile({ r, enter }) {
   const players = r.players?.length ? r.players : [{ name: r.host ?? "Игрок" }, null];
   const seat = (p, side) => (p ? html`<span class=${cx("rt-seat", side)}>${p.bot ? html`<span class="pf-avatar neutral mini"><img src=${img("bot")} alt="" /></span>` : html`<${Face} name=${p.name} photo=${p.avatar} small=${true} />`}<b>${p.name}</b></span>`
     : html`<span class=${cx("rt-seat free", side, join && "open")}><span class="rt-plus">+</span><b>${join ? "Сесть" : "свободно"}</b></span>`);
-  const meta = [r.round ? `раунд ${r.round}` : null, r.seconds ? `${r.seconds} с` : null].filter(Boolean).join(" · ");
+  const meta = r.round ? `раунд ${r.round}` : "";
   return html`<button class=${cx("room-tile press", join && "joinable")} style=${`--tint:${pens ? "#FF5364" : TINT[lv.level]}`} disabled=${!join && !watch}
     onClick=${() => (join || watch) && enter(r, !join)}>
     <span class="rt-top">
       <img class="rt-level" src=${img(pens ? "whistle" : lv.icon)} alt="" />
       <b class="rt-name">${pens ? "Пенальти" : lv.name}</b>
-      ${r.progressive ? html`<img class="rt-up" src=${img("arrow")} alt="сложность растёт" />` : null}
       ${meta ? html`<small class="rt-meta">${meta}</small>` : null}
       <span class="rt-flex"></span>
       ${r.locked ? html`<img class="rt-lock" src=${img("lock")} alt="С паролем" />` : null}
-      ${watch ? html`<span class=${cx("rt-watch", playing && "live")} title=${STAGE[r.stage] ?? ""}><i></i><${Icon} name="eye" size="13" />${r.viewers ? r.viewers : "Смотреть"}</span>`
+      ${watch ? html`<span class=${cx("rt-watch", r.stage === "playing" && "live")} aria-label=${`${STAGE[r.stage] ?? ""}, смотреть`}><i></i><${Icon} name="eye" size="14" />${r.viewers || null}</span>`
         : html`<span class=${cx("rt-state", playing && "live")}><i></i>${STAGE[r.stage] ?? r.stage}</span>`}
     </span>
     <span class="rt-players">${seat(players[0], "l")}<i class="rt-vs">VS</i>${seat(players[1], "r")}</span>

@@ -252,8 +252,7 @@ input { font-family: inherit; }
 .rt-top { display: flex; align-items: center; gap: 6px; min-width: 0; padding-left: 4px; }
 .rt-level { flex: none; width: 24px; height: 24px; object-fit: contain; }
 .rt-name { font-size: 14px; font-weight: 800; color: var(--tint); white-space: nowrap; }
-.rt-up { flex: none; width: 14px; height: 14px; }
-.rt-meta { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.rt-meta { flex: none; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .rt-meta::before { content: "· "; }
 .rt-flex { flex: 1; }
 .rt-lock { flex: none; width: 18px; height: 18px; }
@@ -449,7 +448,9 @@ input { font-family: inherit; }
 .pside.theirs { justify-content: flex-end; }
 .pinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 3px; }
 .pside.theirs .pinfo { align-items: flex-end; text-align: right; }
-.pname { height: 34px; display: flex; align-items: flex-end; font-size: clamp(11.5px, 17.5cqi, 14px); font-weight: 700; line-height: 16px; overflow: hidden; overflow-wrap: anywhere; max-width: 100%; }
+.pname { height: 34px; display: flex; align-items: flex-end; font-size: clamp(11.5px, 17.5cqi, 14px); font-weight: 700; line-height: 16px; overflow: hidden; overflow-wrap: break-word; max-width: 100%; }
+/* A one-word nick never breaks inside the word: it shrinks to fit the line, then ends in «…». */
+.pname.one { display: block; white-space: nowrap; text-overflow: ellipsis; padding-top: 18px; font-size: clamp(10px, calc(160cqi / var(--n)), 14px); }
 .pstatus { display: flex; align-items: center; white-space: nowrap; font-size: clamp(10px, 16.5cqi, 13.5px); font-weight: 800; max-width: 100%; min-width: 0; overflow: hidden; }
 .pstatus .st { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* The status scales with the side's width (cqi), so «в игре» keeps its words on a narrow phone. */
@@ -616,7 +617,7 @@ input { font-family: inherit; }
 .tray { border-radius: 29px; min-height: 58px; }
 .turn-tray { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 5px; }
 .turn-tray.over { padding: 0; border-color: transparent; background: none; }
-.tray-label { flex: 1; min-width: 0; min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding-right: 22px; text-align: center; }
+.tray-label { flex: 1; min-width: 0; min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding-right: 10px; text-align: center; }
 .tray-label b { font-size: clamp(12px, 3.6vw, 14px); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .tray-label small { font-size: 11px; font-weight: 500; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-variant-numeric: tabular-nums; }
 .tools-tray { flex: none; display: flex; align-items: center; padding: 0 4px; }
