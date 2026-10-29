@@ -1,0 +1,140 @@
+{
+  "generator": "built-in image_gen",
+  "date": "2026-10-29",
+  "size": "192x192",
+  "background": "transparent",
+  "items": [
+    {
+      "name": "vibrate.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: A compact smartphone with two vibration arcs on each side. Brushed silver metal frame, dark navy glass screen, small coral-red side button.",
+      "references": [
+        "sound.png",
+        "bot.png"
+      ],
+      "original": "v2-originals/vibrate.png"
+    },
+    {
+      "name": "camera.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: A compact photo camera, brushed silver body with navy lens housing and one small coral-red shutter button. A raised silver plus sign at upper right.",
+      "references": [
+        "whistle.png",
+        "plus.png"
+      ],
+      "original": "v2-originals/camera.png"
+    },
+    {
+      "name": "globe-flag.png",
+      "prompt": "Generate ONE mobile interface icon. A flat rectangular international flag, aspect ratio 3:2, dark medium blue field with a centered simple white globe grid (circle, three meridians, two parallels). Twemoji country flag style: flat solid colors, very subtly rounded rectangular corners, perfectly straight horizontal and vertical edges, front-on, no pole, no waving, no folds, no 3D, no bevel, no metal, no shadow. This must look like an additional country flag glyph in the site's existing Twemoji Country Flags font. Centered within a square transparent PNG canvas, flag width 80% of canvas and height 53%, ample transparent margin. No text or watermark.",
+      "references": [],
+      "original": "v2-originals/globe-flag.png"
+    },
+    {
+      "name": "phone-duo.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: One smartphone behind TWO metallic human busts, same sculpted silver hair, faceless heads, necks and navy metallic shoulder bases as the existing people icon. Dark navy phone with silver frame and a tiny coral detail.",
+      "references": [
+        "people.png",
+        "profile-v1.png"
+      ],
+      "original": "v2-originals/phone-duo.png"
+    },
+    {
+      "name": "friend-add.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: One silver metallic human bust with sculpted swept hair, faceless face, navy metallic shoulder base, coral neck trim, EXACTLY the same character design as existing profile icon. A small silver plus sign at its upper right.",
+      "references": [
+        "profile-v1.png",
+        "plus.png"
+      ],
+      "original": "v2-originals/friend-add.png"
+    },
+    {
+      "name": "friends.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: Two silver metallic human busts, sculpted swept hair, faceless heads, silver necks and navy metallic shoulder bases, directly matching the existing two-person people icon. Keep its human model design, material and three-quarter view.",
+      "references": [
+        "people.png",
+        "profile-v1.png"
+      ],
+      "original": "v2-originals/friends.png"
+    },
+    {
+      "name": "eye.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: One stylized open eye, polished brushed-silver eyelids, deep navy iris with subtle blue highlight, dark pupil. Small readable solid sculptural icon.",
+      "references": [
+        "plus.png",
+        "chat.png"
+      ],
+      "original": "v2-originals/eye.png"
+    },
+    {
+      "name": "search.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: One magnifying glass, silver metal rim with navy sidewalls, subtle pale-blue glass and dark navy grip with a tiny coral-red collar. Three-quarter view matching the reference whistle.",
+      "references": [
+        "whistle.png",
+        "settings.png"
+      ],
+      "original": "v2-originals/search.png"
+    },
+    {
+      "name": "share.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: A thick upward arrow emerging from an open square share tray, silver metal front faces and deep navy bevelled sidewalls, same material as existing arrow and plus icons.",
+      "references": [
+        "arrow.png",
+        "plus.png"
+      ],
+      "original": "v2-originals/share.png"
+    },
+    {
+      "name": "key.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: One silver metal door key, round head and simple teeth, dark navy bevelled edges, slight three-quarter angle matching existing silver arrow.",
+      "references": [
+        "arrow.png",
+        "whistle.png"
+      ],
+      "original": "v2-originals/key.png"
+    },
+    {
+      "name": "logout.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: An open dark navy door with a silver metal frame, and a short silver arrow pointing outward to the right. Tiny coral-red door edge accent. Clearly readable exit symbol.",
+      "references": [
+        "arrow.png",
+        "settings.png"
+      ],
+      "original": "v2-originals/logout.png"
+    },
+    {
+      "name": "question.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: One thick rounded question mark with separate dot, brushed silver front face, deep navy metal sidewalls, exactly the same depth, bevel and material as existing plus icon.",
+      "references": [
+        "plus.png",
+        "arrow.png"
+      ],
+      "original": "v2-originals/question.png"
+    },
+    {
+      "name": "sparkles.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: Three four-point sparkle stars, one large silver metal star and two small coral-red stars, navy bevelled sidewalls. Match silver star on the existing coin and its restrained coral accent.",
+      "references": [
+        "coin.png",
+        "plus.png"
+      ],
+      "original": "v2-originals/sparkles.png"
+    },
+    {
+      "name": "pause.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: Two thick rounded vertical pause bars, brushed silver front faces, dark navy bevelled sidewalls, same metal material and depth as existing plus and arrow icons.",
+      "references": [
+        "plus.png",
+        "arrow.png"
+      ],
+      "original": "v2-originals/pause.png"
+    },
+    {
+      "name": "hand.png",
+      "prompt": "Use case: stylized-concept. Generate exactly ONE isolated production UI icon for the existing DERBYO football game. Supplied images are strict STYLE REFERENCES from the actual site, not subjects to copy. Match their premium toy-like SILVER METAL front surfaces, deep navy blue metallic sidewalls, softly rounded bevels, restrained coral-red accents, clean bright upper-left highlights and substantial three-dimensional sculptural volume. Do not make everything monochromatic light blue plastic. No extra background tile or enclosing badge. Centered on a square true transparent canvas; whole subject contained with ~10% padding on all sides. Readable at 192x192. No text, no watermark, no floor, no background, no external cast shadow. Subject: Two hands in a friendly handshake, smooth sculptural brushed silver metal hands, simple rounded fingers, dark navy cuffs with narrow coral-red trim. Three-quarter perspective, same polished metal treatment as the existing silver human busts.",
+      "references": [
+        "people.png",
+        "whistle.png"
+      ],
+      "original": "v2-originals/hand.png"
+    }
+  ]
+}

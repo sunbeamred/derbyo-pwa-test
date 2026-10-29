@@ -30,25 +30,33 @@ export function fromServer(x = {}, locked = false) {
 
 const STAGE = { lobby: "Ждёт игрока", playing: "В игре", paused: "Пауза", between: "Между раундами", complete: "Матч окончен" };
 
-/** An open room as on the site's list, shorter: the level's icon, its state, then both seats with photos and names. */
+const TINT = { 1: "#5FD497", 2: "#6FA8FF", 3: "#B194FF", 4: "#F6D482", 5: "#FF8FA3" };
+
+/** An open room as a match poster: both seats face each other; a free seat is the join button, a running match opens to watch. */
 function RoomTile({ r, enter }) {
   const lv = PRESETS.find((p) => p.level === (r.level ?? 2)) ?? PRESETS[1];
+  const pens = r.mode === "penalties";
   const playing = r.stage === "playing" || r.stage === "paused";
-  const seat = (p) => (p ? html`<span class="rt-seat">${p.bot ? html`<span class="pf-avatar neutral mini"><img src=${img("bot")} alt="" /></span>` : html`<${Face} name=${p.name} photo=${p.avatar} small=${true} />`}<b>${p.name}</b></span>`
-    : html`<span class="rt-seat vacant"><span class="pf-avatar mini empty">+</span><b>свободно</b></span>`);
+  const join = r.openSeats > 0 && r.stage === "lobby";
+  const watch = !join && r.canWatch;
   const players = r.players?.length ? r.players : [{ name: r.host ?? "Игрок" }, null];
-  return html`<div class="room-tile glass">
-    <div class="rt-top">
-      <img class="rt-level" src=${img(r.mode === "penalties" ? "whistle" : lv.icon)} alt="" />
-      <span class="rt-t"><b>${r.mode === "penalties" ? "Пенальти" : lv.name}${r.progressive ? html` <img class="rt-up" src=${img("arrow")} alt="растёт" />` : null}</b>
-        <small><i class=${cx("rt-dot", playing && "on")}></i>${STAGE[r.stage] ?? r.stage}${r.round ? ` · раунд ${r.round}` : ""}${r.seconds ? ` · ${r.seconds} с` : ""}</small></span>
-      ${r.locked ? html`<span class="rt-lock"><img src=${img("lock")} alt="С паролем" /></span>` : null}
-      ${r.viewers ? html`<span class="rt-view"><${Icon} name="eye" size="12" />${r.viewers}</span>` : null}
-      ${r.openSeats > 0 && r.stage === "lobby" ? html`<button class="join-btn press" onClick=${() => enter(r, false)}>Войти</button>`
-        : r.canWatch ? html`<button class="navy-btn small watch" onClick=${() => enter(r, true)}>Смотреть</button>` : null}
-    </div>
-    <span class="rt-players">${seat(players[0])}<i class="rt-vs">×</i>${seat(players[1])}</span>
-  </div>`;
+  const seat = (p, side) => (p ? html`<span class=${cx("rt-seat", side)}>${p.bot ? html`<span class="pf-avatar neutral mini"><img src=${img("bot")} alt="" /></span>` : html`<${Face} name=${p.name} photo=${p.avatar} small=${true} />`}<b>${p.name}</b></span>`
+    : html`<span class=${cx("rt-seat free", side, join && "open")}><span class="rt-plus">+</span><b>${join ? "Сесть" : "свободно"}</b></span>`);
+  const meta = [r.round ? `раунд ${r.round}` : null, r.seconds ? `${r.seconds} с` : null].filter(Boolean).join(" · ");
+  return html`<button class=${cx("room-tile press", join && "joinable")} style=${`--tint:${pens ? "#FF5364" : TINT[lv.level]}`} disabled=${!join && !watch}
+    onClick=${() => (join || watch) && enter(r, !join)}>
+    <span class="rt-top">
+      <img class="rt-level" src=${img(pens ? "whistle" : lv.icon)} alt="" />
+      <b class="rt-name">${pens ? "Пенальти" : lv.name}</b>
+      ${r.progressive ? html`<img class="rt-up" src=${img("arrow")} alt="сложность растёт" />` : null}
+      ${meta ? html`<small class="rt-meta">${meta}</small>` : null}
+      <span class="rt-flex"></span>
+      ${r.locked ? html`<img class="rt-lock" src=${img("lock")} alt="С паролем" />` : null}
+      ${watch ? html`<span class=${cx("rt-watch", playing && "live")} title=${STAGE[r.stage] ?? ""}><i></i><${Icon} name="eye" size="13" />${r.viewers ? r.viewers : "Смотреть"}</span>`
+        : html`<span class=${cx("rt-state", playing && "live")}><i></i>${STAGE[r.stage] ?? r.stage}</span>`}
+    </span>
+    <span class="rt-players">${seat(players[0], "l")}<i class="rt-vs">VS</i>${seat(players[1], "r")}</span>
+  </button>`;
 }
 
 /** One game's screen with the site's open rooms (refreshed every 10 s). */
@@ -94,7 +102,7 @@ export function OnlineLobby({ nav, app }) {
     ${err ? html`<p class="hint-line small pad">${err}</p>`
       : !rooms ? html`<p class="hint-line small pad">Загружаем комнаты…</p>`
       : !rooms.length ? html`<p class="hint-line small pad">Сейчас открытых комнат нет. Создай свою — и позови друга по коду.</p>`
-      : html`<div class="room-tiles">${rooms.map((r) => html`<${RoomTile} r=${r} enter=${enter} />`)}</div>`}
+      : html`<div class="room-tiles">${[...rooms].sort((a, b) => (b.openSeats > 0 && b.stage === "lobby") - (a.openSeats > 0 && a.stage === "lobby")).map((r) => html`<${RoomTile} r=${r} enter=${enter} />`)}</div>`}
   </div>
   ${locked ? html`<${RoomPassword} room=${`Комната ${locked.r.host ?? ""}`} cancel=${() => setLocked(null)}
     check=${async (pw) => { const ok = await app.joinRoom(locked.r.code, { role: locked.watch ? "spectator" : "player", password: pw }); if (ok !== false) setLocked(null); return ok !== false; }} />` : null}

@@ -1,0 +1,92 @@
+[
+  {
+    "file": "vibrate.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "camera.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "globe-flag.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "phone-duo.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "friend-add.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "friends.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "eye.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "search.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "share.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "key.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "logout.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "question.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "sparkles.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "pause.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  },
+  {
+    "file": "hand.png",
+    "width": 192,
+    "height": 192,
+    "alpha": true
+  }
+]
