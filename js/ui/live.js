@@ -1,7 +1,7 @@
 // The «Играть» screens on the site's server: open rooms, the quick game's search, your room, joining by code,
 // someone's room before the start. Same look as the offline prototype's (lobby.js), real data underneath.
 import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel } from "./common.js";
-import { PRESETS, LEVELS, QuickChoice, Section, RoomPassword, SeatCard, Collapsible, summary, settingRows, extras, passwordOK, newSettings, presetOf } from "./lobby.js";
+import { PRESETS, LEVELS, QuickChoice, Section, RoomPassword, SeatCard, Collapsible, summary, settingRows, extras, passwordOK, newSettings, presetOf, presetsOf } from "./lobby.js";
 import { ViewerList } from "./sheets.js";
 import { ProfileSheet } from "./profile.js";
 import { openRooms, quick, createRoom, account } from "../net.js";
@@ -9,18 +9,20 @@ import { OnlineMatch } from "../online.js";
 
 /** The settings screen's choices as the site's create/settings body. */
 export function createBody(s) {
-  const p = presetOf(s);
-  const body = p ? { preset: p.id } : {
+  const p = presetOf(s), ids = presetsOf(s).map((x) => x.id);
+  // Several levels: the sandbox plays them round by round; the site takes the first.
+  const body = p ? { preset: ids[0] ?? p.id, ...(ids.length > 1 ? { presets: ids } : {}) } : {
     level: s.level, seconds: s.seconds, tokens: s.tokens, progressive: s.progressive, theme: s.theme,
     winsRequired: s.format === "twoWins" ? 2 : undefined, tiebreak: s.format === "tiebreak", rounds: s.format === "rounds" ? s.rounds : 3,
   };
-  return { ...body, penaltiesOnDraw: s.penaltiesOnDraw, penaltiesScope: s.penaltiesEachRound ? "round" : "match", lastChance: s.lastChance && s.penaltiesOnDraw,
+  return { ...body, penaltiesOnDraw: false, lastChance: false,
     accessType: s.closed ? "closed" : "open", ...(s.closed ? { password: s.password } : {}) };
 }
 /** The site's room settings in the settings screen's shape (for the summary and the rows). */
 export function fromServer(x = {}, locked = false) {
-  const preset = PRESETS.some((p) => p.id === x.id) ? x.id : null;
-  return newSettings({ preset, level: x.level ?? 2, seconds: x.seconds ?? 60, tokens: x.tokens ?? 4, theme: x.theme ?? "mixed", progressive: !!x.progressive,
+  const presets = Array.isArray(x.roundPresets) ? [...new Set(x.roundPresets)] : [];
+  const preset = presets[0] ?? (PRESETS.some((p) => p.id === x.id) ? x.id : null);
+  return newSettings({ preset, presets: preset ? (presets.length ? presets : [preset]) : [], level: x.level ?? 2, seconds: x.seconds ?? 60, tokens: x.tokens ?? 4, theme: x.theme ?? "mixed", progressive: !!x.progressive,
     format: x.winsRequired === 2 ? "twoWins" : x.tiebreak ? "tiebreak" : "rounds", rounds: x.rounds ?? 3,
     penaltiesOnDraw: !!x.penaltiesOnDraw, penaltiesEachRound: x.penaltiesScope === "round", lastChance: !!x.lastChance, closed: locked, password: locked ? "••••" : "" });
 }

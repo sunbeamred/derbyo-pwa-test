@@ -159,13 +159,13 @@ function Scoreboard({ m, openProfile, openStands }) {
       <div class=${cx("tint right", mover === 1 && "on")} style=${`--t:${tint(1)}`}></div>
     </div>
     <div class="score-row">
-      <${PlayerSide} name=${m.leftName} mark=${m.mark(0)} red=${m.mySeat === 0} tokens=${m.tokens} active=${live(0)} mine=${true}
+      <${PlayerSide} name=${m.leftName} photo=${m.avatarOf?.(0)} mark=${m.mark(0)} red=${m.mySeat === 0} tokens=${m.tokens} active=${live(0)} mine=${true}
         reaction=${m.myReaction} onClick=${() => openProfile(0)} />
       <div class="scorebug" aria-label=${`Счёт ${m.score[0]}:${m.score[1]}, раунд ${m.round}`}>
         <div class="digits"><b class="digit">${m.score[0]}</b><span class="colon">:</span><b class="digit">${m.score[1]}</b></div>
         <${RoundSteps} results=${m.roundResults.map((r) => (r === null ? null : m.seat(r)))} current=${m.round} live=${!m.roundOver} />
       </div>
-      <${PlayerSide} name=${m.opponent.name} mark=${m.mark(1)} red=${m.mySeat === 1} tokens=${m.oppTokens} active=${live(1)} mine=${false}
+      <${PlayerSide} name=${m.opponent.name} photo=${m.avatarOf?.(1)} mark=${m.mark(1)} red=${m.mySeat === 1} tokens=${m.oppTokens} active=${live(1)} mine=${false}
         isBot=${m.opponent.isBot} reaction=${m.oppReaction} away=${m.oppAwayFor} left=${m.oppLeft} missed=${m.oppMissed} onClick=${() => openProfile(1)} />
     </div>
     <${LevelRow} m=${m} live=${live} />
@@ -203,7 +203,7 @@ function SideTag({ m, owner }) {
 }
 
 /** A player as on the site's player card, folded into half the header width. */
-function PlayerSide({ name, mark, red, tokens, active, mine, isBot, reaction, away = null, left = false, missed = 0, onClick }) {
+function PlayerSide({ name, photo, mark, red, tokens, active, mine, isBot, reaction, away = null, left = false, missed = 0, onClick }) {
   const [echo, setEcho] = useState(null);
   useEffect(() => {
     if (!reaction) return;
@@ -218,7 +218,7 @@ function PlayerSide({ name, mark, red, tokens, active, mine, isBot, reaction, aw
   const tokenCount = html`<span class="tokens"><img src=${img("coin")} alt="" /><b>${tokens}</b></span>`;
   const gone = away !== null || left;
   const avatar = html`<span class=${cx("pavatar", red ? "red" : "green", active && "active", !mine && gone && "gone", mine ? "mine" : "theirs")}>
-    <span class="face">${isBot ? html`<img class="bot" src=${img("bot")} alt="" />` : name.slice(0, 2).toUpperCase()}</span>
+    <span class="face">${isBot ? html`<img class="bot" src=${img("bot")} alt="" />` : photo ? html`<img class="photo" src=${photo} alt="" />` : name.slice(0, 2).toUpperCase()}</span>
     <img class="pmark" src=${img(mark)} alt="" />
   </span>`;
   return html`<button class=${cx("pside", mine ? "mine" : "theirs", active && "active")} onClick=${onClick} aria-label=${`${name}, открыть профиль`}>

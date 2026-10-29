@@ -17,7 +17,7 @@ export function ProfileSheet({ m, owner, viewer = null, close }) {
   const mine = m.mySeat === 0 ? "#FF5364" : "#32E5A1", theirs = m.mySeat === 0 ? "#32E5A1" : "#FF5364";
   return html`<div class="profile">
     <div class="pf-head">
-      <span class=${cx("pf-avatar", viewer ? "neutral" : red ? "red" : "green")}>${bot ? html`<img src=${img("bot")} alt="" />` : p.name.slice(0, 2).toUpperCase()}</span>
+      <span class=${cx("pf-avatar", viewer ? "neutral" : red ? "red" : "green")}>${bot ? html`<img src=${img("bot")} alt="" />` : p.photo ? html`<img class="photo" src=${p.photo} alt="" />` : p.name.slice(0, 2).toUpperCase()}</span>
       <span class="pf-name">
         <b>${p.name}</b>
         <span>${p.flag ? html`<i class="flag">${p.flag}</i>` : null}

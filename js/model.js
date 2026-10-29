@@ -13,7 +13,7 @@ export const Opponent = {
   },
   /** The practice bot: "Бот" and an English first name, so it reads as a bot at a glance (AGENTS.md). */
   bot() {
-    return { name: "Бот " + pick(["Oliver", "Harry", "Jack", "George", "Charlie", "Alfie", "Freddie", "Archie", "Leo", "Theo", "Oscar", "Henry"]), isBot: true, flag: null, rating: 1200, rank: null };
+    return { name: botName(), isBot: true, flag: null, rating: 1200, rank: null };
   },
 };
 
@@ -36,6 +36,8 @@ export function clueFacts(clue) {
 }
 export const clueMask = (clue) => clue.answer.name.split(" ").map((w) => [...w][0] + "•".repeat(Math.max(0, [...w].length - 1)));
 
+/** A training bot's name, as in the iOS app (MatchModel.swift). */
+export const botName = () => "Бот " + ["Oliver", "Harry", "Jack", "George", "Charlie", "Alfie", "Freddie", "Archie", "Leo", "Theo", "Oscar", "Henry"][Math.floor(Math.random() * 12)];
 export const LEVELS = ["Новичок", "Любитель", "Знаток", "Легенда", "Энциклопедия"];
 export const MAX_VIEWERS = 24;
 const LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];

@@ -169,4 +169,9 @@ export function Toast({ toast }) {
   return html`<div class=${cx("toast", toast.good ? "good" : "bad")} key=${toast.id}>${toast.text}</div>`;
 }
 
-export const vibrate = (ms) => { try { navigator.vibrate?.(ms); } catch {} };
+/** Choices kept on this phone. */
+export const Prefs = {
+  get vibration() { try { return localStorage.getItem("derbyo-vibration") !== "0"; } catch { return true; } },
+  set vibration(v) { try { localStorage.setItem("derbyo-vibration", v ? "1" : "0"); } catch {} },
+};
+export const vibrate = (ms) => { if (!Prefs.vibration) return; try { navigator.vibrate?.(ms); } catch {} };

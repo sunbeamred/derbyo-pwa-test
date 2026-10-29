@@ -61,6 +61,12 @@ export const account = {
 
 export const leaderboard = (period) => api(`/api/leaderboard?period=${period}`);
 export const playerProfile = (id) => api(`/api/players/profile?id=${encodeURIComponent(id)}`).then((r) => r.profile);
+/** The site's friends: the list and requests, a search by nickname, and request/accept/decline/cancel/remove. */
+export const social = {
+  state: () => api("/api/social/state"),
+  search: (q) => api(`/api/social/search?q=${encodeURIComponent(q)}`).then((r) => r.players),
+  friend: (target, action) => api("/api/social/friend", { target, action }),
+};
 export const openRooms = () => api("/api/rooms").then((r) => r.rooms);
 export const siteStats = () => api("/api/stats");
 

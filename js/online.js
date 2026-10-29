@@ -1,6 +1,6 @@
 // A real match on the site's server, behind the same face as the local Match (model.js), so the screens read
 // either. The server owns everything; this turns its room state into "you" (owner 0) and "the other side" (owner 1).
-import { store, LEVELS, Hints } from "./model.js";
+import { store, LEVELS, Hints, botName } from "./model.js";
 import { api, openStream, uuid, savedSession, account } from "./net.js";
 
 const HINT_LEVEL = { profile: 1, letters: 2, four: 3 };
@@ -97,6 +97,11 @@ export class OnlineMatch {
   owner(seat) { return seat === null || seat === undefined ? null : seat === this.mySeat ? 0 : 1; }
 
   apply(st) {
+    // The site's training bot is «Скаут Боб»; the app names bots like «Бот Oliver», one name per match.
+    if (JSON.stringify(st.players ?? []).includes("Скаут Боб")) {
+      this.botName ??= botName();
+      st = JSON.parse(JSON.stringify(st).replaceAll("Скаут Боб", this.botName));
+    }
     const before = this.g;
     this.state = st;
     this.offset = st.serverNow - Date.now();
@@ -282,13 +287,15 @@ export class OnlineMatch {
   profile(owner) {
     const m = owner === 0 ? this.me : this.them;
     const c = m?.card;
-    if (c && (c.games || c.rating != null)) return { name: m.name, flag: flagOf(c.country), rating: c.rating, rank: c.rank, level: c.level, games: c.games, winRate: c.games ? Math.round((c.wins / c.games) * 100) : 0, bestStreak: c.bestStreak };
+    if (c && (c.games || c.rating != null)) return { name: m.name, photo: c.avatar ?? null, flag: flagOf(c.country), rating: c.rating, rank: c.rank, level: c.level, games: c.games, winRate: c.games ? Math.round((c.wins / c.games) * 100) : 0, bestStreak: c.bestStreak };
     if (owner === 0 && account.profile && !this.watching) {
       const p = account.profile;
       return { name: this.leftName, flag: null, rating: p.rating, rank: p.rank, level: p.level, games: p.games, winRate: p.games ? Math.round((p.wins / p.games) * 100) : 0, bestStreak: p.bestStreak };
     }
     return { name: m?.name ?? "—", flag: null, rating: null, rank: null, level: null, games: null, winRate: null, bestStreak: null };
   }
+  /** A player's profile photo (the sandbox stores them); the site has none. */
+  avatarOf(owner) { return (owner === 0 ? this.me : this.them)?.card?.avatar ?? (owner === 0 && !this.watching ? account.profile?.avatar : null) ?? null; }
   viewerProfile(v) { return { name: v, flag: null, rating: null, rank: null, level: null, games: null, winRate: null, bestStreak: null }; }
   get headToHead() { return null; }
   relationWith() { return "none"; }

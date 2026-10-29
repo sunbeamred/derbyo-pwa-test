@@ -10,11 +10,11 @@ import { ViewerList } from "./sheets.js";
 // MARK: settings (server/presets.mjs)
 
 export const PRESETS = [
-  { id: "easy", name: "Новичок", description: "Знакомые сборные и позиции", icon: "level-rookie", level: 1, tokens: 6 },
-  { id: "amateur", name: "Любитель", description: "Ведущие клубы и знакомые имена", icon: "level-amateur", level: 2, tokens: 6 },
-  { id: "medium", name: "Знаток", description: "Европа шире топ-лиг", icon: "level-knower", level: 3, tokens: 5 },
-  { id: "hard", name: "Легенда", description: "Клубы мира и редкие сборные", icon: "level-legend", level: 4, tokens: 4 },
-  { id: "encyclopedia", name: "Энциклопедия", description: "Редкие клубы, тренеры и одноклубники", icon: "expert", level: 5, tokens: 4 },
+  { id: "easy", name: "Новичок", description: "Только звёзды, без тренеров", icon: "level-rookie", level: 1, tokens: 6 },
+  { id: "amateur", name: "Любитель", description: "Известные игроки топ-лиг, без тренеров", icon: "level-amateur", level: 2, tokens: 6 },
+  { id: "medium", name: "Знаток", description: "Не только звёзды, иногда тренер", icon: "level-knower", level: 3, tokens: 5 },
+  { id: "hard", name: "Легенда", description: "Глубокие составы, тренеры и одноклубники", icon: "level-legend", level: 4, tokens: 4 },
+  { id: "encyclopedia", name: "Энциклопедия", description: "Редкие игроки, тренеры и одноклубники", icon: "expert", level: 5, tokens: 4 },
 ];
 export const LEVELS = ["Новичок", "Любитель", "Знаток", "Легенда", "Энциклопедия"];
 export const SECONDS = [0, 15, 20, 30, 45, 60, 90, 120];
@@ -23,36 +23,35 @@ export const THEMES = [["mixed", "Разные условия"], ["clubs", "Кл
   ["national-position", "Сборная × позиция"], ["club-league", "Клуб × чемпионат"], ["national-league", "Сборная × чемпионат"],
   ["club-history", "Клуб × трофеи, тренеры, одноклубники"], ["national-trophy", "Сборная × трофеи"]];
 
-export const newSettings = (o = {}) => ({ preset: "amateur", level: 2, seconds: 60, tokens: 6, format: "twoWins", rounds: 3, theme: "mixed",
+export const newSettings = (o = {}) => ({ preset: "amateur", presets: ["amateur"], level: 2, seconds: 60, tokens: 6, format: "twoWins", rounds: 3, theme: "mixed",
   progressive: false, penaltiesOnDraw: false, penaltiesEachRound: false, lastChance: false, closed: false, password: "", ...o });
 export const presetOf = (s) => PRESETS.find((p) => p.id === s.preset);
+/** The ready levels a room plays, easy to hard; two or more go round by round, as in the quick game. */
+export const presetsOf = (s) => (s.presets?.length ? PRESETS.filter((p) => s.presets.includes(p.id)) : presetOf(s) ? [presetOf(s)] : []);
+const levelNames = (s) => presetsOf(s).map((p) => p.name).join(" → ");
 export const passwordOK = (s) => !s.closed || s.password.length >= 4;
 const roundsWord = (n) => `${n} раунд${n === 1 ? "" : n < 5 ? "а" : "ов"}`;
 const fmtOf = (s) => (s.format === "twoWins" ? "до двух побед" : s.format === "tiebreak" ? "2 раунда + решающий" : roundsWord(s.rounds));
 export function summary(s) {
   const p = presetOf(s);
-  if (p) return `${p.name} · 60 с на ход · до двух побед`;
+  if (p) return `${levelNames(s)} · 60 с на ход · до двух побед`;
   return `${LEVELS[s.level - 1]}${s.progressive ? " и выше" : ""} · ${s.seconds === 0 ? "без таймера" : `${s.seconds} с на ход`} · ${fmtOf(s)}`;
 }
 export function settingRows(s) {
   const p = presetOf(s);
   const out = [
-    ["Сложность", p?.name ?? LEVELS[s.level - 1] + (s.progressive ? " и выше каждый раунд" : "")],
+    ["Сложность", p ? levelNames(s) : LEVELS[s.level - 1] + (s.progressive ? " и выше каждый раунд" : "")],
     ["На ход", p ? "60 секунд" : s.seconds === 0 ? "без таймера" : `${s.seconds} секунд`],
-    ["Жетонов скаута", `${p?.tokens ?? s.tokens} на раунд`],
+    ["Жетонов скаута", p ? (presetsOf(s).length > 1 ? "по уровню раунда" : `${p.tokens} на раунд`) : `${s.tokens} на раунд`],
     ["Формат", p ? "до двух побед" : fmtOf(s)],
     ["Условия поля", p ? "Разные условия" : THEMES.find((t) => t[0] === s.theme)?.[1] ?? s.theme],
   ];
-  if (s.penaltiesOnDraw) out.push(["Пенальти", s.penaltiesEachRound ? "в каждом раунде" : "при ничьей в матче"]);
-  if (s.lastChance && s.penaltiesOnDraw) out.push(["Последний шанс", "включён"]);
   out.push(["Доступ", s.closed ? "🔒 по паролю" : "открытая"]);
   return out;
 }
 export function extras(s) {
   const parts = [];
   if (s.progressive && !presetOf(s)) parts.push("сложность растёт");
-  if (s.penaltiesOnDraw) parts.push(s.penaltiesEachRound ? "Пенальти в каждом раунде" : "Пенальти при ничьей");
-  if (s.lastChance && s.penaltiesOnDraw) parts.push("Последний шанс");
   return parts.join(" · ");
 }
 
@@ -157,28 +156,32 @@ export function RoomPassword({ room, enter, cancel, check }) {
 
 // MARK: quick game
 
-export function QuickPickView({ nav, app }) {
-  const [chosen, setChosen] = useState(new Set(QuickChoice.presets));
-  const [remember, setRemember] = useState(QuickChoice.remember);
-  const level = (p) => {
+/** The ready levels as cards to tick, easy to hard; «Энциклопедия» only goes with «Легенда», as its deciding round. */
+export function LevelCards({ chosen, set }) {
+  return PRESETS.map((p) => {
     const enc = p.id === "encyclopedia", lockedEnc = enc && !chosen.has("hard"), on = chosen.has(p.id) && !lockedEnc;
-    const flip = () => {
-      const c = new Set(chosen);
-      on ? c.delete(p.id) : c.add(p.id);
-      if (p.id === "hard" && !c.has("hard")) c.delete("encyclopedia");
-      setChosen(c);
-    };
+    // From the latest choice, not this render's: two quick taps must both count.
+    const flip = () => set((prev) => {
+      const c = new Set(prev);
+      c.has(p.id) ? c.delete(p.id) : c.add(p.id);
+      if (!c.has("hard")) c.delete("encyclopedia");
+      return c;
+    });
     return html`<button class=${cx("pick-card press", on && "on")} disabled=${lockedEnc} onClick=${flip}>
       <img src=${img(p.icon)} alt="" /><span class="pc-t"><b>${p.name}</b>
       <small>${enc ? (lockedEnc ? "только вместе с Легендой" : "решающий раунд") : `${p.description} · ${p.tokens} ${p.tokens === 4 ? "жетона" : "жетонов"}`}</small></span>
       <${PickMark} on=${on} /></button>`;
-  };
+  });
+}
+
+export function QuickPickView({ nav, app }) {
+  const [chosen, setChosen] = useState(new Set(QuickChoice.presets));
+  const [remember, setRemember] = useState(QuickChoice.remember);
   return html`<div class="screen-with-bar"><div class="screen-scroll"><div class="page">
     <${LobbyHeader} title="Быстрая игра" back=${nav.back} />
     <p class="lead-text">Выбери сложности — найдём соперника.</p>
     <${Section} t="ПОДХОДЯЩИЕ СЛОЖНОСТИ" />
-    ${PRESETS.map(level)}
-    <p class="hint-line small pad">Время вне игры за матч: «Новичок» и «Любитель» — 45 с, «Знаток» — 35 с, «Легенда» — 30 с, «Энциклопедия» — 25 с. Звонки и уведомления тоже считаются.</p>
+    <${LevelCards} chosen=${chosen} set=${setChosen} />
     <p class="center-note">От простого к сложному · 60 секунд на ход</p>
   </div></div>
   <${BottomBar}>
@@ -324,7 +327,7 @@ export function Collapsible({ title, summary: sum, open, toggle, children }) {
 
 /** «Раздевалка»: you took the free seat of someone's room; the match starts when both pressed «Я готов». */
 export function LockerRoom({ nav, app, host }) {
-  const [settings] = useState(() => newSettings({ preset: null, level: 2, progressive: true, seconds: 45, tokens: 5, penaltiesOnDraw: true, closed: true, password: "1234" }));
+  const [settings] = useState(() => newSettings({ preset: null, level: 2, progressive: true, seconds: 45, tokens: 5, closed: true, password: "1234" }));
   const [chat, setChat] = useState([{ who: host, text: "Привет! Сейчас подойду", spectator: false }, { who: "alex_99", text: "Жду этот матч 🔥", spectator: true }]);
   const [draft, setDraft] = useState("");
   const [open, setOpen] = useState({ settings: true, chat: true, stands: false });
@@ -388,21 +391,18 @@ export function LockerRoom({ nav, app, host }) {
 /** The settings of a room you created: ready levels as cards, or a manual setup; then extras and access. */
 export function MatchSettingsView({ nav, settings: initial, set }) {
   const [s, setS] = useState(initial);
+  const latest = useRef(initial);
   const [manual, setManual] = useState(initial.preset === null);
-  const upd = (o) => { const n = { ...s, ...o }; setS(n); set(n); };
+  const upd = (o) => { const n = { ...latest.current, ...o }; latest.current = n; setS(n); set(n); };
   const flipManual = () => {
-    if (manual && s.preset === null) upd({ preset: PRESETS[s.level - 1].id });
-    if (!manual) { const p = presetOf(s); if (p) upd({ level: p.level, tokens: p.tokens, preset: null }); }
+    if (manual && s.preset === null) upd({ preset: PRESETS[s.level - 1].id, presets: [PRESETS[s.level - 1].id] });
+    if (!manual) { const p = presetOf(s); if (p) upd({ level: p.level, tokens: p.tokens, preset: null, presets: [] }); }
     setManual(!manual);
   };
   const select = (title, key, options, label) => html`<label class="picker-row"><span>${title}</span>
     <span class="picker"><b>${label(s[key])}</b><${Icon} name="down" size="11" weight="3" />
       <select value=${String(s[key])} onChange=${(e) => { const v = options.find((o) => String(o) === e.target.value); upd({ [key]: v }); }}>
         ${options.map((o) => html`<option value=${String(o)}>${label(o)}</option>`)}</select></span></label>`;
-  const toggle = (key, icon, title, detail) => html`<label class="toggle-card">
-    <span class="tc-ic"><${Icon} name=${icon} size="18" weight="2" /></span>
-    <span class="tc-t"><b>${title}</b><small>${detail}</small></span>
-    <input type="checkbox" class="switch" checked=${s[key]} onChange=${(e) => upd({ [key]: e.target.checked })} /></label>`;
   const seg = (key, a, b) => html`<div class="segmented">
     <button class=${!s[key] ? "on" : ""} onClick=${() => upd({ [key]: false })}>${a}</button>
     <button class=${s[key] ? "on" : ""} onClick=${() => upd({ [key]: true })}>${b}</button></div>`;
@@ -419,14 +419,12 @@ export function MatchSettingsView({ nav, settings: initial, set }) {
       ${select("Формат", "format", ["twoWins", "rounds", "tiebreak"], (f) => ({ twoWins: "До двух побед", rounds: "Число раундов", tiebreak: "2 раунда + решающий" })[f])}
       ${s.format === "rounds" ? select("Раундов", "rounds", ROUNDS, String) : null}
       ${select("Условия поля", "theme", THEMES.map((t) => t[0]), (id) => THEMES.find((t) => t[0] === id)?.[1] ?? id)}
-    </div>` : html`${PRESETS.map((p) => html`<button class=${cx("pick-card press", s.preset === p.id && "on")} onClick=${() => upd({ preset: p.id })}>
-        <img src=${img(p.icon)} alt="" /><span class="pc-t"><b>${p.name}</b><small>${p.description}</small></span>
-        <span class="cost"><img src=${img("coin")} alt="" /><b>${p.tokens}</b></span><${PickMark} on=${s.preset === p.id} round=${true} /></button>`)}
-      <p class="hint-line small pad">60 секунд на ход · до двух побед. Время вне игры за матч: «Новичок» и «Любитель» — 45 с, «Знаток» — 35 с, «Легенда» — 30 с, «Энциклопедия» — 25 с.</p>`}
-    <${Section} t="ДОПОЛНИТЕЛЬНО" />
-    ${toggle("penaltiesOnDraw", "ball", "Пенальти при ничьей", "При равном счёте — серия ударов")}
-    ${s.penaltiesOnDraw ? html`${seg("penaltiesEachRound", "В конце матча", "В каждом раунде")}
-      ${toggle("lastChance", "timer", "Последний шанс", "Второй игрок может спасти раунд ответной тройкой за 20 секунд")}` : null}
+    </div>` : html`<${LevelCards} chosen=${new Set(presetsOf(s).map((p) => p.id))} set=${(f) => {
+        const c = f(new Set(presetsOf(latest.current).map((p) => p.id)));
+        const ids = PRESETS.map((p) => p.id).filter((id) => c.has(id));
+        if (ids.length) upd({ presets: ids, preset: ids[0] });
+      }} />
+      <p class="hint-line small pad">${presetsOf(s).length > 1 ? "Раунды идут от простого к сложному" : "Отметь несколько — раунды пойдут от простого к сложному"} · 60 секунд на ход · до двух побед</p>`}
     <${Section} t="ДОСТУП В КОМНАТУ" />
     ${seg("closed", "Открытая", "🔒 Закрытая")}
     ${s.closed ? html`<label class=${cx("pw-field", !passwordOK(s) && "bad")}><${Icon} name="lock" size="16" style="color:#F6D482" />
