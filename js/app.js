@@ -6,7 +6,7 @@ import { has } from "./data.js";
 import { Match, Opponent, store } from "./model.js";
 import { MatchScreen } from "./ui/match.js";
 import { HomeView, GameLobby, QuickPickView, SearchView, RoomView, JoinCodeView, LockerRoom, MatchSettingsView, MiniGameView } from "./ui/lobby.js";
-import { InstallSheet, installState, InstallRow, isStandalone, isIOS, PushAskSheet } from "./install.js";
+import { InstallSheet, installState, InstallRow, isStandalone, isIOS, PushAskSheet, WhatsNewSheet, whatsNew } from "./install.js";
 import { notifications } from "./push.js";
 import { invites, secondsLeft } from "./invites.js";
 import { updates } from "./update.js";
@@ -55,6 +55,7 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [install, setInstall] = useState(() => installState.shouldOffer());
   const [askPush, setAskPush] = useState(false);
+  const [news, setNews] = useState(() => whatsNew.due());
   const [invite, setInvite] = useState(null);
   /** My calls to friends that are still open: a bubble each over the menu, with a minute's countdown. */
   const [calls, setCalls] = useState([]);
@@ -383,8 +384,9 @@ function App() {
     ${busy ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setBusy(false)}
       message=${`Ты ещё играешь с ${minimized?.opponent.name ?? "соперником"}. Доиграй или выйди из матча — потом можно в другую комнату.`}
       actions=${[{ title: "Вернуться в матч", kind: "bold", run: () => { setBusy(false); ret(); } }, { title: "Отмена", run: () => setBusy(false) }]} />` : null}
-    ${install && !match ? html`<${InstallSheet} close=${() => setInstall(false)} />` : null}
-    ${askPush && !install && !match ? html`<${PushAskSheet} close=${() => setAskPush(false)} />` : null}
+    ${install && !match ? html`<${InstallSheet} close=${() => { setInstall(false); if (whatsNew.due()) setNews(true); }} />` : null}
+    ${news && !install && !match ? html`<${WhatsNewSheet} close=${() => setNews(false)} />` : null}
+    ${askPush && !install && !news && !match ? html`<${PushAskSheet} close=${() => setAskPush(false)} />` : null}
     ${invite && !match ? html`<div class="invite-toast glass" role="alert">
       <img src=${img("invite")} alt="" /><span><b>${invite.nickname}</b><small>${invite.game === "contexto" ? "зовёт в Контекстно" : "зовёт сыграть"}</small></span>
       <button class="chip-btn press accept" onClick=${() => { const i = invite; setInvite(null); takeInvite(i).catch((e) => alert(e.message)); }}>Играть</button>
