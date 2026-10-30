@@ -11,7 +11,7 @@ import { notifications } from "./push.js";
 import { invites, secondsLeft } from "./invites.js";
 import { updates } from "./update.js";
 import { TabBar } from "./ui/tabbar.js";
-import { ONLINE, account, createRoom, joinRoom, savedSession, social, sendFeedback, startVisitPing } from "./net.js";
+import { ONLINE, account, createRoom, joinRoom, savedSession, social, sendFeedback, startVisitPing, link } from "./net.js";
 import { OnlineMatch } from "./online.js";
 import { OnlineLobby, OnlineSearch, OnlineRoom, OnlineJoinCode, OnlineLocker } from "./ui/live.js";
 import { RatingTab, ProfileTab, takeInvite } from "./ui/account.js";
@@ -41,6 +41,18 @@ const depth = () => history.state?.d ?? 0;
 
 /** A full-screen cover that rises from the bottom edge and falls back when `leaving` is set. */
 const Cover = ({ leaving, children, class: c }) => html`<div class=${cx("cover", c, leaving && "leaving")}>${children}</div>`;
+
+/** No network, or the match stream being restored: a thin strip at the top says so, and goes when the line is back. */
+function NetStrip() {
+  const [online, setOnline] = useState(() => navigator.onLine !== false);
+  useEffect(() => {
+    const f = () => setOnline(navigator.onLine !== false);
+    addEventListener("online", f); addEventListener("offline", f);
+    return () => { removeEventListener("online", f); removeEventListener("offline", f); };
+  }, []);
+  const text = !online ? "Нет интернета — ждём связь" : link.state === "reconnecting" ? "Связь пропала — переподключаемся…" : null;
+  return text ? html`<div class="net-strip" role="status"><span class="spinner"></span>${text}</div>` : null;
+}
 
 function App() {
   const [, redraw] = useReducer((n) => n + 1, 0);
@@ -356,6 +368,7 @@ function App() {
   // Bars over the tab bar, bottom up: the minimised match, the update, then one per open call.
   const bars = match ? 0 : (minimized ? 1 : 0) + (update ? 1 : 0) + calls.length;
   return html`<div class="app" style=${bars ? `--tb-space: calc(var(--tb-bottom) + var(--tb-h) + ${12 + bars * 70}px)` : ""}>
+    <${NetStrip} />
     <main class="tab-body">
       <section class="tab-pane" hidden=${tab !== 0}>${ONLINE ? html`<${RatingTab} visible=${tab === 0} />` : html`<${Placeholder} title="Рейтинг" text="Неделя и всё время, все и друзья, твоё место снизу. Следующий шаг прототипа." />`}</section>
       <section class="tab-pane" hidden=${tab !== 1}>${playTab}</section>

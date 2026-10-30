@@ -125,6 +125,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   return html`<div class="match">
     <div class="match-body">
       <${Scoreboard} m=${m} openProfile=${setProfileOf} openStands=${() => setStandsOpen(true)} />
+      ${m.online && !m.watching && m.oppAwayFor != null && !m.oppLeft && !m.roundOver ? html`<${AwayBubble} m=${m} />` : null}
       <${Board} m=${m} tap=${tapCell} />
       <div class="slot">
         ${notes.length ? html`<div class=${cx("notes", ((m.offerRaise && !m.watching) || m.roundOver || m.drawOffer === "theirs") && "hidden")}>
@@ -213,6 +214,16 @@ function LevelRow({ m, live }) {
     <span class="level-path"><span class="cur" style=${lvColor(cur)}>${cur}</span></span>
     <span class="lr-side end">${chain ? html`<span class="lv-side lv-next">${chain.next ? html`<span><i>•</i>${chain.next}</span>` : null}</span>` : null}
       <${SideTag} m=${m} owner=${1} /></span>
+  </div>`;
+}
+
+/** The opponent left the app or lost the line: what happened and how long they have before the round goes to you. */
+function AwayBubble({ m }) {
+  const left = Math.max(0, m.oppAwayBudget ?? 0);
+  const what = m.oppAwayKind === "offline" ? "потерял связь" : "вышел из игры";
+  return html`<div class=${cx("away-bubble", left <= 10 && "low")} role="status">
+    <span class="ab-dot"></span><span><b>${m.opponent.name}</b> ${what}</span>
+    <b class="ab-time num">${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}</b>
   </div>`;
 }
 

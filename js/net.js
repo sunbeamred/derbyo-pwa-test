@@ -6,24 +6,50 @@ let generation = null;
 /** The site's settings: presets, themes, the fleet generation the requests must name. */
 export let config = null;
 
+// The server speaks Russian, but its gateway can answer in English (a timeout, a busy server): the player sees Russian.
+const russian = (text, status) => {
+  if (!text) return status === 0 ? "Нет связи с сервером" : `Ошибка ${status}`;
+  if (/[а-яё]/i.test(text)) return text;
+  if (/time(d)? ?out/i.test(text)) return "Сервер не ответил вовремя. Попробуй ещё раз.";
+  return "Не получилось. Попробуй ещё раз.";
+};
+
 export class ApiError extends Error {
-  constructor(status, body) { super(body?.error || `Ошибка ${status}`); this.status = status; this.code = body?.code; }
+  constructor(status, body) { super(russian(body?.error, status)); this.status = status; this.code = body?.code; }
 }
 
+const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+// A slow line must not hang a move: each try gets 9 s. A request that is safe to send twice (a GET, or a POST carrying its
+// own idempotency `id`) is tried again after a lost connection, a timeout or a gateway hiccup, twice at most.
+const TRY_MS = 9000, RETRY = new Set([0, 408, 502, 503, 504]);
+
 /** One request to the site. POSTs carry JSON; the fleet needs the generation on every request. */
-export async function api(path, body, { token, method } = {}) {
+export async function api(path, body, { token, method, tries } = {}) {
+  const post = body !== undefined || method === "POST";
+  const safe = !post || typeof body?.id === "string";
+  const left = tries ?? (safe ? 3 : 1);
+  try { return await once(path, body, { token, post }); }
+  catch (e) {
+    if (left <= 1 || !RETRY.has(e.status)) throw e;
+    await wait(e.status === 0 ? 700 : 1200);
+    return api(path, body, { token, method, tries: left - 1 });
+  }
+}
+
+async function once(path, body, { token, post }) {
   const headers = {};
   if (generation) headers["X-Derbyo-Generation"] = generation;
   // The server tells the app from the site (visit statistics, the match intro wait).
   headers["X-Derbyo-Client"] = "app";
   if (token) headers.Authorization = `Bearer ${token}`;
-  const post = body !== undefined || method === "POST";
   if (post) headers["Content-Type"] = "application/json";
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), TRY_MS);
   let r;
-  try { r = await fetch(path, { method: post ? "POST" : "GET", headers, body: post ? JSON.stringify(body ?? {}) : undefined, cache: "no-store" }); }
-  catch { throw new ApiError(0, { error: "Нет связи с сервером" }); }
+  try { r = await fetch(path, { method: post ? "POST" : "GET", headers, body: post ? JSON.stringify(body ?? {}) : undefined, cache: "no-store", signal: ctl.signal }); }
+  catch { clearTimeout(timer); throw new ApiError(ctl.signal.aborted ? 408 : 0, { error: ctl.signal.aborted ? "Сервер не ответил вовремя. Попробуй ещё раз." : "Нет связи с сервером" }); }
   let data = null;
   try { data = await r.json(); } catch {}
+  clearTimeout(timer);
   if (r.status === 429) throw new ApiError(429, { error: data?.error || "Слишком часто. Подожди немного.", code: "RATE" });
   if (!r.ok || data?.ok === false) throw new ApiError(r.status, data);
   return data;
@@ -45,9 +71,13 @@ export const account = {
   },
   set guestName(v) { try { localStorage.setItem("derbyo-guest-name", v); } catch {} store.changed(); },
   async load() {
-    const [me, cfg] = await Promise.all([api("/api/account/me"), api("/api/config").catch(() => null)]);
+    // The settings and the account each on their own: a failed /api/config is fetched again in the background, since
+    // without its generation the next room request would fail with a misleading «update the page».
+    const cfgOnce = () => api("/api/config").then((c) => { config = c; generation = c.generation ?? null; return c; });
+    const cfg = cfgOnce().catch(() => { const again = (ms) => setTimeout(() => cfgOnce().catch(() => again(Math.min(ms * 2, 30000))), ms); again(2000); });
+    const me = await api("/api/account/me");
     this.profile = me.profile;
-    if (cfg) { config = cfg; generation = cfg.generation ?? null; }
+    await cfg;
     if (!this.name) this.guestName = "Гость" + Math.floor(1000 + Math.random() * 9000);
     this.ready = true;
     store.changed();
@@ -120,19 +150,34 @@ export const quick = {
   cancel: (ticket) => { keepTicket(null); return api("/api/quick/cancel", { ticket }).catch(() => null); },
 };
 
+/** Is the match stream live? "ok", or "reconnecting" while it is being restored; the match screen shows a strip. */
+export const link = {
+  state: "ok",
+  set(v) { if (this.state !== v) { this.state = v; store.changed(); } },
+};
+
 /** The match stream: fetch with the room token (EventSource cannot send it), `data:` frames only.
- * Reconnects 1.5 s after a drop and when nothing arrives for 45 s; stops on `replaced` or `closed`. */
+ * A watchdog drops a stream silent for 30 s (the server beats every 12 s), even before its headers arrive; after a drop it
+ * comes back at once, then with a growing pause (1 s → 15 s, with jitter, longer on a 429). Coming back to the app, the
+ * network returning or the page being shown again reconnects straight away. Stops on `replaced` or `closed`. */
 export function openStream(token, onFrame) {
-  let stopped = false, ctl = null, watchdog = null;
+  let stopped = false, ctl = null, watchdog = null, failures = 0, nap = null, heard = Date.now();
+  const kick = () => { heard = Date.now(); clearTimeout(watchdog); watchdog = setTimeout(() => ctl?.abort(), 30000); };
+  // Back from the background a socket may be dead without knowing it: nothing heard for 15 s means start again.
+  const wake = () => { if (stopped) return; if (nap) nap(); else if (link.state !== "ok" || Date.now() - heard > 15000) ctl?.abort(); };
+  const onVisible = () => { if (!document.hidden) wake(); };
+  addEventListener("online", wake); addEventListener("pageshow", wake); document.addEventListener("visibilitychange", onVisible);
   const run = async () => {
     while (!stopped) {
       ctl = new AbortController();
-      const kick = () => { clearTimeout(watchdog); watchdog = setTimeout(() => ctl.abort(), 45000); };
+      let status = 0;
+      kick();
       try {
         // The client marker tells the server this player sees the match intro (the first turn waits for it).
         const headers = { Authorization: `Bearer ${token}`, "X-Derbyo-Presence": document.hidden ? "hidden" : "active", "X-Derbyo-Client": "app" };
         if (generation) headers["X-Derbyo-Generation"] = generation;
         const r = await fetch("/api/events", { headers, signal: ctl.signal, cache: "no-store" });
+        status = r.status;
         if ([401, 404, 410].includes(r.status)) { onFrame({ type: "closed", message: "Комната закрыта" }); return; }
         if (!r.ok || !r.body) throw new Error(String(r.status));
         kick();
@@ -142,6 +187,7 @@ export function openStream(token, onFrame) {
           const { value, done } = await reader.read();
           if (done) break;
           kick();
+          if (failures || link.state !== "ok") { failures = 0; link.set("ok"); }
           buf += dec.decode(value, { stream: true });
           let k;
           while ((k = buf.indexOf("\n\n")) >= 0) {
@@ -155,11 +201,19 @@ export function openStream(token, onFrame) {
         }
       } catch {}
       clearTimeout(watchdog);
-      if (!stopped) await new Promise((r) => setTimeout(r, 1500));
+      if (stopped) break;
+      failures++;
+      if (failures > 1) link.set("reconnecting");
+      const pause = status === 429 ? 15000 + Math.random() * 5000 : failures === 1 ? 0 : Math.min(15000, 1000 * 2 ** (failures - 2)) * (0.7 + Math.random() * 0.6);
+      await new Promise((ok) => { const t = setTimeout(() => { nap = null; ok(); }, pause); nap = () => { clearTimeout(t); nap = null; ok(); }; });
     }
   };
   run();
-  return () => { stopped = true; clearTimeout(watchdog); try { ctl?.abort(); } catch {} };
+  return () => {
+    stopped = true; clearTimeout(watchdog); link.set("ok"); nap?.();
+    removeEventListener("online", wake); removeEventListener("pageshow", wake); document.removeEventListener("visibilitychange", onVisible);
+    try { ctl?.abort(); } catch {}
+  };
 }
 
 // MARK: photos

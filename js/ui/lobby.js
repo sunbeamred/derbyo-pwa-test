@@ -94,7 +94,7 @@ export function HomeView({ nav }) {
     </div>
     <${Section} t="ИГРЫ" />
     <div class="game-card">
-      <img class="hero" src=${`img/hero.jpg?v=${BUILD}`} alt="" />
+      <img class="hero" src=${`img/hero.webp?v=${BUILD}`} alt="" />
       <div class="gc-in">
         <h2>Футбольные<br />крестики-нолики</h2>
         <p><i></i>${ONLINE ? "Дуэли онлайн · база derbyo.online" : "Дуэли онлайн · 26 играют сейчас"}</p>

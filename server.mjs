@@ -4,6 +4,8 @@
 import http from "node:http";
 import https from "node:https";
 import { readFile, stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import zlib from "node:zlib";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,6 +17,21 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
 // The proxy's own source never goes out as a page.
 const PRIVATE = new Set(["/server.mjs", "/package.json"]);
 const GAME = /^\/(daily|contexto|links|games)$/;
+// Text is sent compressed (brotli, else gzip): on a slow phone line that is a quarter of the bytes.
+const TEXTY = /^(text\/|application\/(json|javascript|manifest\+json)|image\/svg)/;
+const pickEncoding = (req) => { const a = String(req.headers["accept-encoding"] || ""); return /\bbr\b/.test(a) ? "br" : /\bgzip\b/.test(a) ? "gzip" : null; };
+const squeeze = (enc, body) => enc === "br" ? zlib.brotliCompressSync(body, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 9 } }) : zlib.gzipSync(body, { level: 9 });
+const squeezer = (enc) => enc === "br" ? zlib.createBrotliCompress({ params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4 } }) : zlib.createGzip({ level: 6 });
+// Each file once per change: its body, its tag and its compressed forms.
+const files = new Map();
+async function served(file) {
+  const s = await stat(file), hit = files.get(file);
+  if (hit && hit.mtime === s.mtimeMs) return hit;
+  const body = await readFile(file);
+  const f = { mtime: s.mtimeMs, body, etag: `"${createHash("sha1").update(body).digest("base64url").slice(0, 20)}"`, packed: {} };
+  files.set(file, f);
+  return f;
+}
 
 async function local(path) {
   if (PRIVATE.has(path)) return null;
@@ -62,6 +79,13 @@ function proxy(req, res) {
       });
       return;
     }
+    const type = String(out["content-type"] || ""), enc = pickEncoding(req);
+    if (enc && !out["content-encoding"] && TEXTY.test(type) && !type.startsWith("text/event-stream") && req.method !== "HEAD" && r.statusCode !== 204 && r.statusCode !== 304) {
+      delete out["content-length"]; out["content-encoding"] = enc; out.vary = out.vary ? out.vary + ", Accept-Encoding" : "Accept-Encoding";
+      res.writeHead(r.statusCode, out);
+      r.pipe(squeezer(enc)).pipe(res);
+      return;
+    }
     res.writeHead(r.statusCode, out);
     if (res.flushHeaders) res.flushHeaders();
     r.pipe(res);
@@ -80,10 +104,16 @@ http.createServer(async (req, res) => {
   const fromGame = GAME.test(path) || GAME.test(new URL(req.headers.referer || "/", "http://x").pathname);
   const file = (req.method === "GET" || req.method === "HEAD") && !path.startsWith("/api/") && !fromGame ? await local(path) : null;
   if (!file) return proxy(req, res);
-  const body = await readFile(file);
+  const f = await served(file);
   const type = TYPES[extname(file)] || "application/octet-stream";
-  // Code and the shell revalidate on every load; art can stay a day.
+  // Code and the shell revalidate on every load (a 304 when unchanged); art can stay a day.
   const cache = /\.(html|js|css|webmanifest|json)$/.test(file) ? "no-cache" : "public, max-age=86400";
-  res.writeHead(200, { "content-type": type, "cache-control": cache, "x-content-type-options": "nosniff" });
+  const head = { "content-type": type, "cache-control": cache, "x-content-type-options": "nosniff", etag: f.etag, vary: "Accept-Encoding" };
+  if (req.headers["if-none-match"] === f.etag) { res.writeHead(304, head); res.end(); return; }
+  const enc = TEXTY.test(type) && f.body.length > 1024 ? pickEncoding(req) : null;
+  const body = enc ? (f.packed[enc] ??= squeeze(enc, f.body)) : f.body;
+  if (enc) head["content-encoding"] = enc;
+  head["content-length"] = String(body.length);
+  res.writeHead(200, head);
   res.end(req.method === "HEAD" ? undefined : body);
 }).listen(PORT, () => console.log(`derbyo app test on :${PORT} → ${UPSTREAM.origin}`));
