@@ -141,20 +141,32 @@ export function OnlineSearch({ done }) {
     if (r?.session) { done({ session: r.session }); return; }
     done(bot ? { bot: true } : null);
   };
-  const C = 2 * Math.PI * 85;
-  const f = Math.min(1, s / 20);
-  return html`<div class="search">
+  const me = account.profile;
+  return html`<div class=${cx("search", found && "found", err && "failed")}>
     <div class="search-head"><button class="text-btn red" onClick=${() => cancel(false)}>Отмена</button><b>Быстрая игра</b><span style="width:60px"></span></div>
     <div class="search-mid">
-      <span class="search-ring"><svg viewBox="0 0 180 180"><circle cx="90" cy="90" r="85" fill="none" stroke="#17283A" stroke-width="10" />
-        <circle class="arc slow" cx="90" cy="90" r="85" fill="none" stroke="#FF5364" stroke-width="10" stroke-linecap="round" stroke-dasharray=${C}
-          stroke-dashoffset=${C * (1 - (found ? 1 : f))} transform="rotate(-90 90 90)" /></svg>
-        <span><b>${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}</b><small>${found ? "найден" : "ищем"}</small></span></span>
-      <h2>${err ? "Не получилось" : found ? "Соперник найден" : "Ищем соперника…"}</h2>
-      <p>${err ?? (found ? `Комната ${found.code ?? ""} · ${lvl}` : QuickChoice.summary)}</p>
+      <${Radar} found=${!!found} me=${me?.avatar ?? null} name=${account.name} />
+      <div class="search-copy">
+        <h2>${err ? "Не получилось" : found ? "Соперник найден" : "Ищем соперника"}</h2>
+        <p>${err ?? (found ? `Комната ${found.code ?? ""} · ${lvl}` : html`${QuickChoice.summary} · <b class="search-time">${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}</b>`)}</p>
+      </div>
       ${s >= 5 && !found && !err ? html`<button class="navy-btn fade-in" onClick=${() => cancel(true)}><img src=${img("bot")} alt="" />Пока никого — играть с ботом</button>` : null}
     </div>
-    <p class="search-foot">Ищем среди игроков derbyo.online. Можно открыть сайт на компьютере и сыграть с собой.</p>
+  </div>`;
+}
+
+// Faces the sweep lights up as it passes: the radar is looking through the players.
+const BLIPS = [["messi", 28, .78], ["cr7", 96, .58], ["mbappe", 150, .86], ["modric", 212, .62], ["henry", 262, .84], ["iniesta", 322, .6]];
+
+/** The search as a radar on a night pitch: rings breathe out from you, a red beam sweeps round and lights up
+ * players' faces as it passes; on a match the beam stops and everything flashes mint. */
+function Radar({ found, me, name }) {
+  return html`<div class="radar" aria-hidden="true">
+    <span class="rd-grid"></span>
+    <span class="rd-wave"></span><span class="rd-wave w2"></span><span class="rd-wave w3"></span>
+    <span class="rd-sweep"></span>
+    ${BLIPS.map(([who, deg, r]) => html`<span class="rd-blip" style=${`--a:${deg}deg;--r:${r};--d:${(deg / 360) * 2.8}s`}><img src=${`img/p_${who}.jpg`} alt="" /></span>`)}
+    <span class="rd-me">${me ? html`<img src=${me} alt="" />` : html`<b>${(name || "?").slice(0, 2).toUpperCase()}</b>`}</span>
   </div>`;
 }
 

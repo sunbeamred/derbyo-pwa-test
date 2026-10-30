@@ -1448,3 +1448,39 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .sound-btn, .mode-ic { position: relative; }
 .sound-btn .badge { top: -5px; right: -5px; }
 .mode-ic .badge { top: -6px; right: -7px; }
+
+/* The quick game's search: a radar on a night pitch. Rings breathe out from you, a red beam sweeps round
+   (2.8 s a turn) and lights up players' faces as it passes; on a match it stops and flashes mint. */
+.radar { --R: min(132px, 34vw); position: relative; width: calc(var(--R) * 2 + 44px); aspect-ratio: 1; flex: none; }
+.radar::before { content: ""; position: absolute; inset: 22px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(22, 196, 126, .12), rgba(22, 196, 126, .04) 55%, transparent 71%); }
+.rd-grid { position: absolute; inset: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
+  background: radial-gradient(circle, transparent 32.4%, rgba(255, 255, 255, .09) 33%, transparent 33.6%, transparent 65.6%, rgba(255, 255, 255, .09) 66.2%, transparent 66.8%),
+    linear-gradient(transparent calc(50% - .5px), rgba(255, 255, 255, .07) 50%, transparent calc(50% + .5px)),
+    linear-gradient(90deg, transparent calc(50% - .5px), rgba(255, 255, 255, .07) 50%, transparent calc(50% + .5px)); }
+.rd-sweep { position: absolute; inset: 22px; border-radius: 50%; will-change: transform; animation: rd-spin 2.8s linear infinite;
+  background: conic-gradient(from 0deg, transparent 0deg 250deg, rgba(255, 83, 100, .08) 290deg, rgba(255, 83, 100, .32) 352deg, rgba(255, 150, 160, .85) 359deg, transparent 360deg); }
+@keyframes rd-spin { to { transform: rotate(360deg); } }
+.rd-wave { position: absolute; inset: calc(50% - 38px); border-radius: 50%; border: 2px solid rgba(255, 83, 100, .55); opacity: 0; animation: rd-wave 2.8s ease-out infinite; }
+.rd-wave.w2 { animation-delay: .93s; }
+.rd-wave.w3 { animation-delay: 1.86s; }
+@keyframes rd-wave { 0% { opacity: .8; transform: scale(1); } 100% { opacity: 0; transform: scale(3.4); } }
+.rd-blip { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; overflow: hidden; opacity: .14;
+  transform: rotate(var(--a)) translateY(calc(var(--r) * var(--R) * -1)) rotate(calc(var(--a) * -1)) scale(.85);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .25); animation: rd-blip 2.8s var(--d) ease-out infinite; }
+.rd-blip img { width: 100%; height: 100%; object-fit: cover; }
+@keyframes rd-blip { 0% { opacity: 1; box-shadow: 0 0 0 2px #FF5364, 0 0 16px rgba(255, 83, 100, .8); }
+  70%, 100% { opacity: .14; box-shadow: 0 0 0 2px rgba(255, 255, 255, .25); } }
+.rd-me { position: absolute; inset: calc(50% - 38px); border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #0B1626;
+  box-shadow: 0 0 0 3px #FF5364, 0 0 34px rgba(255, 83, 100, .55); transition: box-shadow .4s; }
+.rd-me img { width: 100%; height: 100%; object-fit: cover; }
+.rd-me b { font-size: 24px; font-weight: 800; }
+.search.found .rd-sweep, .search.failed .rd-sweep { animation-play-state: paused; opacity: 0; transition: opacity .4s; }
+.search.found .rd-blip, .search.failed .rd-blip { animation: none; opacity: 0; transition: opacity .3s; }
+.search.failed .rd-wave { animation: none; }
+.search.found .rd-wave { border-color: rgba(50, 229, 161, .7); }
+.search.found .rd-me { box-shadow: 0 0 0 3px #32E5A1, 0 0 44px rgba(50, 229, 161, .7); }
+.search-copy { display: flex; flex-direction: column; gap: 8px; }
+.search-copy p { margin-top: 0; }
+.search-time { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+
