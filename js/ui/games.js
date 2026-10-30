@@ -355,6 +355,7 @@ export function LinksView({ nav }) {
           <div class="lk-answer"><b>${view.answer.label}</b><em>${view.answer.kind}</em></div>
           ${view.also ? html`<small>Твой ответ «${view.also.label}» тоже подходит</small>` : null}
         </div>` : null}
+      ${view?.guesses.length ? html`<h4 class="section">ТВОИ ОТВЕТЫ</h4><div class="lk-guesses">${view.guesses.map((g) => html`<span class=${cx("lk-guess", g.ok ? "ok" : "no")}>${g.ok ? "✓" : "✕"} ${g.label}<small>${g.kind}</small></span>`)}</div>` : null}
       <div class="dg-list">
         ${Array.from({ length: total }, (_, i) => {
           const p = view?.cards[i];
@@ -366,7 +367,6 @@ export function LinksView({ nav }) {
             : html`<div class="lk-card locked" key=${"l" + i}><span class="lk-lock"><img src=${img("lock")} alt="" /></span><span class="lk-who"><b>Футболист ${i + 1}</b><small>откроется после неверного ответа</small></span></div>`;
         })}
       </div>
-      ${view?.guesses.length ? html`<h4 class="section">ТВОИ ОТВЕТЫ</h4><div class="lk-guesses">${view.guesses.map((g) => html`<span class=${cx("lk-guess", g.ok ? "ok" : "no")}>${g.ok ? "✓" : "✕"} ${g.label}<small>${g.kind}</small></span>`)}</div>` : null}
       ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
     </div></div>
     <${BottomBar}>
