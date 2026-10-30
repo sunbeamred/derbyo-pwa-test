@@ -38,6 +38,15 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     return () => clearTimeout(t);
   }, [m.toast?.id]);
   useEffect(() => { const t = setTimeout(() => setEntering(false), reduceMotion() ? 200 : 1050); return () => clearTimeout(t); }, []);
+  // A new match (its first round) opens with the two players face to face behind closing doors, then a 5-second count.
+  const [intro, setIntro] = useState(null);
+  const firstGame = m.online && !m.watching && !m.hotseat && m.round === 1 && m.g?.stage === "play" ? m.g.id : null;
+  useEffect(() => {
+    if (!firstGame) return;
+    const key = "intro-" + firstGame;
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch {}
+    setIntro(firstGame);
+  }, [firstGame]);
   useEffect(() => {
     if (!m.reward) return;
     if (m.reward.coins) setCoins(m.reward.id);
@@ -158,6 +167,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
       onClose=${() => setConfirmSurrender(false)}
       actions=${[{ title: "Играть дальше", run: () => setConfirmSurrender(false) }, { title: "Сдаться", kind: "destructive", run: () => { setConfirmSurrender(false); m.surrender(); store.changed(); } }]} />` : null}
     ${entering ? html`<${Entrance} />` : null}
+    ${intro ? html`<${MatchIntro} m=${m} key=${intro} done=${() => setIntro(null)} />` : null}
   </div>`;
 }
 
@@ -482,6 +492,51 @@ function CoinAtmosphere({ done }) {
 }
 
 /** .stadium-entrance: the site's «Выходим на поле» moment when a match starts (1.05 s). */
+/** The match intro: two doors slide shut from the sides, each carrying a player (photo, name, flag, rating, place),
+ * the VS seal lands on the seam, a 5…1 count runs, and the doors part to show the board. A tap skips it. */
+function MatchIntro({ m, done }) {
+  const [n, setN] = useState(5);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let left = 5;
+    const tick = setInterval(() => {
+      left -= 1;
+      if (left > 0) { setN(left); vibrate(8); Sound.play?.("turn"); }
+      else { clearInterval(tick); setOpen(true); setTimeout(done, 650); }
+    }, 1000);
+    return () => clearInterval(tick);
+  }, []);
+  const skip = () => { if (!open) { setOpen(true); setTimeout(done, 650); } };
+  const side = (owner) => {
+    const mine = owner === 0;
+    const name = mine ? m.leftName : m.opponent.name;
+    const flag = mine ? m.myFlag : m.opponent.flag;
+    const rating = mine ? m.myRating : m.opponent.rating;
+    const rank = mine ? m.myRank : m.opponent.rank;
+    const bot = !mine && m.opponent.isBot;
+    const photo = m.avatarOf?.(owner);
+    const red = m.seat(owner) === 0;
+    return html`<div class=${cx("intro-door", mine ? "l" : "r", red ? "red" : "green")}>
+      <div class="intro-player">
+        <span class="intro-face">${bot ? html`<img class="bot" src=${img("bot")} alt="" />` : photo ? html`<img class="photo" src=${photo} alt="" />` : html`<b>${name.slice(0, 2).toUpperCase()}</b>`}
+          ${flag ? html`<i class="intro-flag">${flagView(flag)}</i>` : null}</span>
+        <b class="intro-name">${name}</b>
+        ${rating != null ? html`<span class="intro-rating"><b>${rating}</b>${rank ? html`<small>#${rank} в рейтинге</small>` : null}</span>`
+          : html`<span class="intro-rating"><small>${bot ? "учебный бот" : "без рейтинга"}</small></span>`}
+      </div>
+    </div>`;
+  };
+  return html`<div class=${cx("match-intro", open && "open")} onClick=${skip} role="dialog" aria-label=${`${m.leftName} против ${m.opponent.name}, старт через ${n}`}>
+    ${side(0)}${side(1)}
+    <div class="intro-seam"></div>
+    <div class="intro-center">
+      <span class="intro-vs"><i>VS</i></span>
+      <b class="intro-count" key=${n}>${n}</b>
+      <small class="intro-level">${m.levelChain?.cur ?? m.levelPath?.find((x) => x.current)?.name ?? ""}</small>
+    </div>
+  </div>`;
+}
+
 const Entrance = () => html`<div class="entrance" aria-hidden="true">
   <div class="ent-blur"></div><img class="ent-stadium" src="img/stadium.jpg" alt="" /><div class="ent-shade"></div><div class="ent-beams"></div>
   <div class="ent-copy"><small>DERBYO · МАТЧ СКОРО НАЧНЁТСЯ</small><b>Выходим на поле</b></div>

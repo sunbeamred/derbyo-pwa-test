@@ -1204,3 +1204,81 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 .feedback-sheet { display: flex; flex-direction: column; gap: 10px; }
 .fb-text { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 14px; background: var(--navy); border: 1px solid var(--navy-line); color: var(--ink); font: inherit; font-size: 15px; resize: none; }
 .home-head { gap: 8px; }
+
+/* Match intro: two doors close from the sides with the players on them, the VS seal lands on the seam,
+   a 5…1 count runs, then the doors part to show the board. */
+.match-intro { position: fixed; inset: 0; z-index: 70; overflow: hidden; }
+.intro-door { position: absolute; top: 0; bottom: 0; width: 50%; display: flex; align-items: center; justify-content: center;
+  animation: door-in .55s cubic-bezier(.2, .9, .25, 1.05) both; transition: transform .6s cubic-bezier(.6, 0, .4, 1); }
+.intro-door.l { left: 0; --from: -100%; }
+.intro-door.r { right: 0; --from: 100%; animation-delay: .05s; }
+.intro-door.red { background: radial-gradient(120% 70% at 30% 40%, #E23A47 0%, #8E1422 55%, #3E0710 100%); }
+.intro-door.green { background: radial-gradient(120% 70% at 70% 40%, #1FB97A 0%, #0C6A45 55%, #04271A 100%); }
+.intro-door::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .04) 0 14px, transparent 14px 28px); pointer-events: none; }
+@keyframes door-in { from { transform: translateX(var(--from)); } }
+.match-intro.open .intro-door.l { transform: translateX(-105%); }
+.match-intro.open .intro-door.r { transform: translateX(105%); }
+.intro-player { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 0 10px; text-align: center;
+  animation: player-in .5s .35s ease-out both; }
+.intro-door.l .intro-player { margin-right: 52px; }
+.intro-door.r .intro-player { margin-left: 52px; }
+@keyframes player-in { from { opacity: 0; transform: translateY(18px) scale(.9); } }
+.intro-face { position: relative; width: 80px; height: 80px; border-radius: 26px; display: grid; place-items: center; background: rgba(0, 0, 0, .25);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5), 0 12px 30px rgba(0, 0, 0, .45); font-size: 28px; font-weight: 800; }
+.intro-face .photo { width: 100%; height: 100%; border-radius: 26px; object-fit: cover; }
+.intro-face .bot { width: 60%; }
+.intro-flag { position: absolute; left: -6px; bottom: -8px; font-style: normal; font-size: 26px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .5)); }
+.intro-flag img.globe { width: 28px; height: 28px; margin: 0; }
+.intro-name { max-width: 100%; font-size: 19px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 2px 8px rgba(0, 0, 0, .4); }
+.intro-rating { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.intro-rating b { font-family: var(--rounded); font-size: 26px; font-weight: 800; color: #FFE7A3; text-shadow: 0 0 14px rgba(255, 200, 80, .5); }
+.intro-rating small { font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, .8); }
+.intro-seam { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; transform: translateX(-50%); background: linear-gradient(transparent, #FFE7A3 30%, #FFE7A3 70%, transparent);
+  box-shadow: 0 0 18px rgba(255, 220, 130, .8); animation: seam-in .3s .5s ease-out both; transition: opacity .3s; }
+@keyframes seam-in { from { opacity: 0; transform: translateX(-50%) scaleY(0); } }
+.match-intro.open .intro-seam, .match-intro.open .intro-center { opacity: 0; transition: opacity .25s; }
+.intro-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+/* The count sits well below the names, the level above the seal. */
+.intro-count { position: absolute; top: 150px; }
+.intro-level { position: absolute; bottom: 110px; white-space: nowrap; }
+.intro-vs { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 50% 35%, #22385A, #0B1626);
+  box-shadow: 0 0 0 3px rgba(246, 212, 130, .7), 0 0 40px rgba(246, 212, 130, .45); animation: vs-in .55s .55s cubic-bezier(.3, 1.6, .5, 1) both; }
+.intro-vs i { display: inline-block; padding: 0 .16em 0 .06em; font-style: italic; font-size: 32px; font-weight: 900; background: linear-gradient(#FFF1C2, #E8B04A);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+@keyframes vs-in { from { opacity: 0; transform: scale(2.2) rotate(-12deg); } }
+.intro-count { font-family: var(--rounded); font-size: 64px; font-weight: 900; color: #fff; text-shadow: 0 0 20px rgba(255, 255, 255, .5); animation: count-pop .9s ease-out both; }
+@keyframes count-pop { 0% { opacity: 0; transform: scale(1.8); } 25% { opacity: 1; transform: scale(1); } 85% { opacity: 1; } 100% { opacity: .2; transform: scale(.85); } }
+.intro-level { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #FFE7A3; }
+@media (prefers-reduced-motion: reduce) { .intro-door, .intro-player, .intro-vs, .intro-count, .intro-seam { animation-duration: .01s; } }
+
+/* Контекстно · с друзьями: the tic-tac-toe lobby and room, with eight seats in place of the duel. */
+.ctx-menu { margin-top: 0; padding: 10px; }
+.ctx-as { font-size: 13px; color: var(--muted); }
+.ctx-as b { color: var(--ink); }
+.ctx-code-boxes { margin-top: 18px; }
+.ctx-code-boxes + .text-btn { align-self: center; }
+.ctx-seats { border-radius: 22px; padding: 14px 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+.ctx-seat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 4px; }
+.ctx-seat { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; color: inherit; text-align: center; }
+.ctx-seat .ds-av { width: 50px; height: 50px; border-radius: 17px; overflow: visible; }
+.ctx-seat .ds-av b { font-size: 17px; }
+.ctx-seat .ds-av.wait i { border-radius: 17px; }
+.ctx-seat .ctx-plus { font-size: 22px; font-weight: 600; color: var(--mint); }
+.ctx-seat.me .ds-av { box-shadow: 0 0 0 2.5px var(--mint), 0 0 14px rgba(50, 229, 161, .35); }
+.ctx-seat.won .ds-av { box-shadow: 0 0 0 2.5px var(--gold), 0 0 16px rgba(246, 212, 130, .45); }
+.ctx-key { position: absolute; right: -5px; top: -5px; width: 18px; height: 18px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); }
+.ctx-seat-name { max-width: 100%; font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctx-seat small { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.ctx-seat.free small { color: var(--mint); font-weight: 700; }
+.ctx-seat-hint { font-size: 12px; color: var(--soft); text-align: center; }
+.ctx-seats.compact { padding: 10px 8px; }
+.ctx-seats.compact .ctx-seat-grid { gap: 8px 2px; }
+.ctx-seats.compact .ds-av { width: 38px; height: 38px; border-radius: 13px; }
+.ctx-seats.compact .ds-av b { font-size: 14px; }
+.ctx-seats.compact .ctx-seat-name { font-size: 12px; }
+.ctx-settings { margin-top: 0; }
+.ctx-watchers { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px; }
+.ctx-watcher { padding: 6px 10px; border-radius: 14px; background: var(--navy); border: 1px solid var(--navy-line); font-size: 13px; }
+.ctx-watcher.me { border-color: rgba(50, 229, 161, .6); }
+.ctx-level { border-radius: 20px; padding: 12px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.ctx-level .cap { color: var(--gold); padding-left: 4px; }

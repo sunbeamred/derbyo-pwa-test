@@ -365,28 +365,78 @@ export function LinksView({ nav }) {
 
 // ———————————————————————————— Контекстно · с друзьями ————————————————————————————
 // One hidden player per round and one shared list: everyone sees every guess and its author; whoever names №1 first wins.
-// The room lives on the server (contexto-rooms.mjs); this phone keeps its seat (code + secret) in the site's own memory.
+// The room lives on the server (contexto-rooms.mjs): eight seats play, the rest watch from the stands; a chat for all.
+// The lobby and the room look like the tic-tac-toe ones (live.js). The name is the account's: a nickname, or «ГостьNNNN».
 
 const roomCall = (route, body = {}, secret) => fetch(`/api/contexto/room/${route}`, { method: "POST",
   headers: { "Content-Type": "application/json", ...(secret ? { Authorization: "Bearer " + secret } : {}) }, body: JSON.stringify(body) })
   .then((r) => r.json().catch(() => ({ ok: false, error: "Сервер недоступен." })))
   .then((d) => { if (!d.ok) throw Object.assign(new Error(d.error || "Ошибка."), { code: d.code }); return d; });
+const spaced = (code) => `${code.slice(0, 3)} ${code.slice(3)}`;
+
+/** Eight seats in one glass bubble, like the duel in tic-tac-toe: a free seat takes you in, your own seat stands you up. */
+function Seats({ v, sit, compact }) {
+  const bySeat = new Map(v.players.map((p) => [p.seat, p]));
+  const meSeated = v.players.some((p) => p.id === v.you);
+  return html`<div class=${cx("ctx-seats glass", compact && "compact")}>
+    <div class="ctx-seat-grid">${Array.from({ length: v.seats ?? 8 }, (_, i) => {
+      const p = bySeat.get(i);
+      if (!p) return html`<button class="ctx-seat free press" onClick=${() => sit(i)} aria-label=${`Сесть на место ${i + 1}`}>
+        <span class="ds-av wait">${meSeated ? null : html`<i></i>`}<b class="ctx-plus">+</b></span><small>${meSeated ? "свободно" : "сесть"}</small></button>`;
+      const me = p.id === v.you;
+      return html`<button class=${cx("ctx-seat press", me && "me", p.id === v.winner && "won")} onClick=${me ? () => sit(null) : null} aria-label=${me ? "Встать на трибуну" : p.name}>
+        <span class=${cx("ds-av", me ? "green" : "red")}><b>${p.name.slice(0, 2).toUpperCase()}</b>
+          ${p.id === v.host ? html`<img class="ctx-key" src=${img("key")} alt="создатель" />` : null}</span>
+        <b class="ctx-seat-name">${me ? "Ты" : p.name}</b>
+        <small>${p.best ? `лучший #${p.best}` : v.status === "playing" ? "думает" : "на месте"}</small></button>`;
+    })}</div>
+    ${meSeated ? null : html`<p class="ctx-seat-hint">Ты на трибуне — нажми на свободное место, чтобы играть</p>`}
+  </div>`;
+}
+
+/** The room's chat and stands, the same card as in tic-tac-toe. */
+function CtxTalk({ v, say }) {
+  const [tab, setTab] = useState("chat");
+  const [draft, setDraft] = useState("");
+  const list = useRef();
+  const chat = v.chat ?? [], watchers = v.watchers ?? [];
+  useEffect(() => { if (list.current) list.current.scrollTop = list.current.scrollHeight; }, [chat.length, tab]);
+  const send = (e) => { e.preventDefault(); const t = draft.trim(); if (!t) return; say(t); setDraft(""); };
+  return html`<div class="talk glass">
+    <div class="segmented talk-tabs">
+      <button class=${tab === "chat" ? "on" : ""} onClick=${() => setTab("chat")}><img src=${img("chat")} alt="" />Чат${chat.length ? html` <i>${chat.length}</i>` : null}</button>
+      <button class=${tab === "stands" ? "on" : ""} onClick=${() => setTab("stands")}><img src=${img("eye")} alt="" />Трибуна <i>${watchers.length}</i></button>
+    </div>
+    ${tab === "chat" ? html`
+      ${chat.length ? html`<div class="chat-list inline talk-list" ref=${list}>${chat.map((x) => html`<div class=${cx("msg", x.by === v.you && "me")}>
+        <span class="who"><span>${x.by === v.you ? "Ты" : x.name}</span></span><span class="text">${x.text}</span></div>`)}</div>` : null}
+      <form class="mini-field" onSubmit=${send} action="#">
+        <input value=${draft} maxlength="200" onInput=${(e) => setDraft(e.target.value)} placeholder=${chat.length ? "Сообщение" : "Пока тихо — напиши первым"} enterkeyhint="send" autocomplete="off" />
+        <button type="submit" class=${cx("send", draft.trim() && "on")} disabled=${!draft.trim()} aria-label="Отправить"><${Icon} name="up" size="16" weight="3" /></button>
+      </form>`
+      : watchers.length ? html`<div class="ctx-watchers">${watchers.map((w) => html`<span class=${cx("ctx-watcher", w.id === v.you && "me")}>${w.id === v.you ? "Ты" : w.name}</span>`)}</div>`
+      : html`<p class="talk-empty">На трибуне пока никого. Кто войдёт по коду, сядет сюда, пока не займёт место.</p>`}
+  </div>`;
+}
 
 function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
   const memo = ctxMem.get();
   const [seat, setSeat] = useState(memo.room ?? null);
   const [view, setView] = useState(null);
-  const [name, setName] = useState(() => memo.name || (account.profile?.registered ? account.name : "") || "");
-  const [code, setCode] = useState(join ?? "");
-  const [level, setLevel] = useState(memo.endless.level || 1);
+  const [step, setStep] = useState(join && !memo.room ? "code" : null);
+  const [digits, setDigits] = useState(join ?? "");
+  const [focused, setFocused] = useState(false);
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [, tick] = useState(0);
   const clockOff = useRef(0);
   const lastSeen = useRef(0);
+  const codeRef = useRef();
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => { if (step === "code") codeRef.current?.focus(); }, [step]);
   // The room's live state: one stream per seat, reconnecting with a growing pause.
   useEffect(() => {
     if (!seat) { setView(null); return; }
@@ -421,84 +471,109 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
     })();
     return () => ctl.abort();
   }, [seat?.secret]);
-  function drop(text) { memo.room = null; ctxMem.save(); setSeat(null); setView(null); if (text) setErr(text); }
+  function drop(text) { memo.room = null; ctxMem.save(); setSeat(null); setView(null); setStep(null); if (text) setErr(text); }
   const call = async (route, body = {}) => {
     setErr(null);
     try { return await roomCall(route, { code: seat.code, ...body }, seat.secret); }
     catch (e) { if (["ROOM", "AUTH"].includes(e.code)) drop(e.message); else setErr(e.message); }
   };
+  // The name is the account's own; a guest is always «ГостьNNNN».
   async function enter(route) {
-    const n = name.trim();
-    if (!n) { setErr("Введи имя."); return; }
-    if (route === "join" && !/^\d{6}$/.test(code.trim())) { setErr("Код — шесть цифр."); return; }
     setBusy(true); setErr(null);
     try {
-      const d = await roomCall(route, route === "join" ? { name: n, code: code.trim() } : { name: n, level });
-      memo.name = n; memo.room = { code: d.code, secret: d.secret, playerId: d.playerId }; ctxMem.save(); setSeat(memo.room);
+      const d = await roomCall(route, route === "join" ? { name: account.name, code: digits, watch: true } : { name: account.name, level: memo.endless.level || 1 });
+      memo.room = { code: d.code, secret: d.secret, playerId: d.playerId }; ctxMem.save(); setSeat(memo.room); setStep(null);
     } catch (e) { setErr(e.message); }
     setBusy(false);
   }
-  const invite = async () => {
-    const url = `${location.origin}/#ctx=${seat.code}`;
-    const text = `Сыграем в «Контекстно» в DERBYO? Комната ${seat.code}\n${url}`;
+  const link = () => `${location.origin}/#ctx=${seat.code}`;
+  const share = async () => {
+    const text = `Сыграем в «Контекстно» в DERBYO? Комната ${spaced(seat.code)}\n${link()}`;
     try { if (navigator.share) { await navigator.share({ text }); return; } } catch (e) { if (e.name === "AbortError") return; }
-    try { await navigator.clipboard.writeText(text); setErr("Ссылка скопирована"); } catch {}
+    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {}
   };
+  const copy = async () => { try { await navigator.clipboard.writeText(seat.code); } catch {} setCopied(true); setTimeout(() => setCopied(false), 1500); };
+  const paste = async () => { try { const t = await navigator.clipboard.readText(); setDigits(t.replace(/\D/g, "").slice(0, 6)); } catch {} };
   const leave = async () => { setLeaving(false); await call("leave"); drop(); };
 
   const v = view, you = v?.you, host = v && v.host === you;
-  const names = new Map((v?.players ?? []).map((p) => [p.id, p.name]));
+  const seated = !!v?.players.some((p) => p.id === you);
+  const names = new Map([...(v?.players ?? []), ...(v?.watchers ?? [])].map((p) => [p.id, p.name]));
   const sorted = (v?.guesses ?? []).slice().sort((a, b) => a.rank - b.rank);
   const used = new Set((v?.guesses ?? []).map((g) => g.id));
   const last = v?.guesses?.at(-1);
   const fresh = v && v.guesses.length > lastSeen.current ? last?.id : null;
   if (v) lastSeen.current = v.guesses.length;
   const hintLeft = v?.nextHintAt ? Math.max(0, Math.ceil((v.nextHintAt - (Date.now() + clockOff.current)) / 1000)) : null;
-  const line = !seat ? "Один загаданный на всех, общий список вариантов. Кто первым назовёт №1 — выиграл раунд."
+  const level = st?.levels?.find((l) => l.level === v?.level);
+  const line = step === "code" ? "Введи 6 цифр, которые прислал друг"
+    : !seat ? "Один загаданный на всех, общий список вариантов. Кто первым назовёт №1 — выиграл раунд."
     : !v ? "Подключаемся…"
     : v.status === "playing" ? `Вариантов ${v.guesses.length}${hintLeft !== null ? ` · подсказка для всех через ${Math.floor(hintLeft / 60)}:${String(hintLeft % 60).padStart(2, "0")}` : v.hintsGiven ? " · подсказок больше не будет" : ""}`
-    : `Комната ${seat.code.slice(0, 3)} ${seat.code.slice(3)} · игроков ${v.players.length} из 8`;
+    : `Игроков ${v.players.length} из ${v.seats ?? 8}${v.watchers?.length ? ` · на трибуне ${v.watchers.length}` : ""}`;
+  const list = v && sorted.length ? html`<div class="dg-list">${sorted.map((f) => html`<div class="ctx-by-wrap" key=${f.id}>
+      <${CtxRow} f=${f} total=${v.total} hint=${f.hint} why=${v.result?.why?.[f.id]} fresh=${f.id === fresh} />
+      ${f.by ? html`<span class=${cx("ctx-by", f.by === you && "me")}>${f.by === you ? "ты" : names.get(f.by) ?? "игрок"}</span>` : null}</div>`)}</div>` : null;
+
   return html`<div class="screen-with-bar daily-screen">
-    <${GameTop} title="Контекстно" back=${nav.back} mode=${mode} setMode=${setMode} tabs=${tabs} line=${line} />
+    <${GameTop} title="Контекстно" back=${step ? () => { setStep(null); setErr(null); } : nav.back} mode=${mode} setMode=${(m) => { setStep(null); setMode(m); }} tabs=${tabs} line=${line} />
     <div class="screen-scroll"><div class="page game-page">
-      ${!seat ? html`<div class="dg-empty glass ctx-lobby">
+      ${step === "code" ? html`
+        <label class="code-boxes ctx-code-boxes">
+          <input ref=${codeRef} inputmode="numeric" autocomplete="one-time-code" value=${digits} onFocus=${() => setFocused(true)} onBlur=${() => setFocused(false)}
+            onInput=${(e) => { const d = e.target.value.replace(/\D/g, "").slice(0, 6); e.target.value = d; setDigits(d); setErr(null); }} aria-label="Код комнаты" />
+          ${[0, 1, 2, 3, 4, 5].map((i) => html`${i === 3 ? html`<i class="dash">–</i>` : null}<span class=${cx("box", i === digits.length && focused && "cur")}>${digits[i] ?? ""}</span>`)}
+        </label>
+        <button class="text-btn muted" onClick=${paste}><${Icon} name="paste" size="15" />Вставить из буфера</button>`
+      : !seat ? html`<div class="dg-empty glass">
           <img src=${img("game-contexto")} alt="" /><b>Сыграйте вместе</b>
-          <p>До 8 игроков. Подсказки открываются для всех сами: первая через 2 минуты, потом каждые полторы.</p>
-          <label class="pw-field"><${Icon} name="profile" size="16" /><input value=${name} maxlength="16" onInput=${(e) => setName(e.target.value)} placeholder="Твоё имя" autocapitalize="words" /></label>
-          <div class="dg-levels">${(st?.levels ?? []).map((l) => html`<button class=${cx("dg-level press", level === l.level && "on")} style=${`--t:${LEVEL_TINT[l.level]}`} onClick=${() => setLevel(l.level)}>
-            <img src=${img(LEVEL_ICON[l.level])} alt="" /><b>${l.label}</b></button>`)}</div>
-          <button class="primary-btn" disabled=${busy} onClick=${() => enter("create")}><img src=${img("invite")} alt="" />Создать комнату</button>
-          <div class="ctx-join"><label class="pw-field"><input value=${code} inputmode="numeric" maxlength="6" onInput=${(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="Код из 6 цифр" /></label>
-            <button class="navy-btn" disabled=${busy || code.length !== 6} onClick=${() => enter("join")}>Войти</button></div>
+          <p>До 8 игроков за одним загаданным, остальные смотрят с трибуны. Подсказки открываются для всех сами: первая через 2 минуты, потом каждые полторы.</p>
+          <p class="ctx-as">Ты играешь как <b>${account.name}</b></p>
         </div>`
-      : v ? html`
-        <div class="ctx-players">${v.players.map((p) => html`<span class=${cx("ctx-player", p.id === you && "me", p.id === v.winner && "won")}>
-            ${p.id === v.host ? html`<img src=${img("key")} alt="создатель" />` : null}<b>${p.id === you ? "ты" : p.name}</b>${p.best ? html`<small>#${p.best}</small>` : null}</span>`)}</div>
-        ${v.status === "lobby" ? html`<div class="dg-empty glass"><img src=${img("invite")} alt="" /><b>${host ? "Позови друзей и начинай" : "Ждём, когда создатель начнёт"}</b>
-            <p>Код комнаты <b class="ctx-code">${seat.code.slice(0, 3)} ${seat.code.slice(3)}</b> — друзья вводят его во вкладке «С друзьями» или открывают ссылку.</p></div>` : null}
+      : !v ? null
+      : v.status === "playing" ? html`<${Seats} v=${v} sit=${(i) => call("sit", { seat: i })} compact />${list}`
+      : html`
         ${v.result ? html`<div class=${cx("dg-result glass", v.winner === you ? "won" : "lost")}>
             <small>${v.gaveUp ? "Раунд остановлен · загадан был" : v.winner === you ? "Ты угадал первым!" : `Первым угадал ${names.get(v.winner) ?? "кто-то"}`}</small>
             <div class="dg-answer"><${Face} p=${{ name: v.result.answer.name, photo: v.result.answer.photo }} size=${56} />
               <span><b>${v.result.answer.name}</b><em>${[v.result.answer.nat && `${v.result.answer.nat.flag} ${v.result.answer.nat.label}`, v.result.answer.pos, v.result.answer.born].filter(Boolean).join(" · ")}</em></span></div>
           </div>` : null}
-        <div class="dg-list">${sorted.map((f) => html`<div class="ctx-by-wrap" key=${f.id}>
-            <${CtxRow} f=${f} total=${v.total} hint=${f.hint} why=${v.result?.why?.[f.id]} fresh=${f.id === fresh} />
-            ${f.by ? html`<span class=${cx("ctx-by", f.by === you && "me")}>${f.by === you ? "ты" : names.get(f.by) ?? "игрок"}</span>` : null}</div>`)}</div>`
-      : null}
+        <div class="code-bar glass">
+          <span class="cb-t"><small class="cap">КОД КОМНАТЫ</small><b class="cb-code">${spaced(seat.code)}</b></span>
+          <button class="cb-btn press" onClick=${copy} aria-label="Скопировать код"><${Icon} name=${copied ? "check" : "copy"} size="18" /></button>
+          <button class="cb-btn main press" onClick=${share} aria-label="Поделиться"><${Icon} name="share" size="18" /></button>
+        </div>
+        <p class="hint-line small pad">${copied ? "Скопировано — отправь друзьям" : "Друзья войдут по коду во вкладке «С друзьями» или по ссылке."}</p>
+        <${Seats} v=${v} sit=${(i) => call("sit", { seat: i })} />
+        ${host ? html`<div class="ctx-level glass"><small class="cap">УРОВЕНЬ ДЛЯ РАУНДА</small>
+            <div class="dg-levels">${(st?.levels ?? []).map((l) => html`<button class=${cx("dg-level press", v.level === l.level && "on")} style=${`--t:${LEVEL_TINT[l.level]}`}
+              onClick=${() => v.level !== l.level && call("settings", { level: l.level })}><img src=${img(LEVEL_ICON[l.level])} alt="" /><b>${l.label}</b></button>`)}</div></div>`
+          : html`<div class="settings-card ctx-settings">
+            <img src=${img(LEVEL_ICON[v.level] ?? "settings")} alt="" />
+            <span><small>Уровень · выбирает создатель</small><b>${level?.label ?? "—"}</b></span></div>`}
+        <${CtxTalk} v=${v} say=${(text) => call("say", { text })} />
+        ${list}`}
       ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
     </div></div>
     <${BottomBar}>
-      ${!seat || !v ? null : v.status === "playing" ? html`
+      ${step === "code" ? html`<button class="primary-btn" disabled=${digits.length < 6 || busy} onClick=${() => enter("join")}>${busy ? html`<span class="spinner"></span>` : "Войти"}</button>`
+      : !seat ? html`<section class="mode-group glass ctx-menu">
+          <div class="two">
+            <button class="navy-btn tall" disabled=${busy} onClick=${() => enter("create")}><img src=${img("invite")} alt="" />Создать</button>
+            <button class="mint-btn tall press" onClick=${() => { setErr(null); setStep("code"); }}><img src=${img("arrow")} alt="" />По коду</button>
+          </div></section>`
+      : !v ? null
+      : v.status === "playing" ? html`
         ${last ? html`<div class="ctx-last"><small>Последний вариант · ${last.by === you ? "твой" : last.by ? names.get(last.by) : "подсказка"}</small><${CtxRow} f=${last} total=${v.total} hint=${last.hint} /></div>` : null}
         <div class="dg-bar">
-          <${AskButton} busy=${busy} text=${`Назови футболиста${sorted[0] ? ` · лучший #${sorted[0].rank}` : ""}`} open=${() => setAsking(true)} />
+          ${seated ? html`<${AskButton} busy=${busy} text=${`Назови футболиста${sorted[0] ? ` · лучший #${sorted[0].rank}` : ""}`} open=${() => setAsking(true)} />`
+            : html`<span class="dg-wait">Ты на трибуне — сядь на свободное место</span>`}
           ${host ? html`<button class="round-tool press" aria-label="Остановить раунд" onClick=${() => call("giveup")}><img src=${img("finish")} alt="" /></button>` : null}
-          <button class="round-tool press" aria-label="Позвать в комнату" onClick=${invite}><img src=${img("share")} alt="" /></button>
+          <button class="round-tool press" aria-label="Позвать в комнату" onClick=${share}><img src=${img("share")} alt="" /></button>
         </div>`
       : html`<div class="dg-bar">
-          ${host ? html`<button class="primary-btn" onClick=${() => call("start", { level: v.level })}><img src=${img("bolt")} alt="" />${v.round ? "Следующий раунд" : "Начать раунд"}</button>`
-            : html`<span class="dg-wait">${v.round ? "Следующий раунд начнёт создатель" : "Ждём начала"}</span>`}
-          <button class="round-tool press" aria-label="Позвать в комнату" onClick=${invite}><img src=${img("share")} alt="" /></button>
+          ${host ? html`<button class="primary-btn" disabled=${!v.players.length} onClick=${() => call("start", { level: v.level })}><img src=${img("bolt")} alt="" />${v.round ? "Следующий раунд" : "Начать раунд"}</button>`
+            : html`<span class="dg-wait">${v.round ? "Следующий раунд начнёт создатель" : "Ждём, когда создатель начнёт"}</span>`}
           <button class="round-tool press" aria-label="Выйти из комнаты" onClick=${() => setLeaving(true)}><img src=${img("logout")} alt="" /></button>
         </div>`}
     <//>
