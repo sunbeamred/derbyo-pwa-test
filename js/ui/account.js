@@ -50,9 +50,14 @@ function BoardRow({ e, period, open }) {
   </button>`;
 }
 
-/** The first place as a full-width gold bubble licked by neon flames; second and third as silver and bronze below. */
+/** The first place as a full-width gold bubble: a neon ring runs round it, fire licks up behind it and sparks rise;
+ * second and third as silver and bronze below. Faces are rounded squares with the flag on the corner, as in the match. */
 function TopThree({ top, period, open }) {
-  const face = (e) => html`<span class="tt-face">${e.avatar ? html`<img src=${e.avatar} alt="" />` : html`<i>${initials2(e.nickname)}</i>`}</span>`;
+  const face = (e) => {
+    const flag = flagOrGlobe(e.country);
+    return html`<span class="tt-face">${e.avatar ? html`<img src=${e.avatar} alt="" />` : html`<i>${initials2(e.nickname)}</i>`}
+      ${flag ? html`<em class="tt-flag">${flagView(flag)}</em>` : null}</span>`;
+  };
   const [first, second, third] = top;
   const small = (e, place) => e ? html`<button class=${cx("tt-card", place === 2 ? "silver" : "bronze", e.self && "self")} onClick=${() => open(e.id)}>
     <span class="tt-shine"></span><b class="tt-place">${place}</b>${face(e)}
@@ -60,10 +65,25 @@ function TopThree({ top, period, open }) {
   </button>` : html`<span></span>`;
   return html`<div class="top3">
     ${first ? html`<div class="tt-gold-wrap">
-      <span class="tt-flames" aria-hidden="true">${[...Array(13).keys()].map((i) => html`<i style=${`--i:${i};--h:${[34, 50, 28, 44, 58, 36, 52, 30, 46, 60, 38, 48, 32][i]}px`}></i>`)}</span>
+      <svg class="tt-fire" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="ttFireG" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0" stop-color="#FF1E6E" /><stop offset=".35" stop-color="#FF5A1F" /><stop offset=".7" stop-color="#FFC13B" stop-opacity=".85" /><stop offset="1" stop-color="#FFF6C0" stop-opacity="0" />
+          </linearGradient>
+          <filter id="ttFireF" x="-10%" y="-40%" width="120%" height="180%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.012 0.045" numOctaves="2" seed="7" result="n">
+              <animate attributeName="baseFrequency" dur="2.6s" values="0.012 0.045;0.016 0.06;0.012 0.045" repeatCount="indefinite" />
+            </feTurbulence>
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="46" xChannelSelector="R" yChannelSelector="G" />
+            <feGaussianBlur stdDeviation="2" />
+          </filter>
+        </defs>
+        <path filter="url(#ttFireF)" fill="url(#ttFireG)" d="M0 140 L0 92 Q20 40 40 86 Q58 18 82 80 Q100 30 122 84 Q140 8 166 78 Q186 36 206 82 Q228 2 252 78 Q272 34 292 84 Q312 14 336 80 Q356 40 376 86 Q392 50 400 90 L400 140 Z" />
+      </svg>
+      <span class="tt-sparks" aria-hidden="true">${[...Array(10).keys()].map((i) => html`<i style=${`--x:${6 + i * 9.5}%;--d:${(i * 0.37) % 2.2}s;--t:${1.8 + (i % 4) * 0.35}s`}></i>`)}</span>
       <button class=${cx("tt-card gold", first.self && "self")} onClick=${() => open(first.id)}>
         <span class="tt-shine"></span>
-        <span class="tt-crowned">${face(first)}<span class="tt-crown">👑</span></span>
+        ${face(first)}
         <span class="tt-text"><small>ЧЕМПИОН · #1</small><b class="tt-name">${first.nickname}</b><small>${first.games} игр · ${first.winRate}% побед</small></span>
         <b class="tt-score num">${scoreText(first, period)}</b>
       </button></div>` : null}

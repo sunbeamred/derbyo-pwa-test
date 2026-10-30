@@ -1521,32 +1521,42 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .news-perk { display: inline-block; margin-top: 6px; padding: 3px 9px; border-radius: 99px; font-style: normal; font-size: 12px; font-weight: 800;
   color: #FFE7A3; background: rgba(246, 212, 130, .14); border: 1px solid rgba(246, 212, 130, .35); }
 
-/* The top three as metal: first place a full-width gold bubble with a moving glint and neon flames rising behind it;
-   second and third smaller, side by side, in silver and bronze. The rest of the table stays the plain list. */
-.top3 { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
-.tt-gold-wrap { position: relative; }
+/* The top three as metal: first place a full-width gold bubble with a neon ring running round it, fire licking up
+   from behind (SVG turbulence) and sparks rising; second and third smaller, side by side, in silver and bronze. */
+@property --tt-a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.top3 { display: flex; flex-direction: column; gap: 12px; margin-top: 44px; }
+.tt-gold-wrap { position: relative; isolation: isolate; }
 .tt-card { position: relative; overflow: hidden; isolation: isolate; color: #2A1A05; text-align: left; border-radius: 24px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), inset 0 -2px 0 rgba(0, 0, 0, .25), 0 12px 28px rgba(0, 0, 0, .45); }
-.tt-card.gold { display: flex; align-items: center; gap: 14px; width: 100%; padding: 18px 18px 18px 16px;
+.tt-card.gold { z-index: 2; display: flex; align-items: center; gap: 14px; width: 100%; padding: 18px 18px 18px 16px;
   background: linear-gradient(125deg, #7A5410 0%, #D9A93F 14%, #FFF1B8 26%, #E8B94A 38%, #9C6C17 52%, #E2B04A 66%, #FFE89A 78%, #B0801F 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), inset 0 -3px 0 rgba(90, 55, 0, .45), 0 0 0 1px rgba(255, 220, 120, .6), 0 0 28px rgba(255, 150, 40, .55), 0 14px 32px rgba(0, 0, 0, .5);
-  animation: tt-neon 2.2s ease-in-out infinite; }
-@keyframes tt-neon { 50% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), inset 0 -3px 0 rgba(90, 55, 0, .45), 0 0 0 1px rgba(255, 220, 120, .8), 0 0 46px rgba(255, 90, 40, .75), 0 14px 32px rgba(0, 0, 0, .5); } }
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), inset 0 -3px 0 rgba(90, 55, 0, .45), 0 14px 32px rgba(0, 0, 0, .5); }
+/* The neon ring: a conic gradient turning round the card, a sharp copy for the line and a blurred one for the glow. */
+.tt-gold-wrap::before, .tt-gold-wrap::after { content: ""; position: absolute; inset: -3px; z-index: 1; border-radius: 27px; pointer-events: none;
+  background: conic-gradient(from var(--tt-a), #FF2E7E, #FF8A1F, #FFF2A0, #FF8A1F, #FF2E7E, #B44CFF, #FF2E7E); animation: tt-spin 4s linear infinite; }
+.tt-gold-wrap::after { inset: -8px; border-radius: 32px; filter: blur(16px); opacity: .75; z-index: 0; }
+@keyframes tt-spin { to { --tt-a: 360deg; } }
+.tt-fire { position: absolute; left: 2%; width: 96%; bottom: calc(100% - 26px); height: 96px; z-index: 0; pointer-events: none; mix-blend-mode: screen;
+  filter: drop-shadow(0 0 10px rgba(255, 80, 40, .8)); }
+.tt-sparks { position: absolute; left: 0; right: 0; bottom: 70%; height: 120px; z-index: 3; pointer-events: none; }
+.tt-sparks i { position: absolute; left: var(--x); bottom: 0; width: 4px; height: 4px; border-radius: 50%; background: #FFF3B0;
+  box-shadow: 0 0 6px #FFB21E, 0 0 12px #FF2E7E; opacity: 0; animation: tt-spark var(--t) ease-out var(--d) infinite; }
+@keyframes tt-spark { 0% { opacity: 0; transform: translate(0, 0) scale(1); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(10px, -110px) scale(.3); } }
 .tt-card.silver { background: linear-gradient(125deg, #5E6B7B 0%, #C9D3DE 16%, #FFFFFF 28%, #AEBBC9 44%, #6F7C8D 58%, #D8E1EB 78%, #8693A4 100%); color: #1A2330; }
 .tt-card.bronze { background: linear-gradient(125deg, #5E3212 0%, #C9824B 16%, #FFD0A6 28%, #B26530 44%, #6E3B17 58%, #E09C66 78%, #85471E 100%); color: #2A1406; }
-.tt-shine { position: absolute; inset: -40% auto -40% -60%; width: 40%; z-index: -1; transform: skewX(-20deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .75), transparent); animation: tt-glint 3.6s ease-in-out infinite; pointer-events: none; }
-.tt-card.silver .tt-shine { animation-delay: 1.2s; } .tt-card.bronze .tt-shine { animation-delay: 1.8s; }
-@keyframes tt-glint { 0%, 55% { left: -60%; } 100% { left: 130%; } }
-.tt-face { flex: none; width: 52px; height: 52px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #13233A;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, .85), 0 4px 10px rgba(0, 0, 0, .35); }
-.tt-face img { width: 100%; height: 100%; object-fit: cover; }
+.tt-shine { position: absolute; top: -40%; bottom: -40%; left: 0; width: 45%; z-index: -1; transform: translateX(-150%) skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .8), transparent); animation: tt-glint 4.2s cubic-bezier(.4, 0, .2, 1) infinite; pointer-events: none; }
+.tt-card.silver .tt-shine { animation-delay: 1.4s; } .tt-card.bronze .tt-shine { animation-delay: 2.1s; }
+@keyframes tt-glint { 0%, 50% { transform: translateX(-150%) skewX(-20deg); } 100% { transform: translateX(340%) skewX(-20deg); } }
+.tt-face { position: relative; flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: #13233A;
+  box-shadow: 0 0 0 2.5px rgba(255, 255, 255, .9), 0 4px 10px rgba(0, 0, 0, .35); }
+.tt-face img { width: 100%; height: 100%; border-radius: 16px; object-fit: cover; }
 .tt-face i { font-style: normal; font-size: 17px; font-weight: 800; color: #fff; }
-.tt-crowned { position: relative; flex: none; }
-.gold .tt-face { width: 70px; height: 70px; box-shadow: 0 0 0 3px #FFF6D2, 0 0 0 5px rgba(122, 84, 16, .6), 0 6px 14px rgba(0, 0, 0, .4); }
+.gold .tt-face { width: 68px; height: 68px; border-radius: 20px; box-shadow: 0 0 0 3px #FFF6D2, 0 0 0 5px rgba(122, 84, 16, .55), 0 6px 14px rgba(0, 0, 0, .4); }
+.gold .tt-face img { border-radius: 20px; }
 .gold .tt-face i { font-size: 24px; }
-.tt-crown { position: absolute; left: 50%; top: -22px; translate: -50% 0; font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .4)); animation: crown-bob 2.6s ease-in-out infinite; }
-@keyframes crown-bob { 50% { transform: translateY(-3px) rotate(-6deg); } }
+.tt-flag { position: absolute; right: -8px; bottom: -8px; font-style: normal; font-size: 20px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); }
+.tt-flag img.globe { width: 20px; height: 20px; margin: 0; }
 .tt-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .tt-text small { font-size: 11px; font-weight: 800; letter-spacing: .08em; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tt-text small + .tt-name + small { letter-spacing: 0; font-weight: 700; }
@@ -1555,17 +1565,8 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .tt-score { font-family: var(--rounded); font-size: 22px; font-weight: 900; text-shadow: 0 1px 0 rgba(255, 255, 255, .5); }
 .gold .tt-score { flex: none; font-size: 34px; }
 .tt-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.tt-row .tt-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 10px 12px; text-align: center; min-width: 0; }
-.tt-place { position: absolute; left: 10px; top: 8px; font-family: var(--rounded); font-size: 22px; font-weight: 900; opacity: .55; }
+.tt-row .tt-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 10px 12px; text-align: center; min-width: 0; }
+.tt-place { position: absolute; left: 12px; top: 8px; font-family: var(--rounded); font-size: 22px; font-weight: 900; opacity: .55; }
 .tt-card.self { outline: 2px solid #fff; outline-offset: -2px; }
-/* Neon flames: tongues of orange-pink fire flickering up from behind the gold card. */
-.tt-flames { position: absolute; left: 4%; right: 4%; top: -34px; height: 64px; z-index: 0; display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none; }
-.tt-flames i { position: relative; width: 16px; height: var(--h); border-radius: 50% 50% 50% 50% / 90% 90% 25% 25%; transform-origin: 50% 100%;
-  background: linear-gradient(to top, #FF2E7E 0%, #FF5A1F 35%, #FFB21E 70%, rgba(255, 240, 160, .9) 100%);
-  box-shadow: 0 0 10px rgba(255, 70, 40, .9), 0 0 22px rgba(255, 40, 150, .6); filter: blur(.6px);
-  animation: tt-flame calc(.55s + var(--i) * .07s) ease-in-out calc(var(--i) * -.19s) infinite alternate; }
-.tt-flames i::after { content: ""; position: absolute; left: 25%; right: 25%; bottom: 0; height: 55%; border-radius: inherit; background: linear-gradient(to top, #FFFFFF, #FFF3A6 60%, transparent); opacity: .9; }
-@keyframes tt-flame { 0% { transform: scaleY(.7) skewX(-6deg); opacity: .75; } 50% { transform: scaleY(1.08) skewX(5deg); opacity: 1; } 100% { transform: scaleY(.88) skewX(-3deg); opacity: .9; } }
-.top3 { margin-top: 34px; }
 .tt-gold-wrap .tt-card { z-index: 1; }
 
