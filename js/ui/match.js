@@ -239,11 +239,12 @@ function PlayerSide({ name, photo, flag, mark, red, tokens, active, mine, isBot,
   const avatar = html`<span class=${cx("pavatar", red ? "red" : "green", active && "active", !mine && gone && "gone", mine ? "mine" : "theirs")}>
     <span class="face">${isBot ? html`<img class="bot" src=${img("bot")} alt="" />` : photo ? html`<img class="photo" src=${photo} alt="" />` : name.slice(0, 2).toUpperCase()}</span>
     <img class="pmark" src=${img(mark)} alt="" />
+    ${flagMark}
   </span>`;
   return html`<button class=${cx("pside", mine ? "mine" : "theirs", active && "active")} onClick=${onClick} aria-label=${`${name}, открыть профиль`}>
     ${mine ? avatar : null}
     <span class="pinfo">
-      <span class="pname-row">${mine ? flagMark : null}<span class=${cx("pname", !/[\s_.-]/.test(name) && "one")} style=${`--n:${name.length}`}>${breakable(name)}</span>${!mine ? flagMark : null}</span>
+      <span class=${cx("pname", !/[\s_.-]/.test(name) && "one")} style=${`--n:${name.length}`}>${breakable(name)}</span>
       <span class="tokens ptokens"><img src=${img("coin")} alt="" /><b>${tokens}</b></span>
     </span>
     ${!mine ? avatar : null}

@@ -61,7 +61,7 @@ input { font-family: inherit; }
 .tabbar { position: absolute; z-index: 6; left: 50%; bottom: var(--tb-bottom); width: min(276px, calc(100% - 32px)); height: var(--tb-h); padding: 4px;
   display: flex; border-radius: calc(var(--tb-h) / 2); translate: -50% 0; touch-action: none;
   background: linear-gradient(rgba(44, 62, 84, .52), rgba(22, 34, 50, .62));
-  backdrop-filter: blur(13px) saturate(180%); -webkit-backdrop-filter: blur(13px) saturate(180%);
+  backdrop-filter: blur(9px) saturate(180%); -webkit-backdrop-filter: blur(9px) saturate(180%);
   box-shadow: 0 10px 30px rgba(0, 0, 0, .38), 0 1px 3px rgba(0, 0, 0, .3), inset 0 0 0 .5px rgba(255, 255, 255, .16), inset 0 1px 0 rgba(255, 255, 255, .14);
   transition: scale .35s var(--spring); }
 .tabbar.held { scale: 1.035; transition: scale .2s ease-out; }
@@ -192,7 +192,7 @@ input { font-family: inherit; }
 .alert-wrap.out .alert { animation: alert-out .18s ease-in forwards; }
 @keyframes alert-out { to { transform: scale(.94); opacity: 0; } }
 .alert-wrap { position: fixed; left: 0; right: 0; top: var(--vv-top, 0px); height: var(--vv-h, 100%); z-index: 90; background: rgba(0, 0, 0, .45); display: grid; place-items: center; padding: 24px; animation: fade-in .15s; }
-.alert { width: min(300px, 100%); border-radius: 18px; background: rgba(28, 44, 63, .92); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, .1); text-align: center; overflow: hidden;
+.alert { width: min(300px, 100%); border-radius: 18px; background: rgba(28, 44, 63, .92); backdrop-filter: blur(11px); -webkit-backdrop-filter: blur(11px); border: 1px solid rgba(255, 255, 255, .1); text-align: center; overflow: hidden;
   animation: pop-in .3s var(--spring); box-shadow: 0 20px 50px rgba(0, 0, 0, .5); }
 @keyframes pop-in { from { transform: scale(1.12); opacity: 0; } }
 .alert h3 { font-size: 17px; font-weight: 600; padding: 18px 16px 4px; }
@@ -411,7 +411,7 @@ input { font-family: inherit; }
 .return-bar { position: absolute; left: 16px; right: 16px; bottom: calc(var(--tb-bottom) + var(--tb-h) + 10px + var(--i, 0) * 68px); z-index: 6; display: flex; align-items: center; gap: 12px;
   padding: 8px 8px 8px 10px; border-radius: 26px; animation: rise .5s var(--spring); }
 /* With the return bar up, screens leave room for it too. */
-.glass-bar { background: linear-gradient(rgba(44, 62, 84, .55), rgba(22, 34, 50, .7)); backdrop-filter: blur(13px) saturate(180%); -webkit-backdrop-filter: blur(13px) saturate(180%);
+.glass-bar { background: linear-gradient(rgba(44, 62, 84, .55), rgba(22, 34, 50, .7)); backdrop-filter: blur(9px) saturate(180%); -webkit-backdrop-filter: blur(9px) saturate(180%);
   box-shadow: 0 10px 30px rgba(0, 0, 0, .38), inset 0 0 0 .5px rgba(255, 255, 255, .16), inset 0 1px 0 rgba(255, 255, 255, .14); }
 @keyframes rise { from { transform: translateY(40px) scale(.9); opacity: 0; } }
 .rb-dot { flex: none; width: 36px; height: 36px; border-radius: 50%; background: rgba(255, 83, 100, .25); display: grid; place-items: center; }
@@ -989,7 +989,7 @@ img.globe { display: inline-block; width: 1.5em; height: 1.5em; margin: -.25em -
 .notify-row .pencil-btn { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--soft); background: rgba(255, 255, 255, .06); border: 1px solid var(--navy-line); }
 .notify-kinds .settings-list { margin-top: 12px; }
 .invite-row .lb-name { flex: 1; }
-.invite-toast { background: rgba(22, 34, 50, .94); backdrop-filter: blur(13px); -webkit-backdrop-filter: blur(13px); position: fixed; z-index: 60; left: 12px; right: 12px; top: calc(env(safe-area-inset-top) + 10px); display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; border-radius: 18px; animation: toast-in .35s cubic-bezier(.2, .9, .3, 1.2); }
+.invite-toast { background: rgba(22, 34, 50, .94); backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px); position: fixed; z-index: 60; left: 12px; right: 12px; top: calc(env(safe-area-inset-top) + 10px); display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; border-radius: 18px; animation: toast-in .35s cubic-bezier(.2, .9, .3, 1.2); }
 .invite-toast > img { width: 34px; height: 34px; }
 .invite-toast > span { flex: 1; min-width: 0; }
 .invite-toast b { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1042,9 +1042,13 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 /* Header: the flag by the name (on the photo's side), the coins under the name. */
 .pname-row { display: flex; align-items: flex-end; gap: 4px; max-width: 100%; min-width: 0; }
 .pname-row .pname { min-width: 0; }
-.pflag { font-style: normal; font-size: 13px; line-height: 16px; flex: none; }
+.pflag { position: absolute; bottom: -3px; font-style: normal; font-size: 13px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); }
 .pflag img.globe { width: 15px; height: 15px; margin: 0; }
-.pinfo .ptokens { position: static; transform: none; align-self: auto; }
+/* The flag takes the photo's other bottom corner: the mark sits on one, the flag on the other. */
+.pavatar.mine .pflag { left: -5px; }
+.pavatar.theirs .pflag { right: -5px; }
+/* The coins sit centred between the photo and the score. */
+.pinfo .ptokens { position: static; transform: none; align-self: center; }
 /* Level row: each side's status and the ring of its time-away budget. */
 .side-st { display: inline-flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; font-size: 11.5px; font-weight: 800; }
 .side-st .st { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
