@@ -374,23 +374,102 @@ const roomCall = (route, body = {}, secret) => fetch(`/api/contexto/room/${route
   .then((d) => { if (!d.ok) throw Object.assign(new Error(d.error || "Ошибка."), { code: d.code }); return d; });
 const spaced = (code) => `${code.slice(0, 3)} ${code.slice(3)}`;
 
+const SEAT_TINT = ["#FF5364", "#32E5A1", "#6FA8FF", "#F6D482", "#BC8CFF", "#FF9A52", "#4FD6E8", "#FF7AC8"];
+
 /** Eight seats in one glass bubble, like the duel in tic-tac-toe: a free seat takes you in, your own seat stands you up. */
-function Seats({ v, sit, compact }) {
+function Seats({ v, sit }) {
   const bySeat = new Map(v.players.map((p) => [p.seat, p]));
   const meSeated = v.players.some((p) => p.id === v.you);
-  return html`<div class=${cx("ctx-seats glass", compact && "compact")}>
+  return html`<div class="ctx-seats glass">
+    <div class="ctx-seats-head"><small class="cap">ЗА СТОЛОМ</small><b>${v.players.length}<i> / ${v.seats ?? 8}</i></b></div>
     <div class="ctx-seat-grid">${Array.from({ length: v.seats ?? 8 }, (_, i) => {
       const p = bySeat.get(i);
-      if (!p) return html`<button class="ctx-seat free press" onClick=${() => sit(i)} aria-label=${`Сесть на место ${i + 1}`}>
-        <span class="ds-av wait">${meSeated ? null : html`<i></i>`}<b class="ctx-plus">+</b></span><small>${meSeated ? "свободно" : "сесть"}</small></button>`;
+      if (!p) return html`<button class=${cx("ctx-seat free press", !meSeated && "call")} onClick=${() => sit(i)} aria-label=${`Сесть на место ${i + 1}`}>
+        <span class="ctx-av free"><img src=${img("plus")} alt="" /></span><small>${meSeated ? "пересесть" : "сесть"}</small></button>`;
       const me = p.id === v.you;
-      return html`<button class=${cx("ctx-seat press", me && "me", p.id === v.winner && "won")} onClick=${me && v.status !== "playing" ? () => sit(null) : null} aria-label=${me ? "Встать на трибуну" : p.name}>
-        <span class=${cx("ds-av", me ? "green" : "red")}><b>${p.name.slice(0, 2).toUpperCase()}</b>
+      return html`<button class=${cx("ctx-seat press", me && "me", p.id === v.winner && "won")} style=${`--t:${SEAT_TINT[i]}`}
+          onClick=${me && v.status !== "playing" ? () => sit(null) : null} aria-label=${me ? "Встать на трибуну" : p.name}>
+        <span class="ctx-av"><b>${p.name.slice(0, 2).toUpperCase()}</b>
           ${p.id === v.host ? html`<img class="ctx-key" src=${img("key")} alt="создатель" />` : null}</span>
         <b class="ctx-seat-name">${me ? "Ты" : p.name}</b>
-        <small>${p.best ? `лучший #${p.best}` : v.status === "playing" ? "думает" : "на месте"}</small></button>`;
+        <small>${p.id === v.winner ? "угадал!" : p.best ? `лучший #${p.best}` : me ? "встать" : "на месте"}</small></button>`;
     })}</div>
     ${meSeated ? null : html`<p class="ctx-seat-hint">Ты на трибуне — нажми на свободное место, чтобы играть</p>`}
+  </div>`;
+}
+
+/** The hint clock as the match's turn dial: the ring drains until the next hint opens for everyone. */
+function HintDial({ left, total, size = 48 }) {
+  const fill = left === null ? 0 : Math.min(1, left / total);
+  const tint = left === null ? "#A8B8CA" : left <= 10 ? "#F6D482" : "#6FA8FF";
+  const R = 45, C = 2 * Math.PI * R;
+  return html`<span class="dial" style=${`width:${size}px;height:${size}px`} aria-label=${left === null ? "Подсказок больше не будет" : `Подсказка через ${left} секунд`}>
+    <svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="48" fill="rgba(0,0,0,.3)" />
+      <circle cx="50" cy="50" r=${R} fill="none" stroke="#1D2C3D" stroke-width="9.5" />
+      <circle class="arc" cx="50" cy="50" r=${R} fill="none" stroke=${tint} stroke-width="9.5" stroke-linecap="round"
+        stroke-dasharray=${C} stroke-dashoffset=${C * (1 - fill)} transform="rotate(-90 50 50)" style=${`filter:drop-shadow(0 0 4px ${tint}8c)`} />
+    </svg>
+    <span class="dial-in">${left === null ? html`<img class="pict" src=${img("stopwatch")} alt="" />`
+      : html`<b class=${left >= 100 ? "ctx-dial-long" : ""} style=${left <= 10 ? "color:#F6D482" : ""}>${left >= 100 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` : left}</b>`}</span>
+  </span>`;
+}
+
+/** The round opens behind closing doors, as a tic-tac-toe match does: the table on one side, the level on the other, a 5-second count. */
+function CtxIntro({ v, level, done }) {
+  const [n, setN] = useState(5);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let left = 5;
+    const hit = setTimeout(() => vibrate([30, 30, 20]), 480);
+    const tick = setInterval(() => {
+      left -= 1;
+      if (left > 0) { setN(left); vibrate(left === 1 ? 25 : 8); }
+      else { clearInterval(tick); setOpen(true); setTimeout(done, 700); }
+    }, 1000);
+    return () => { clearInterval(tick); clearTimeout(hit); };
+  }, []);
+  const skip = () => { if (!open) { setOpen(true); setTimeout(done, 700); } };
+  const players = v.players.slice().sort((a, b) => a.seat - b.seat);
+  return html`<div class=${cx("match-intro ctx-intro", open && "open")} onClick=${skip} role="dialog" aria-label=${`Раунд ${v.round}, старт через ${n}`}>
+    <div class="intro-bg"></div>
+    <div class="intro-door l red"><div class="intro-player">
+      <span class="intro-face"><img class="bot" src=${img("game-contexto")} alt="" /></span>
+      <b class="intro-name">Раунд ${v.round}</b>
+      <span class="intro-rating"><small>Кто загадан?</small></span>
+    </div></div>
+    <div class="intro-door r green"><div class="intro-player">
+      <div class="ctx-intro-faces">${players.map((p) => html`<span class=${cx("ctx-intro-face", p.id === v.you && "me")} style=${`--t:${SEAT_TINT[p.seat]}`}>
+        <b>${p.name.slice(0, 2).toUpperCase()}</b><small>${p.id === v.you ? "Ты" : p.name}</small></span>`)}</div>
+    </div></div>
+    <svg class="intro-seam" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="58" y1="-2" x2="42" y2="102" /></svg>
+    <div class="intro-flash"></div>
+    <div class="intro-center">
+      ${level ? html`<small class="intro-level">${level}</small>` : null}
+      <span class="intro-vs"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="track" cx="50" cy="50" r="46" /><circle class="drain" cx="50" cy="50" r="46" pathLength="100" /></svg><i>№1</i></span>
+      <b class="intro-count" key=${n}>${n}</b>
+    </div>
+  </div>`;
+}
+
+/** The room's chat as the match's chat sheet. */
+function CtxChatSheet({ v, say }) {
+  const [text, setText] = useState("");
+  const list = useRef();
+  const chat = v.chat ?? [];
+  useEffect(() => { const el = list.current; if (el) el.scrollTop = el.scrollHeight; }, [chat.length]);
+  const send = (e) => { e.preventDefault(); const t = text.trim(); if (!t) return; say(t); setText(""); };
+  return html`<div class="chat">
+    <div class="chat-head"><h2>Чат комнаты</h2><span class="sp"></span></div>
+    <div class="chat-list" ref=${list}>${chat.length ? chat.map((x) => html`<div class=${cx("msg", x.by === v.you && "me")}>
+        <span class="who"><span>${x.by === v.you ? "Ты" : x.name}</span></span><span class="text">${x.text}</span></div>`)
+      : html`<p class="talk-empty">Пока тихо — напиши первым</p>`}</div>
+    <form class="answer-row" onSubmit=${send} action="#">
+      <span class="field chat-field">
+        <input value=${text} maxlength="200" onInput=${(e) => setText(e.target.value)} placeholder="Напиши сообщение" enterkeyhint="send" autocomplete="off" />
+        <button type="submit" class=${cx("send", text.trim() && "on")} disabled=${!text.trim()} aria-label="Отправить"><${Icon} name="up" size="17" weight="3" /></button>
+      </span>
+    </form>
   </div>`;
 }
 
@@ -431,6 +510,10 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
   const [asking, setAsking] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [intro, setIntro] = useState(null);
+  const chatSeen = useRef(0);
   const [, tick] = useState(0);
   const clockOff = useRef(0);
   const lastSeen = useRef(0);
@@ -506,6 +589,19 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
   if (v) lastSeen.current = v.guesses.length;
   const hintLeft = v?.nextHintAt ? Math.max(0, Math.ceil((v.nextHintAt - (Date.now() + clockOff.current)) / 1000)) : null;
   const level = st?.levels?.find((l) => l.level === v?.level);
+  const playing = v?.status === "playing";
+  // The round is a match: the app's tab bar steps aside, as it does for tic-tac-toe.
+  useEffect(() => { document.body.classList.toggle("ctx-full", playing); return () => document.body.classList.remove("ctx-full"); }, [playing]);
+  // Doors only at a round's very start, not when coming back to one already under way.
+  const fresh0 = playing && !v.guesses.length && hintLeft !== null && hintLeft > 110 ? `${v.code}-${v.round}` : null;
+  useEffect(() => {
+    if (!fresh0) return;
+    try { if (sessionStorage.getItem("ctx-intro-" + fresh0)) return; sessionStorage.setItem("ctx-intro-" + fresh0, "1"); } catch {}
+    setIntro(fresh0);
+  }, [fresh0]);
+  if (chatOpen && v) chatSeen.current = v.chat?.length ?? 0;
+  const unread = Math.max(0, (v?.chat?.length ?? 0) - chatSeen.current);
+  const freeSeat = v ? Array.from({ length: v.seats ?? 8 }, (_, i) => i).find((i) => !v.players.some((p) => p.seat === i)) : undefined;
   const line = step === "code" ? "Введи 6 цифр, которые прислал друг"
     : !seat ? "Один загаданный на всех, общий список вариантов. Кто первым назовёт №1 — выиграл раунд."
     : !v ? "Подключаемся…"
@@ -514,6 +610,54 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
   const list = v && sorted.length ? html`<div class="dg-list">${sorted.map((f) => html`<div class="ctx-by-wrap" key=${f.id}>
       <${CtxRow} f=${f} total=${v.total} hint=${f.hint} why=${v.result?.why?.[f.id]} fresh=${f.id === fresh} />
       ${f.by ? html`<span class=${cx("ctx-by", f.by === you && "me")}>${f.by === you ? "ты" : names.get(f.by) ?? "игрок"}</span>` : null}</div>`)}</div>` : null;
+
+  const menuRow = (title, run, destructive) => html`<button class=${cx("navy-btn menu-row", destructive && "destructive")} onClick=${() => { setMenuOpen(false); run(); }}>${title}</button>`;
+  const sheets = html`
+    ${asking && playing ? html`<${Panel} onClose=${() => setAsking(false)} class="answer-panel">${(leaveSheet) => html`<${PickSheet}
+        head=${html`<b>${sorted[0] ? `Лучший в комнате #${sorted[0].rank}` : "Первый вариант в комнате"}</b>`} placeholder="Фамилия футболиста…" empty="Начни вводить фамилию — выбери футболиста из списка."
+        find=${(q) => ctxApi("search", { query: q }).then((r) => r.players ?? [])} row=${playerRow} used=${used}
+        choose=${async (p) => { setBusy(true); await call("guess", { id: p.id }); vibrate(10); setBusy(false); }} dismiss=${leaveSheet} />`}<//>` : null}
+    ${chatOpen && v ? html`<${Panel} onClose=${() => setChatOpen(false)} class="chat-panel"><${CtxChatSheet} v=${v} say=${(text) => call("say", { text })} /><//>` : null}
+    ${menuOpen && v ? html`<${Panel} onClose=${() => setMenuOpen(false)}><div class="menu">
+        <h2>Комната ${spaced(seat.code)}</h2>
+        ${menuRow("Пригласить друзей", share)}
+        ${host && playing ? menuRow("Остановить раунд — открыть ответ", () => call("giveup"), true) : null}
+        ${seated && !playing ? menuRow("Встать на трибуну", () => call("sit", { seat: null })) : null}
+        ${menuRow("Выйти из комнаты", () => setLeaving(true), true)}
+      </div><//>` : null}
+    ${leaving ? html`<${Alert} title="Выйти из комнаты?" message="Вернуться можно по коду, если комната ещё открыта." onClose=${() => setLeaving(false)}
+      actions=${[{ title: "Остаться", run: () => setLeaving(false) }, { title: "Выйти", kind: "destructive", run: leave }]} />` : null}`;
+
+  // The round: the answer field on top, the shared list in the middle, the hint clock with chat and menu at the bottom — the match's trays.
+  if (playing) return html`<div class="screen-with-bar daily-screen ctx-round">
+    <div class="game-top">
+      <${LobbyHeader} title=${`Контекстно · раунд ${v.round}`} back=${nav.back} />
+      ${seated ? html`<${AskButton} busy=${busy} text=${`Назови футболиста${sorted[0] ? ` · лучший #${sorted[0].rank}` : ""}`} open=${() => setAsking(true)} />`
+        : html`<button class="primary-btn" disabled=${freeSeat === undefined} onClick=${() => call("sit", { seat: freeSeat })}>
+            <img src=${img("plus")} alt="" />${freeSeat === undefined ? "Все 8 мест заняты — ты на трибуне" : "Сесть за стол и играть"}</button>`}
+    </div>
+    <div class="screen-scroll"><div class="page game-page">
+      ${last ? html`<div class="ctx-last"><small>Последний вариант · ${last.by === you ? "твой" : last.by ? names.get(last.by) : "подсказка для всех"}</small><${CtxRow} f=${last} total=${v.total} hint=${last.hint} /></div>` : null}
+      ${list ?? html`<div class="dg-empty glass"><img src=${img("game-contexto")} alt="" /><b>Кто загадан?</b>
+        <p>Называйте футболистов — каждый получит место по близости к загаданному. Кто первым назовёт №1, выиграл раунд.</p></div>`}
+      ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
+    </div></div>
+    <div class="tray-row ctx-trays">
+      <div class="tray turn-tray glass">
+        <${HintDial} left=${hintLeft} total=${v.hintsGiven ? 90 : 120} />
+        <span class="tray-label"><b style=${hintLeft !== null && hintLeft <= 10 ? "color:#F6D482" : ""}>${hintLeft === null ? "Подсказок больше не будет" : hintLeft <= 0 ? "Открываем подсказку…" : "Подсказка для всех"}</b>
+          <small>${v.guesses.length} ${plural(v.guesses.length, "вариант", "варианта", "вариантов")}${sorted[0] ? ` · лучший #${sorted[0].rank}` : ""}</small></span>
+      </div>
+      <div class="tray tools-tray glass">
+        <button class="tool press" onClick=${() => setChatOpen(true)} aria-label=${unread ? `Чат, новых сообщений: ${unread}` : "Чат"}>
+          <img src=${img("chat")} alt="" />${unread ? html`<b class="badge">${unread}</b>` : null}</button>
+        <i class="tool-sep"></i>
+        <button class="tool press" onClick=${() => setMenuOpen(true)} aria-label="Меню комнаты"><img src=${img("menu")} alt="" /></button>
+      </div>
+    </div>
+    ${sheets}
+    ${intro ? html`<${CtxIntro} v=${v} level=${level?.label} key=${intro} done=${() => setIntro(null)} />` : null}
+  </div>`;
 
   return html`<div class="screen-with-bar daily-screen">
     <${GameTop} title="Контекстно" back=${step ? () => { setStep(null); setErr(null); } : nav.back} mode=${mode} setMode=${(m) => { setStep(null); setMode(m); }} tabs=${tabs} line=${line} />
@@ -531,7 +675,6 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
           <p class="ctx-as">Ты играешь как <b>${account.name}</b></p>
         </div>`
       : !v ? null
-      : v.status === "playing" ? html`<${Seats} v=${v} sit=${(i) => call("sit", { seat: i })} compact />${list}`
       : html`
         ${v.result ? html`<div class=${cx("dg-result glass", v.winner === you ? "won" : "lost")}>
             <small>${v.gaveUp ? "Раунд остановлен · загадан был" : v.winner === you ? "Ты угадал первым!" : `Первым угадал ${names.get(v.winner) ?? "кто-то"}`}</small>
@@ -563,25 +706,12 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
             <button class="mint-btn tall press" onClick=${() => { setErr(null); setStep("code"); }}><img src=${img("arrow")} alt="" />По коду</button>
           </div></section>`
       : !v ? null
-      : v.status === "playing" ? html`
-        ${last ? html`<div class="ctx-last"><small>Последний вариант · ${last.by === you ? "твой" : last.by ? names.get(last.by) : "подсказка"}</small><${CtxRow} f=${last} total=${v.total} hint=${last.hint} /></div>` : null}
-        <div class="dg-bar">
-          ${seated ? html`<${AskButton} busy=${busy} text=${`Назови футболиста${sorted[0] ? ` · лучший #${sorted[0].rank}` : ""}`} open=${() => setAsking(true)} />`
-            : html`<span class="dg-wait">Ты на трибуне — сядь на свободное место</span>`}
-          ${host ? html`<button class="round-tool press" aria-label="Остановить раунд" onClick=${() => call("giveup")}><img src=${img("finish")} alt="" /></button>` : null}
-          <button class="round-tool press" aria-label="Позвать в комнату" onClick=${share}><img src=${img("share")} alt="" /></button>
-        </div>`
       : html`<div class="dg-bar">
           ${host ? html`<button class="primary-btn" disabled=${!v.players.length} onClick=${() => call("start", { level: v.level })}><img src=${img("bolt")} alt="" />${v.round ? "Следующий раунд" : "Начать раунд"}</button>`
             : html`<span class="dg-wait">${v.round ? "Следующий раунд начнёт создатель" : "Ждём, когда создатель начнёт"}</span>`}
           <button class="round-tool press" aria-label="Выйти из комнаты" onClick=${() => setLeaving(true)}><img src=${img("logout")} alt="" /></button>
         </div>`}
     <//>
-    ${asking && v?.status === "playing" ? html`<${Panel} onClose=${() => setAsking(false)} class="answer-panel">${(leaveSheet) => html`<${PickSheet}
-        head=${html`<b>${sorted[0] ? `Лучший в комнате #${sorted[0].rank}` : "Первый вариант в комнате"}</b>`} placeholder="Фамилия футболиста…" empty="Начни вводить фамилию — выбери футболиста из списка."
-        find=${(q) => ctxApi("search", { query: q }).then((r) => r.players ?? [])} row=${playerRow} used=${used}
-        choose=${async (p) => { setBusy(true); await call("guess", { id: p.id }); vibrate(10); setBusy(false); }} dismiss=${leaveSheet} />`}<//>` : null}
-    ${leaving ? html`<${Alert} title="Выйти из комнаты?" message="Вернуться можно по коду, если комната ещё открыта." onClose=${() => setLeaving(false)}
-      actions=${[{ title: "Остаться", run: () => setLeaving(false) }, { title: "Выйти", kind: "destructive", run: leave }]} />` : null}
+    ${sheets}
   </div>`;
 }
