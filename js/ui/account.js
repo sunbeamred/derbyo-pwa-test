@@ -214,23 +214,25 @@ function NotifyRow() {
   const [edit, setEdit] = useState(false);
   const [shut, setShut] = useState(false);
   const check = () => notifications.enabled().then(setOn).catch(() => setOn(false));
-  useEffect(() => { check(); }, []);
+  useEffect(() => { check(); const off = notifications.onChange(check); const back = () => document.hidden || check();
+    document.addEventListener("visibilitychange", back); return () => { off(); document.removeEventListener("visibilitychange", back); }; }, []);
   // Pushes belong to an account: a guest sees the row and how to get them.
   const guest = !account.profile?.registered;
   const supported = !guest && notifications.supported(), denied = notifications.permission() === "denied", prefs = notifications.prefs;
   const kinds = PUSH_KINDS.filter(([k]) => prefs[k]).map(([, t]) => t);
-  const detail = guest ? "После входа в аккаунт: приглашения от друзей" : !supported ? "Работают в приложении с экрана «Домой»" : denied ? "Запрещены: включи в Настройках iPhone → DERBYO"
+  const detail = guest ? "Появятся после регистрации" : !supported ? "Работают в приложении с экрана «Домой»" : denied ? "Запрещены: разреши их для DERBYO в настройках браузера или телефона"
     : on ? (kinds.length ? kinds.join(" · ") : "Все виды выключены") : "Приглашения в игру и заявки в друзья";
   const flip = async (v) => {
     setErr(null); setOn(v);
     try { if (v) await notifications.enable(); else await notifications.disable(); vibrate(10); } catch (e) { setErr(e.message); }
     check();
   };
-  return html`<div class="toggle-card notify-row">
+  return html`<div class=${cx("toggle-card notify-row", guest && "off")} aria-disabled=${guest}>
       <span class="tc-ic"><img src=${img("bell")} alt="" /></span>
       <span class="tc-t"><b>Уведомления</b><small>${err ?? detail}</small></span>
       ${on ? html`<button class="pencil-btn press" aria-label="Выбрать уведомления" onClick=${() => { setShut(false); setEdit(true); }}><${Icon} name="pencil" size="16" weight="2" /></button>` : null}
-      ${supported && !denied ? html`<input type="checkbox" class="switch" aria-label="Уведомления" checked=${!!on} disabled=${on === null} onClick=${(e) => flip(e.target.checked)} />` : null}
+      ${guest ? html`<input type="checkbox" class="switch" aria-label="Уведомления" checked=${false} disabled />`
+        : supported && !denied ? html`<input type="checkbox" class="switch" aria-label="Уведомления" checked=${!!on} disabled=${on === null} onClick=${(e) => flip(e.target.checked)} />` : null}
     </div>
     ${edit ? html`<${Panel} shut=${shut} onClose=${() => setEdit(false)}><${NotifyKinds} /><//>` : null}`;
 }

@@ -997,3 +997,5 @@ img.globe { width: 1.5em; height: 1.5em; margin: -.25em -.1em; vertical-align: m
 .invite-toast small { display: block; font-size: 12px; color: var(--soft); }
 .invite-toast .accept { background: linear-gradient(#3FE0A0, #22B57C); border: 0; color: #062016; }
 @keyframes toast-in { from { transform: translateY(-120%); opacity: 0; } }
+.notify-row.off { opacity: .5; }
+.notify-row.off .tc-ic img { filter: grayscale(1); }

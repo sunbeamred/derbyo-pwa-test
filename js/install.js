@@ -71,12 +71,17 @@ export function InstallRow({ open }) {
 export function PushAskSheet({ close }) {
   const [out, setOut] = useState(false);
   const [err, setErr] = useState(null);
+  const [busy, setBusy] = useState(false);
   const leave = () => { notifications.asked(); setOut(true); setTimeout(close, 250); };
+  // Subscribing takes a few seconds on iPhone: the button spins meanwhile; a refusal closes, a failure says why.
   const enable = async () => {
-    try { await notifications.enable(); leave(); } catch (e) { if (notifications.permission() === "default") setErr(e.message); else leave(); }
+    if (busy) return;
+    setBusy(true); setErr(null);
+    try { await notifications.enable(); leave(); }
+    catch (e) { if (notifications.permission() === "denied") leave(); else { setErr(e.message); setBusy(false); } }
   };
   return html`<div class=${cx("overlay install", out && "out")}>
-    <div class="dim" onClick=${leave}></div>
+    <div class="dim" onClick=${() => busy || leave()}></div>
     <div class="panel install-panel" role="dialog" aria-label="Уведомления">
       <div class="grip-row"><span class="grip"></span></div>
       <div class="inst">
@@ -85,8 +90,8 @@ export function PushAskSheet({ close }) {
           <span><b>Включить уведомления?</b><small>Узнаешь сразу, когда друг зовёт сыграть или добавляет в друзья.</small></span>
         </div>
         ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
-        <button class="primary-btn" onClick=${enable}><img src=${img("bell")} alt="" />Включить</button>
-        <button class="navy-btn tall" onClick=${leave}>Не сейчас</button>
+        <button class="primary-btn" disabled=${busy} onClick=${enable}>${busy ? html`<span class="spinner"></span>Включаем…` : html`<img src=${img("bell")} alt="" />Включить`}</button>
+        <button class="navy-btn tall" disabled=${busy} onClick=${leave}>Не сейчас</button>
       </div>
     </div>
   </div>`;
