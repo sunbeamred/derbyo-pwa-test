@@ -477,11 +477,11 @@ function HintDial({ left, total, size = 48 }) {
   </span>`;
 }
 
-/** The round opens with the match's entrance: the stadium and «Выходим на поле», a second long. */
+/** The round opens with the match's entrance: the stadium and «Выходим на поле». */
 function CtxIntro({ v, done }) {
-  useEffect(() => { vibrate(12); const t = setTimeout(done, matchMedia("(prefers-reduced-motion: reduce)").matches ? 200 : 1050); return () => clearTimeout(t); }, []);
+  useEffect(() => { vibrate(12); const t = setTimeout(done, matchMedia("(prefers-reduced-motion: reduce)").matches ? 200 : 1800); return () => clearTimeout(t); }, []);
   return html`<div class="entrance" aria-hidden="true">
-    <div class="ent-blur"></div><img class="ent-stadium" src="img/stadium.jpg" alt="" /><div class="ent-shade"></div><div class="ent-beams"></div>
+    <div class="ent-scene"></div><div class="ent-beams"></div>
     <div class="ent-copy"><small>КОНТЕКСТНО · РАУНД ${v.round}</small><b>Выходим на поле</b></div>
   </div>`;
 }

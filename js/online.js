@@ -137,7 +137,7 @@ export class OnlineMatch {
     this.round = st.round;
     this.roundResults = (st.roundResults ?? []).map((r) => this.owner(r.winner));
     this.viewers = (st.viewers ?? []).map((v) => v.name);
-    this.chat = (st.chat ?? []).map((c) => ({ id: c.id, who: c.senderId === st.selfId ? "Ты" : c.name, text: c.text, kind: "text", spectator: c.role === "spectator" }));
+    this.chat = (st.chat ?? []).map((c) => ({ id: c.id, who: c.senderId === st.selfId ? "Ты" : c.name, text: c.text, kind: "text", spectator: c.role === "spectator", likes: c.likeCount ?? 0, liked: !!c.liked }));
     for (const c of st.chat ?? []) if (!this.seenChat.has(c.id)) { this.seenChat.add(c.id); if (!this.firstState && c.senderId !== st.selfId) this.unread++; }
     this.oppLeft = !them && st.round > 0;
     this.matchOver = !!st.seriesComplete;
@@ -187,6 +187,8 @@ export class OnlineMatch {
       if (this.firstState) continue;
       // Reactions from the stands have no avatar to rise over.
       if (x.seat !== 0 && x.seat !== 1) continue;
+      // My own reaction already shows from the tap; its echo from the server must not pop it a second time.
+      if (x.seat === this.mySeat && this.myReaction?.local && this.myReaction.e === x.emoji) { this.myReaction.local = false; continue; }
       const r = { e: x.emoji, n: x.id };
       if (x.seat === this.mySeat) this.myReaction = r; else this.oppReaction = r;
     }
@@ -392,10 +394,26 @@ export class OnlineMatch {
     else this.show("Реванш начинает создатель комнаты — ждём его", true);
   }
   react(e) {
-    this.myReaction = { e, n: uuid() };
+    this.myReaction = { e, n: uuid(), local: true };
     if (Array.isArray(this.state?.reactions)) this.act("reaction", { emoji: e }).catch(() => {}); else this.send(e);
   }
   send(text) { this.act("chat", { text }).catch(() => {}); }
+  /** A heart for someone else's chat message (a double tap, as the site's double click). */
+  likeMessage(id) {
+    const c = this.chat.find((x) => x.id === id);
+    if (!c || c.who === "Ты" || c.liked) return;
+    c.liked = true; c.likes++;
+    this.act("chat_like", { message: id }).catch(() => {});
+  }
+  /** Respect for the opponent's last capture: a double tap on that card, as on the site. */
+  canRespect(i) { const r = this.state?.respect; return !!r && !this.watching && r.cell === i && r.seat !== this.state.seat && !r.liked; }
+  respectCount(i) { return this.state?.respect?.awards?.find((x) => x.cell === i)?.count ?? 0; }
+  respectMove() {
+    const r = this.state?.respect;
+    if (!r || !this.canRespect(r.cell)) return;
+    r.liked = true; const w = r.awards?.find((x) => x.capture === r.capture); if (w) w.count++; else (r.awards ??= []).push({ game: r.game, capture: r.capture, cell: r.cell, count: 1, liked: true });
+    this.act("respect", { game: r.game, capture: r.capture }).catch(() => {});
+  }
   sendFriendRequest() {} acceptFriend() {} block() {} report() { this.show("Жалобы — в версии сайта", false); }
   cameBack() {}
   addBot() { return this.act("add_bot", { seat: 1 - this.mySeat }); }

@@ -1,5 +1,5 @@
 // The match screen (port of MatchView.swift and Motion.swift).
-import { html, useState, useEffect, useRef, cx, img, Icon, Panel, useSheet, Alert, Toast, RatingTag, breakable, vibrate, flagView } from "./common.js";
+import { html, useState, useEffect, useRef, cx, img, Icon, Panel, useSheet, Alert, Toast, RatingTag, breakable, vibrate, flagView, useDoubleTap, LikeEcho } from "./common.js";
 import { byId } from "../data.js";
 import { photoOf } from "../net.js";
 import { store } from "../model.js";
@@ -37,7 +37,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     const t = setTimeout(() => setShownToast((s) => (s === m.toast ? null : s)), 2400);
     return () => clearTimeout(t);
   }, [m.toast?.id]);
-  useEffect(() => { const t = setTimeout(() => setEntering(false), reduceMotion() ? 200 : 1050); return () => clearTimeout(t); }, []);
+  useEffect(() => { const t = setTimeout(() => setEntering(false), reduceMotion() ? 200 : 1800); return () => clearTimeout(t); }, []);
   // A new match (its first round) opens with the two players face to face behind closing doors, then a 5-second count.
   const [intro, setIntro] = useState(null);
   const firstGame = m.online && !m.watching && !m.hotseat && m.round === 1 && m.g?.stage === "play" ? m.g.id : null;
@@ -243,7 +243,7 @@ function PlayerSide({ name, photo, flag, mark, red, tokens, active, mine, isBot,
   useEffect(() => {
     if (!reaction) return;
     setEcho(reaction);
-    const t = setTimeout(() => setEcho(null), 1000);
+    const t = setTimeout(() => setEcho(null), 3000);
     return () => clearTimeout(t);
   }, [reaction?.n]);
   const gone = away !== null || left;
@@ -335,25 +335,29 @@ function Board({ m, tap }) {
           oppPick=${m.oppSelected === i || (m.review?.owner === 1 && m.review?.cell === i)} clued=${!!m.sharedClues[i]}
           recent=${m.recent === i} disputed=${m.review?.cell === i} plain=${m.watching} phase=${Math.max(0, winning.indexOf(i)) * 0.3}
           label=${`${m.rows[r].title} и ${m.cols[c].title}`}
-          tap=${() => { if (!cell && m.turn === 0 && !m.watching && !m.roundOver && !m.paused && !m.review) tap(i); }} />`;
+          tap=${() => { if (!cell && m.turn === 0 && !m.watching && !m.roundOver && !m.paused && !m.review) tap(i); }}
+          respect=${m.online ? m.respectCount(i) : 0} canRespect=${m.online && m.canRespect(i)} giveRespect=${() => { m.respectMove(); store.changed(); }} />`;
       })}
     </div>`)}
   </div>`;
 }
 
-function Cell({ cell, cross, selected, locked, oppPick, clued, recent, disputed, plain, phase, label, tap }) {
+function Cell({ cell, cross, selected, locked, oppPick, clued, recent, disputed, plain, phase, label, tap, respect = 0, canRespect = false, giveRespect }) {
+  const twice = useDoubleTap(() => canRespect && giveRespect());
   if (cell?.blocked) return html`<button class="cell free locked" aria-label=${`${label}: закрыта опекой`}><img class="cell-glyph lock" src=${img("lock")} alt="" /></button>`;
   const p = !cell ? null : cell.name ? { name: cell.name, photo: photoOf(cell) } : byId[cell.playerId];
   const cls = cx("cell", cell ? (cross ? "taken x" : "taken o") : "free", selected && "selected", oppPick && !cell && "opp-pick",
     cell?.winning && "winning", recent && "recent", locked && !oppPick && "locked");
-  return html`<button class=${cls} onClick=${tap} aria-label=${label} style=${`--phase:${-phase}s`}>
+  return html`<button class=${cls} onClick=${() => { tap(); if (cell) twice(); }} aria-label=${canRespect ? `${label}: дважды коснись — респект` : label} style=${`--phase:${-phase}s`}>
     ${p ? html`
       ${p.photo ? html`<img class="cell-photo" src=${p.photo} alt="" />` : null}
       <span class="cell-shade"></span>
       <img class="cell-mark" src=${img(cross ? "mark-x" : "mark-o")} alt="" />
       <span class=${cx("cell-name", p.name.split(" ").some((w) => w.length > 11) && "long")}>${p.name}</span>
       ${cell.winning ? html`<span class="sheen"></span>` : null}
-      ${recent ? html`<span class="echo"></span>` : null}` : html`
+      ${recent ? html`<span class="echo"></span>` : null}
+      ${respect ? html`<span class="respect-badge">🤝 ${respect}</span>` : null}
+      <${LikeEcho} count=${respect} symbol="🤝" />` : html`
       <img class=${cx("cell-glyph", locked && !oppPick ? "lock" : "plus", plain && "plain")} src=${img(locked && !oppPick ? "lock" : "plus")} alt="" />
       ${clued ? html`<span class="clue-dot"><img src=${img("scout")} alt="" /></span>` : null}
       ${disputed ? html`<span class="cell-tag">На зачёте</span>`
@@ -543,6 +547,6 @@ function MatchIntro({ m, done }) {
 }
 
 const Entrance = () => html`<div class="entrance" aria-hidden="true">
-  <div class="ent-blur"></div><img class="ent-stadium" src="img/stadium.jpg" alt="" /><div class="ent-shade"></div><div class="ent-beams"></div>
+  <div class="ent-scene"></div><div class="ent-beams"></div>
   <div class="ent-copy"><small>DERBYO · МАТЧ СКОРО НАЧНЁТСЯ</small><b>Выходим на поле</b></div>
 </div>`;

@@ -518,10 +518,11 @@ input { font-family: inherit; }
 .reaction-echo { position: absolute; top: 50%; width: 34px; height: 34px; margin-top: -25px; display: grid; place-items: center; pointer-events: none; }
 .pside.mine .reaction-echo { left: 18px; }
 .pside.theirs .reaction-echo { right: 18px; }
-.reaction-echo b { font-size: 30px; animation: echo-pop .9s ease-out forwards; }
+.reaction-echo b { font-size: 30px; animation: echo-pop 3s ease-out forwards; }
 .reaction-echo i { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(246, 212, 130, .6); animation: echo-ring .9s ease-out forwards; opacity: 0; }
 .reaction-echo i + i { animation-delay: .12s; }
-@keyframes echo-pop { 0% { transform: scale(.4); opacity: 0; } 25% { transform: scale(1.2); opacity: 1; } 50% { transform: scale(1); opacity: 1; } 100% { transform: translateY(-16px); opacity: 0; } }
+/* The same pop as before, then the emoji stays about three seconds and rises away. */
+@keyframes echo-pop { 0% { transform: scale(.4); opacity: 0; } 8% { transform: scale(1.2); opacity: 1; } 15% { transform: scale(1); opacity: 1; } 85% { transform: none; opacity: 1; } 100% { transform: translateY(-16px); opacity: 0; } }
 @keyframes echo-ring { 0% { transform: scale(.7); opacity: .7; filter: blur(0); } 100% { transform: scale(2.8); opacity: 0; filter: blur(9px); } }
 
 /* Board */
@@ -831,21 +832,21 @@ input { font-family: inherit; }
 @keyframes coin-drift { 0% { transform: translate(var(--x), var(--y)) rotate(-30deg); opacity: 0; }
   60% { transform: translate(calc(var(--x) + 17vw), calc(var(--y) - 41vh)) rotate(80deg); opacity: .27; }
   100% { transform: translate(calc(var(--x) + 20vw), calc(var(--y) - 48vh)) rotate(100deg); opacity: 0; } }
-.entrance { position: fixed; inset: 0; z-index: 70; pointer-events: none; background: #07111D; overflow: hidden; animation: reveal 1.05s linear forwards; }
+/* «Выходим на поле», as on the site's phone layout: its own portrait stadium, the floodlights switch on
+   with a flicker, then the title settles on the dark grass. */
+.entrance { position: fixed; inset: 0; z-index: 70; pointer-events: none; background: #040810; overflow: hidden; animation: reveal 1.8s linear forwards; }
 @keyframes reveal { 0% { opacity: 0; } 18% { opacity: 1; } 68% { opacity: 1; } 100% { opacity: 0; } }
-.ent-blur { position: absolute; inset: -40px; background: url(img/stadium.jpg) center / cover; filter: blur(22px); opacity: .75; }
-.ent-stadium { position: absolute; left: 0; top: 42%; width: 100%; translate: 0 -50%; animation: ent-zoom 1.05s ease-out;
-  -webkit-mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent); }
-@keyframes ent-zoom { from { scale: 1.04; } }
-.ent-shade { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(4, 11, 20, .94), transparent 80%), linear-gradient(90deg, rgba(7, 17, 29, .53), rgba(7, 17, 29, .13)); }
-.ent-beams { position: absolute; inset: 0; filter: blur(8px); will-change: transform, opacity; animation: beams .95s ease-out forwards;
-  background: conic-gradient(from 55deg at 15% 8%, transparent, rgba(185, 222, 250, .27) 13deg, transparent 28deg, transparent),
-    conic-gradient(from 103deg at 88% 8%, transparent, rgba(213, 239, 255, .33) 13deg, transparent 27deg, transparent); }
-@keyframes beams { 0% { opacity: 0; transform: rotate(-7deg) scale(1.06); } 45% { opacity: .8; } 100% { opacity: .1; transform: rotate(7deg) scale(1); } }
-.ent-copy { position: absolute; left: 24px; right: 24px; bottom: 23%; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
-  text-shadow: 0 3px 14px rgba(0, 0, 0, .55); animation: ent-copy .9s linear forwards; }
-.ent-copy small { font-size: 12px; font-weight: 600; letter-spacing: 3px; color: #BBCDDD; white-space: nowrap; }
-.ent-copy b { font-size: 34px; font-weight: 700; letter-spacing: -1px; color: #F3F6FF; white-space: nowrap; }
+.ent-scene { position: absolute; inset: 0; background: url(img/stadium-entrance.webp) 50% 0 / cover no-repeat; transform-origin: 62% 38%; animation: ent-scene 1.8s ease-out both; }
+@keyframes ent-scene { 0% { transform: scale(1.07); filter: brightness(.3); } 12% { filter: brightness(.75); } 16% { filter: brightness(.45); } 24%, 100% { filter: brightness(1); } 100% { transform: scale(1); } }
+.ent-beams { position: absolute; inset: 0; filter: blur(10px); mix-blend-mode: screen; animation: ent-floodlights 1.8s ease-out both;
+  background: radial-gradient(circle at 6% 6%, #F2F8FFCC, #CFE6FF33 7%, transparent 16%), radial-gradient(circle at 95% 12%, #F2F8FFCC, #CFE6FF33 7%, transparent 16%),
+    conic-gradient(from 128deg at 6% 6%, transparent, #CFE6FF3D 9deg, transparent 22deg), conic-gradient(from 212deg at 95% 12%, transparent, #CFE6FF3D 9deg, transparent 22deg); }
+@keyframes ent-floodlights { 0%, 8% { opacity: 0; } 12% { opacity: 1; } 16% { opacity: .35; } 24% { opacity: 1; } 60% { opacity: .8; } 100% { opacity: .55; } }
+.ent-copy { position: absolute; left: 20px; right: 20px; bottom: 21%; display: flex; flex-direction: column; align-items: center; text-align: center;
+  text-shadow: 0 3px 28px rgba(0, 0, 0, .6); animation: ent-copy 1.8s ease both; }
+.ent-copy small { margin-bottom: 12px; font-size: 11px; font-weight: 700; letter-spacing: 2.6px; color: #BBCDDD; white-space: nowrap; }
+.ent-copy b { font-size: clamp(34px, 11vw, 48px); font-weight: 850; letter-spacing: -1px; line-height: 1.1; color: #F3F6FF; text-wrap: balance; }
+.ent-copy::after { content: ""; width: 56px; height: 3px; margin-top: 18px; border-radius: 2px; background: #E5383B; }
 @keyframes ent-copy { 0% { opacity: 0; transform: translateY(18px); } 28% { opacity: 1; transform: none; } 75% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
 
 /* Online: waiting for the server, the leaderboard, the account */
@@ -1423,3 +1424,20 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .dg-reward img { width: 18px; height: 18px; }
 .dg-reward.guest { color: var(--soft); background: rgba(255, 255, 255, .06); box-shadow: none; font-weight: 600; }
 .lk-pic.coach img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
+
+/* Likes as on the site: a double tap gives someone else's chat message a heart and the opponent's last card a 🤝;
+   two rings spread and the symbol pops each time the count grows. */
+.like-echo { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; pointer-events: none; color: #FF718B; font-size: 46px; line-height: 1; }
+.like-echo i, .like-echo b { grid-area: 1 / 1; font-style: normal; animation: like-pop .9s ease-out both; }
+.like-echo i { animation-name: like-wave; }
+.like-echo i:nth-child(2) { animation-delay: .12s; }
+@keyframes like-pop { 0% { opacity: 0; transform: scale(.4); } 25% { opacity: 1; transform: scale(1.2); } 50% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: translateY(-16px); } }
+@keyframes like-wave { 0% { opacity: .7; transform: scale(.7); } 100% { opacity: 0; transform: scale(2.8); } }
+.cell .like-echo { font-size: 40px; }
+.msg { position: relative; }
+.msg .like-echo { font-size: 34px; }
+.msg-like { align-self: flex-end; margin-top: 4px; padding: 2px 8px; border-radius: 10px; background: #243747; color: #C7D6E2; font-size: 12px; font-weight: 700; }
+.msg-like.on { background: #4B2939; color: #FF8198; }
+.respect-badge { position: absolute; z-index: 5; right: 4px; top: 4px; padding: 2px 6px; border-radius: 10px; background: rgba(36, 49, 60, .86);
+  border: 1px solid #D1AF77; color: #FFDDA6; font-size: 11px; font-weight: 700; line-height: 1.3; }
+
