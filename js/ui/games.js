@@ -440,15 +440,23 @@ const spaced = (code) => `${code.slice(0, 3)} ${code.slice(3)}`;
 const SEAT_TINT = ["#FF5364", "#32E5A1", "#6FA8FF", "#F6D482", "#BC8CFF", "#FF9A52", "#4FD6E8", "#FF7AC8"];
 
 /** Eight seats in one glass bubble, like the duel in tic-tac-toe: a free seat takes you in, your own seat stands you up. */
-function Seats({ v, sit, invite }) {
+function Seats({ v, sit, invite, waiting = [] }) {
   const bySeat = new Map(v.players.map((p) => [p.seat, p]));
   const meSeated = v.players.some((p) => p.id === v.you);
-  const firstFree = Array.from({ length: v.seats ?? 8 }, (_, i) => i).find((i) => !bySeat.has(i));
+  // Friends you called hold the next free seats with their countdown; «пригласить» moves to the seat after them.
+  const free = Array.from({ length: v.seats ?? 8 }, (_, i) => i).filter((i) => !bySeat.has(i));
+  const held = new Map(waiting.slice(0, free.length).map((c, n) => [free[n], c]));
+  const firstFree = free[held.size];
   return html`<div class="ctx-seats glass">
-    <div class="ctx-seats-head"><small class="cap">ЗА СТОЛОМ</small><b>${v.players.length}<i> / ${v.seats ?? 8}</i></b></div>
+    <div class="ctx-seats-head"><small class="cap">РАЗДЕВАЛКА</small><b>${v.players.length}<i> / ${v.seats ?? 8}</i></b></div>
     <div class="ctx-seat-grid">${Array.from({ length: v.seats ?? 8 }, (_, i) => {
       const p = bySeat.get(i);
       // Seats fill in the order players come in; only someone on the stands can take a free one.
+      const call = !p && held.get(i);
+      if (call) { const left = secondsLeft(call); return html`<span class="ctx-seat called">
+        <span class="ctx-av free"><b>${call.nickname.slice(0, 2).toUpperCase()}</b>
+          <svg class="ctx-ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" pathLength="60" style=${`stroke-dashoffset:${60 - left}`} /></svg></span>
+        <b class="ctx-seat-name">${call.nickname}</b><small>ждём · ${left}</small></span>`; }
       // The first free seat calls a friend (a registered player only); the rest just wait.
       if (!p && meSeated && invite && i === firstFree) return html`<button class="ctx-seat free call press" onClick=${invite} aria-label="Пригласить друга">
         <span class="ctx-av free"><img src=${img("invite")} alt="" /></span><small>пригласить</small></button>`;
@@ -575,6 +583,11 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join, auto }) {
   const [view, setView] = useState(null);
   const [step, setStep] = useState(join && !memo.room && !auto ? "code" : null);
   const [inviting, setInviting] = useState(false);
+  // Your calls into this room: each waits on a seat with its countdown until the friend comes or the minute runs out.
+  const [calls, setCalls] = useState(invites.list);
+  useEffect(() => invites.on(setCalls), []);
+  const waitingCalls = calls.some((c) => c.direction === "outgoing" && c.code === seat?.code && c.status === "pending" && c.expires > Date.now());
+  useEffect(() => { if (!waitingCalls) return; const t = setInterval(() => invites.refresh(), 3000); return () => clearInterval(t); }, [waitingCalls]);
   const [digits, setDigits] = useState(join ?? "");
   const [focused, setFocused] = useState(false);
   const [err, setErr] = useState(null);
@@ -779,7 +792,8 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join, auto }) {
           <button class="cb-btn main press" onClick=${share} aria-label="Поделиться"><${Icon} name="share" size="18" /></button>
         </div>
         <p class="hint-line small pad">${copied ? "Скопировано — отправь друзьям" : "Друзья войдут по коду во вкладке «С друзьями» или по ссылке."}</p>
-        <${Seats} v=${v} sit=${(i) => call("sit", { seat: i })} invite=${account.profile?.registered ? () => setInviting(true) : null} />
+        <${Seats} v=${v} sit=${(i) => call("sit", { seat: i })} invite=${account.profile?.registered ? () => setInviting(true) : null}
+          waiting=${calls.filter((c) => c.direction === "outgoing" && c.code === seat.code && c.status === "pending" && c.expires > Date.now())} />
         ${host ? html`<div class="ctx-level glass"><small class="cap">УРОВЕНЬ ДЛЯ РАУНДА</small>
             <div class="dg-levels">${(st?.levels ?? []).map((l) => html`<button class=${cx("dg-level press", v.level === l.level && "on")} style=${`--t:${LEVEL_TINT[l.level]}`}
               onClick=${() => v.level !== l.level && call("settings", { level: l.level })}><img src=${img(LEVEL_ICON[l.level])} alt="" /><b>${l.label}</b></button>`)}</div></div>`

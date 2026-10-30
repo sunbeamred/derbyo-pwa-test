@@ -293,11 +293,12 @@ function App() {
     const off = invites.on((list) => {
       const i = list.find((x) => x.direction === "incoming" && x.status === "pending" && !seen.has(x.id));
       if (i) { seen.add(i.id); setInvite(i); }
-      setCalls(list.filter((x) => x.direction === "outgoing"));
+      // A call into a Контекстно room waits on its seat in the room, not as a bubble over the menu.
+      setCalls(list.filter((x) => x.direction === "outgoing" && x.game !== "contexto"));
     });
     invites.start();
     // The countdowns move every second while a call is open.
-    const t = setInterval(() => { if (invites.list.length) setCalls(invites.list.filter((x) => x.direction === "outgoing" && x.expires > Date.now())); }, 1000);
+    const t = setInterval(() => { if (invites.list.length) setCalls(invites.list.filter((x) => x.direction === "outgoing" && x.game !== "contexto" && x.expires > Date.now())); }, 1000);
     return () => { off(); invites.stop(); clearInterval(t); };
   }, [sandbox]);
   const route = (hash) => {
