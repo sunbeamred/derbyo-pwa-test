@@ -1422,3 +1422,4 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
   background: linear-gradient(#FFE7A3, #E8B04A); box-shadow: 0 4px 14px rgba(246, 212, 130, .35); animation: dgf-pop .5s .2s cubic-bezier(.2, 1.4, .4, 1) both; }
 .dg-reward img { width: 18px; height: 18px; }
 .dg-reward.guest { color: var(--soft); background: rgba(255, 255, 255, .06); box-shadow: none; font-weight: 600; }
+.lk-pic.coach img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
