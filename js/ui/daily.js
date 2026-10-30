@@ -39,7 +39,7 @@ function GuessCard({ f, n, fresh }) {
       <span class=${cx("dg-tile", f.nat.result)}><small>Сборная</small><em class="flag">${f.nat.flag}</em><span>${f.nat.label}</span></span>
       <span class=${cx("dg-tile", f.pos.result)}><small>Позиция</small><b>${POS_SHORT[f.pos.code] ?? "—"}</b><span>${f.pos.label}</span></span>
       <span class=${cx("dg-tile", f.born.result)}><small>Год</small><b>${f.born.year ?? "—"}${arrow ? html`<i>${arrow}</i>` : null}</b>
-        <span>${f.born.result === "hit" ? "тот же" : arrow === "↑" ? "загаданный старше" : arrow === "↓" ? "загаданный моложе" : ""}</span></span>
+        <span>${f.born.result === "hit" ? "тот же" : arrow === "↑" ? "загаданный моложе" : arrow === "↓" ? "загаданный старше" : ""}</span></span>
       <span class=${cx("dg-tile clubs", f.clubs.result)}><small>Клубы</small>
         ${f.clubs.shared.length ? html`<span class="dg-clubs">${f.clubs.shared.slice(0, 3).map((c) => html`<span class="dg-club">${c.logo ? html`<img src=${c.logo} alt="" referrerpolicy="no-referrer" />` : null}<em>${c.name}</em></span>`)}</span>`
           : html`<span>${f.clubs.result === "near" ? "одна лига" : "нет общих"}</span>`}</span>
@@ -197,7 +197,7 @@ export function DailyView({ nav }) {
   const memo = mem();
   return html`<div class="screen-with-bar daily-screen"><div class="screen-scroll"><div class="page">
     <${LobbyHeader} title="Футболист дня" back=${nav.back} />
-    <div class="ro-seg dg-tabs" role="tablist">
+    <div class="segmented talk-tabs dg-tabs" role="tablist">
       ${[["daily", st ? `Дня · №${st.day}` : "Футболист дня"], ["endless", "Бесконечный"]].map(([m, t]) => html`<button role="tab" aria-selected=${mode === m} class=${cx("press", mode === m && "on")} onClick=${() => mode !== m && setMode(m)}>${t}</button>`)}
     </div>
     ${mode === "endless" && st ? html`<div class="dg-levels">${st.levels.map((l) => html`<button class=${cx("dg-level press", level === l.level && "on")} style=${`--t:${LEVEL_TINT[l.level]}`}
@@ -207,7 +207,7 @@ export function DailyView({ nav }) {
     ${!st && !err ? html`<p class="hint-line pad">Загружаем…</p>` : null}
     ${st && game && !rows.length && !game.over ? html`<div class="dg-empty glass">
         <img src=${img("game-daily")} alt="" /><b>Угадай футболиста за ${st.maxGuesses} попыток</b>
-        <p>После каждой попытки видно, что совпало: <i class="hit">сборная</i>, <i class="near">позиция</i>, <i class="miss">год</i>, клубы. Зелёное — точно, жёлтое — близко.</p></div>` : null}
+        <p>После каждой попытки видно, что совпало: <i class="k-hit">сборная</i>, <i class="k-near">позиция</i>, <i class="k-miss">год</i>, клубы. Зелёное — точно, жёлтое — близко.</p></div>` : null}
     <div class="dg-list" ref=${list}>${rows.map((f, i) => html`<${GuessCard} f=${f} n=${i + 1} fresh=${f.id === freshId.current} key=${f.id} />`)}</div>
     ${game?.over && game.answer ? html`<div class=${cx("dg-result glass", game.won ? "won" : "lost")}>
         <small>${game.won ? `Угадано за ${attempts} из ${st.maxGuesses}${game.hint ? " · с подсказкой" : ""}` : "Не угадано. Это был"}</small>
