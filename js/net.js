@@ -111,7 +111,8 @@ export function openStream(token, onFrame) {
       ctl = new AbortController();
       const kick = () => { clearTimeout(watchdog); watchdog = setTimeout(() => ctl.abort(), 45000); };
       try {
-        const headers = { Authorization: `Bearer ${token}`, "X-Derbyo-Presence": document.hidden ? "hidden" : "active" };
+        // The client marker tells the server this player sees the match intro (the first turn waits for it).
+        const headers = { Authorization: `Bearer ${token}`, "X-Derbyo-Presence": document.hidden ? "hidden" : "active", "X-Derbyo-Client": "app" };
         if (generation) headers["X-Derbyo-Generation"] = generation;
         const r = await fetch("/api/events", { headers, signal: ctl.signal, cache: "no-store" });
         if ([401, 404, 410].includes(r.status)) { onFrame({ type: "closed", message: "Комната закрыта" }); return; }
