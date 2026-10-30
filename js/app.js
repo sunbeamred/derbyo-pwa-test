@@ -8,6 +8,7 @@ import { MatchScreen } from "./ui/match.js";
 import { HomeView, GameLobby, QuickPickView, SearchView, RoomView, JoinCodeView, LockerRoom, MatchSettingsView, MiniGameView } from "./ui/lobby.js";
 import { InstallSheet, installState, InstallRow, isStandalone, isIOS, PushAskSheet } from "./install.js";
 import { notifications } from "./push.js";
+import { invites, secondsLeft } from "./invites.js";
 import { updates } from "./update.js";
 import { TabBar } from "./ui/tabbar.js";
 import { ONLINE, account, createRoom, joinRoom, savedSession, social } from "./net.js";
@@ -53,6 +54,8 @@ function App() {
   const [install, setInstall] = useState(() => installState.shouldOffer());
   const [askPush, setAskPush] = useState(false);
   const [invite, setInvite] = useState(null);
+  /** My calls to friends that are still open: a bubble each over the menu, with a minute's countdown. */
+  const [calls, setCalls] = useState([]);
   const [update, setUpdate] = useState(false);
   const live = useRef({});
   const stackRef = useRef();
@@ -279,13 +282,15 @@ function App() {
   useEffect(() => {
     if (!sandbox) return;
     const seen = new Set();
-    const poll = () => document.hidden || social.state().then((st) => {
-      const i = st.invites?.find((x) => x.direction === "incoming" && x.status === "pending" && !seen.has(x.id));
+    const off = invites.on((list) => {
+      const i = list.find((x) => x.direction === "incoming" && x.status === "pending" && !seen.has(x.id));
       if (i) { seen.add(i.id); setInvite(i); }
-    }).catch(() => {});
-    poll();
-    const t = setInterval(poll, 15000);
-    return () => clearInterval(t);
+      setCalls(list.filter((x) => x.direction === "outgoing"));
+    });
+    invites.start();
+    // The countdowns move every second while a call is open.
+    const t = setInterval(() => { if (invites.list.length) setCalls(invites.list.filter((x) => x.direction === "outgoing" && x.expires > Date.now())); }, 1000);
+    return () => { off(); invites.stop(); clearInterval(t); };
   }, [sandbox]);
   const route = (hash) => {
     const inv = hash.match(/^#invite=([\w-]{8,64})$/);
@@ -316,7 +321,9 @@ function App() {
     history.replaceState(history.state, "", location.pathname + location.search);
     app.joinRoom(m[2], { role: m[1] === "watch" ? "spectator" : "player" });
   }, []);
-  return html`<div class=${cx("app", (minimized || update) && !match && "has-return", minimized && update && !match && "has-two")}>
+  // Bars over the tab bar, bottom up: the minimised match, the update, then one per open call.
+  const bars = match ? 0 : (minimized ? 1 : 0) + (update ? 1 : 0) + calls.length;
+  return html`<div class="app" style=${bars ? `--tb-space: calc(var(--tb-bottom) + var(--tb-h) + ${12 + bars * 70}px)` : ""}>
     <main class="tab-body">
       <section class="tab-pane" hidden=${tab !== 0}>${ONLINE ? html`<${RatingTab} visible=${tab === 0} />` : html`<${Placeholder} title="Рейтинг" text="Неделя и всё время, все и друзья, твоё место снизу. Следующий шаг прототипа." />`}</section>
       <section class="tab-pane" hidden=${tab !== 1}>${playTab}</section>
@@ -325,10 +332,11 @@ function App() {
     </main>
     <div class="edge-fade" aria-hidden="true"></div>
     ${minimized && !match && (!minimized.online || minimized.state) ? html`<${ReturnBar} m=${minimized} go=${ret} />` : null}
-    ${update && !match ? html`<button class=${cx("return-bar update-bar glass-bar press", minimized && "stacked")} onClick=${() => updates.apply()}>
+    ${update && !match ? html`<button class="return-bar update-bar glass-bar press" style=${`--i:${minimized ? 1 : 0}`} onClick=${() => updates.apply()}>
       <span class="rb-dot up"><img src=${img("sparkles")} alt="" /></span>
       <span class="rb-t"><small>Вышло обновление</small><b>${updates.text}</b></span>
       <span class="rb-go up">Обновить</span></button>` : null}
+    ${!match ? calls.map((c, n) => html`<${CallBar} c=${c} i=${(minimized ? 1 : 0) + (update ? 1 : 0) + n} key=${c.id} />`) : null}
     <${TabBar} tab=${tab} pick=${pickTab} items=${[["Рейтинг", "trophy"], ["Играть", "bolt"], ["Профиль", "profile-v1", ONLINE ? (account.ready && !account.registered ? "!" : null) : 1]]} />
     ${searching ? html`<${Cover} class="search-cover" leaving=${searchLeaving}>${ONLINE ? html`<${OnlineSearch} done=${(r) => {
       coverClosed();
@@ -413,6 +421,19 @@ function paint(g, f) {
   g.top.style.transform = `translate3d(${f * 100}%,0,0)`;
   g.under.style.transform = `translate3d(${(f - 1) * 30}%,0,0)`;
   g.under.style.filter = `brightness(${0.7 + 0.3 * f})`;
+}
+
+/** A call to a friend: waiting for the answer, then «Войти» once accepted; each has a minute. */
+function CallBar({ c, i }) {
+  const left = secondsLeft(c), accepted = c.status === "accepted";
+  const go = () => takeInvite(c).catch((e) => alert(e.message)).finally(() => invites.refresh());
+  const cancel = () => takeInvite(c, "cancel").catch(() => {}).finally(() => invites.refresh());
+  return html`<div class=${cx("return-bar call-bar glass-bar", accepted && "accepted")} style=${`--i:${i}`}>
+    <span class="rb-dot call"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" pathLength="60" style=${`stroke-dashoffset:${60 - left}`} /></svg><b>${left}</b></span>
+    <span class="rb-t"><small>${accepted ? "Принял приглашение · заходи" : "Приглашение · ждём ответа"}</small><b>${c.nickname}</b></span>
+    ${accepted ? html`<button class="rb-go up press" onClick=${go}>Войти</button>`
+      : html`<button class="round-no press" aria-label="Отменить приглашение" onClick=${cancel}><${Icon} name="x" size="14" weight="2.5" /></button>`}
+  </div>`;
 }
 
 /** «Вернуться в матч»: who, the score and the round, over the tab bar on every tab. */
