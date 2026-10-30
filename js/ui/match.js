@@ -217,7 +217,7 @@ function LevelRow({ m, live }) {
 }
 
 /** Under a player in the header: what the player is doing (in the game, minimised, offline…) and the ring of
- * their time-away budget, emptying as it is spent. */
+ * their time-away budget while they are away, emptying as it is spent. */
 function SideTag({ m, owner }) {
   const mine = owner === 0, isBot = !mine && m.opponent.isBot;
   if (isBot) return html`<span class="side-st"><span class="st in">● в игре</span></span>`;
@@ -226,13 +226,14 @@ function SideTag({ m, owner }) {
   const left = mine ? !!m.meLeft : m.oppLeft;
   const missed = mine ? 0 : m.oppMissed || 0;
   const status = left ? html`<span class="st left">○ покинул матч</span>`
-    : missed > 0 && away === null ? html`<span class=${cx("st", missed >= 2 ? "idle" : "missed")}>${missed >= 2 ? "⏱ не отвечает" : "⏱ пропустил ход"}</span>`
+    : missed > 0 && away === null ? html`<span class=${cx("st", missed >= 2 ? "idle" : "missed")}>${missed >= 2 ? "⏱ не отвечает" : "⏱ пропуск"}</span>`
     : away !== null ? html`<span class="st away">◒ ${kind === "offline" ? "нет связи" : kind === "blurred" ? "в другом окне" : "свернул"}</span>`
     : html`<span class="st in">● в игре</span>`;
   // The budget: the server's seconds left (counting down while away), out of the level's total.
   const total = (mine || !m.oppAwayTotal ? m.awayTotal : m.oppAwayTotal) ?? 45;
   const left_s = mine ? (m.watching ? m.leftAwayBudget : m.awaySeconds) : m.oppAwayBudget;
-  const ring = m.online && m.g?.hideBudget && left_s != null ? html`<span class=${cx("away-ring", away !== null && "on", left_s <= 5 && "low")}>
+  // Shown only while the player is away and it counts down: a still «30» by the status read as a riddle.
+  const ring = m.online && m.g?.hideBudget && left_s != null && away !== null ? html`<span class=${cx("away-ring", away !== null && "on", left_s <= 5 && "low")}>
     <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" pathLength="100" style=${`stroke-dashoffset:${100 - Math.max(0, Math.min(100, (left_s / total) * 100))}`} /></svg><b>${left_s}</b></span>` : null;
   return html`<span class=${cx("side-st", mine && "mine")}>${mine ? html`${status}${ring}` : html`${ring}${status}`}</span>`;
 }
@@ -471,7 +472,9 @@ function ResultBubble({ m }) {
   const w = m.roundWinner, done = m.matchOver;
   const title = m.watching && w === 0 ? (done ? `Матч выиграл ${m.leftName}` : `Раунд выиграл ${m.leftName}`)
     : w === 0 ? (done ? "Победа в матче!" : "Раунд твой")
-    : w === 1 ? (done ? `Матч выиграл ${m.opponent.name}` : `Раунд выиграл ${m.opponent.name}`) : "Ничья в раунде";
+    : w === 1 ? (done ? `Матч выиграл ${m.opponent.name}` : `Раунд выиграл ${m.opponent.name}`)
+    // Six turns in a row with no capture end the round (the server's «Шесть ходов без захвата — ничья»).
+    : /^Шесть ходов без захвата/.test(m.g?.reason ?? "") ? "Пат: 6 ходов без захвата" : "Ничья в раунде";
   const ws = w === null ? null : m.seat(w);
   const tint = ws === 0 ? RED : ws === 1 ? MINT : GOLD;
   return html`<div class="result-bubble" style=${`--t:${tint}`}><img src=${img(w === null ? "whistle" : m.mark(w))} alt="" /><b>${title}</b></div>`;
