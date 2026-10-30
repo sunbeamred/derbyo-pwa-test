@@ -41,12 +41,14 @@ function OnlineFriend({ m, owner, viewer, name, close }) {
 export function ProfileSheet({ m, owner, viewer = null, close }) {
   const [confirmBlock, setConfirmBlock] = useState(false);
   const p = viewer ? m.viewerProfile(viewer) : m.profile(owner);
-  const bot = !viewer && owner === 1 && m.opponent.isBot;
+  // A spectator sees both players as other people: the left one is not «you».
+  const other = !viewer && (owner === 1 || m.watching);
+  const bot = !viewer && (owner === 1 ? m.opponent.isBot : m.watching && !!m.me?.bot);
   const red = m.seat(owner) === 0;
   const me = viewer === m.myName;
   const social = !m.online && (viewer ? !me : owner === 1 && !bot);
   // Online: friends need your own account; not for yourself, a bot or the other phone's «Игрок 2».
-  const onlineSocial = m.online && !m.hotseat && !!account.profile?.registered && (viewer ? !me : owner === 1 && !bot);
+  const onlineSocial = m.online && !m.hotseat && !!account.profile?.registered && (viewer ? !me : other && !bot && (owner === 0 ? m.me : m.them)?.card?.profileId !== account.profile?.id);
   const rel = m.relationWith(viewer);
   const act = (f) => () => { f(); store.changed(); };
   const t = rankTier(p.rating ?? 0);
@@ -64,7 +66,7 @@ export function ProfileSheet({ m, owner, viewer = null, close }) {
         <b class="grad" style=${`${tierStyle(p.rating)};filter:drop-shadow(0 0 6px ${t.b}${Math.round(t.glow * 255).toString(16).padStart(2, "0")})`}>${p.rating}</b>
         ${p.rank ? html`<small><span class=${cx(placeStyle(p.rank) && "grad", p.rank <= 5 && "top")} style=${placeStyle(p.rank)}>${p.rank}</span> место в рейтинге</small>`
           : html`<small>${bot ? "фиксированный рейтинг" : "рейтинг"}</small>`}
-      </span>` : m.online ? html`<span class="pf-rating"><small>${bot ? "бот" : owner === 0 ? "рейтинг после 5 игр с 2 соперниками" : "рейтинг на сайте"}</small></span>` : null}
+      </span>` : m.online ? html`<span class="pf-rating"><small>${bot ? "бот" : owner === 0 && !m.watching ? "рейтинг после 5 игр с 2 соперниками" : "рейтинг на сайте"}</small></span>` : null}
     </div>
     ${!bot && p.games != null ? html`<div class="pf-stats">
       <span><b>${p.games}</b><small>Игр</small></span><span><b>${p.winRate}%</b><small>Побед</small></span><span><b>${p.bestStreak}</b><small>Лучшая серия</small></span></div>` : null}
