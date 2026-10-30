@@ -4,7 +4,8 @@
 import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel, vibrate, Alert } from "./common.js";
 import { Face } from "./sheets.js";
 import { raiseKeyboard } from "./match.js";
-import { account } from "../net.js";
+import { account, social } from "../net.js";
+import { invites, secondsLeft } from "../invites.js";
 
 const LEVEL_ICON = { 1: "level-rookie", 2: "level-amateur", 3: "level-knower", 4: "level-legend" };
 const LEVEL_TINT = { 1: "#C9D5E3", 2: "#6FA8FF", 3: "#FFE45C", 4: "#FF7A3D" };
@@ -126,7 +127,7 @@ function CtxRow({ f, total, hint, why, fresh }) {
   </div>`;
 }
 
-export function ContextoView({ nav, join }) {
+export function ContextoView({ nav, join, auto }) {
   const memo = ctxMem.get();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mode, setMode] = useState(() => (join || memo.room ? "friends" : memo.appMode === "endless" ? "endless" : "daily"));
@@ -223,7 +224,7 @@ export function ContextoView({ nav, join }) {
 
   const reward = useDailyReward(mode === "daily" && round?.won ? { game: "contexto", token: round.token, guesses: round.guesses } : null);
   const tabs = [["daily", "Сегодня"], ["endless", "Бесконечный"], ["friends", "С друзьями"]];
-  if (mode === "friends") return html`<${ContextoFriends} nav=${nav} st=${st} tabs=${tabs} mode=${mode} setMode=${setMode} join=${join} />`;
+  if (mode === "friends") return html`<${ContextoFriends} nav=${nav} st=${st} tabs=${tabs} mode=${mode} setMode=${setMode} join=${join} auto=${auto} />`;
   const used = new Set(round?.guesses ?? []);
   const hints = new Set(round?.hints ?? []);
   const sorted = rows.slice().sort((a, b) => a.rank - b.rank);
@@ -439,14 +440,18 @@ const spaced = (code) => `${code.slice(0, 3)} ${code.slice(3)}`;
 const SEAT_TINT = ["#FF5364", "#32E5A1", "#6FA8FF", "#F6D482", "#BC8CFF", "#FF9A52", "#4FD6E8", "#FF7AC8"];
 
 /** Eight seats in one glass bubble, like the duel in tic-tac-toe: a free seat takes you in, your own seat stands you up. */
-function Seats({ v, sit }) {
+function Seats({ v, sit, invite }) {
   const bySeat = new Map(v.players.map((p) => [p.seat, p]));
   const meSeated = v.players.some((p) => p.id === v.you);
+  const firstFree = Array.from({ length: v.seats ?? 8 }, (_, i) => i).find((i) => !bySeat.has(i));
   return html`<div class="ctx-seats glass">
     <div class="ctx-seats-head"><small class="cap">ЗА СТОЛОМ</small><b>${v.players.length}<i> / ${v.seats ?? 8}</i></b></div>
     <div class="ctx-seat-grid">${Array.from({ length: v.seats ?? 8 }, (_, i) => {
       const p = bySeat.get(i);
       // Seats fill in the order players come in; only someone on the stands can take a free one.
+      // The first free seat calls a friend (a registered player only); the rest just wait.
+      if (!p && meSeated && invite && i === firstFree) return html`<button class="ctx-seat free call press" onClick=${invite} aria-label="Пригласить друга">
+        <span class="ctx-av free"><img src=${img("invite")} alt="" /></span><small>пригласить</small></button>`;
       if (!p) return meSeated ? html`<span class="ctx-seat free"><span class="ctx-av free"><img src=${img("plus")} alt="" /></span><small>свободно</small></span>`
         : html`<button class="ctx-seat free call press" onClick=${() => sit(i)} aria-label=${`Сесть на место ${i + 1}`}>
         <span class="ctx-av free"><img src=${img("plus")} alt="" /></span><small>сесть</small></button>`;
@@ -532,11 +537,44 @@ function CtxTalk({ v, say }) {
   </div>`;
 }
 
-function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
+const PRESENCE = { online: "в сети", in_match: "в игре", in_minigame: "в мини-игре", offline: "не в сети" };
+/** Friends to call into this room: each gets a call with a minute to answer; while one waits you can call the next. */
+function FriendsPick({ v, code, close }) {
+  const [list, setList] = useState(null);
+  const [err, setErr] = useState(null);
+  const [calls, setCalls] = useState(invites.list);
+  const [, tick] = useState(0);
+  const load = () => social.state().then((s) => setList(s.friends ?? [])).catch((e) => setErr(e.message));
+  useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, []);
+  useEffect(() => { const off = invites.on(setCalls); invites.refresh(); const t = setInterval(() => tick((n) => n + 1), 1000); return () => { off(); clearInterval(t); }; }, []);
+  // The tapped button turns into «Приглашён»: drop its focus first, or the browser scrolls the whole screen after it.
+  const keep = () => { document.activeElement?.blur?.(); const st = document.querySelector(".stack"); if (st) st.scrollTop = 0; };
+  const call = async (id) => { keep(); setErr(null); try { await social.invite(id, code); vibrate(10); invites.refresh(); } catch (e) { setErr(e.message); } requestAnimationFrame(keep); };
+  const side = (f) => {
+    if (f.contexto?.code === code) return html`<small class="fr-note">в комнате</small>`;
+    const i = calls.find((x) => x.friend === f.id && x.direction === "outgoing" && x.code === code && x.status === "pending" && x.expires > Date.now());
+    if (i) return html`<span class="chip-btn invited"><span class="spinner"></span>Приглашён · ${secondsLeft(i)}</span>`;
+    return html`<button class="chip-btn press" onClick=${() => call(f.id)}><img src=${img("invite")} alt="" />Позвать</button>`;
+  };
+  return html`<div class="menu ctx-pick">
+    <h2>Позвать друзей</h2>
+    ${!list ? html`<p class="hint-line pad">${err ?? "Загружаем друзей…"}</p>`
+      : !list.length ? html`<p class="hint-line pad">Пока нет друзей. Добавь их во вкладке «Профиль» → «Друзья».</p>`
+      : html`<div class="board-list glass">${list.map((f) => html`<div class="fr-row" key=${f.id}>
+          <span class="fr-who"><${Face} p=${{ name: f.nickname, photo: f.avatar }} size=${40} />
+            <span class="lb-name"><b>${f.nickname}</b><small class=${cx(f.presence && "pres-" + f.presence)}>${PRESENCE[f.presence] ?? ""}</small></span></span>
+          ${side(f)}</div>`)}</div>`}
+    ${err && list ? html`<p class="hint-line small" style="color:#FF9AA8">${err}</p>` : null}
+    <p class="hint-line small">Друг сядет на свободное место, а если мест нет — на трибуну. Позвать своих друзей может любой в комнате.</p>
+  </div>`;
+}
+
+function ContextoFriends({ nav, st, tabs, mode, setMode, join, auto }) {
   const memo = ctxMem.get();
   const [seat, setSeat] = useState(memo.room ?? null);
   const [view, setView] = useState(null);
-  const [step, setStep] = useState(join && !memo.room ? "code" : null);
+  const [step, setStep] = useState(join && !memo.room && !auto ? "code" : null);
+  const [inviting, setInviting] = useState(false);
   const [digits, setDigits] = useState(join ?? "");
   const [focused, setFocused] = useState(false);
   const [err, setErr] = useState(null);
@@ -597,11 +635,19 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
     try { return await roomCall(route, { code: seat.code, ...body }, seat.secret); }
     catch (e) { if (["ROOM", "AUTH"].includes(e.code)) drop(e.message); else setErr(e.message); }
   };
+  // A friend's invite (or «Войти» in the friends list): straight into that room, leaving the one you sat in.
+  useEffect(() => {
+    if (!auto || !join || memo.room?.code === join) return;
+    (async () => {
+      if (memo.room) { await roomCall("leave", { code: memo.room.code }, memo.room.secret).catch(() => {}); memo.room = null; ctxMem.save(); setSeat(null); }
+      enter("join", join);
+    })();
+  }, []);
   // The name is the account's own; a guest is always «ГостьNNNN».
-  async function enter(route) {
+  async function enter(route, code = digits) {
     setBusy(true); setErr(null);
     try {
-      const d = await roomCall(route, route === "join" ? { name: account.name, code: digits } : { name: account.name, level: memo.endless.level || 1 });
+      const d = await roomCall(route, route === "join" ? { name: account.name, code } : { name: account.name, level: memo.endless.level || 1 });
       memo.room = { code: d.code, secret: d.secret, playerId: d.playerId }; ctxMem.save(); setSeat(memo.room); setStep(null);
     } catch (e) { setErr(e.message); }
     setBusy(false);
@@ -653,6 +699,7 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
 
   const menuRow = (title, run, destructive) => html`<button class=${cx("navy-btn menu-row", destructive && "destructive")} onClick=${() => { setMenuOpen(false); run(); }}>${title}</button>`;
   const sheets = html`
+    ${inviting && v ? html`<${Panel} onClose=${() => setInviting(false)}>${(leave) => html`<${FriendsPick} v=${v} code=${seat.code} close=${leave} />`}<//>` : null}
     ${asking && playing ? html`<${Panel} onClose=${() => setAsking(false)} class="answer-panel">${(leaveSheet) => html`<${PickSheet}
         head=${html`<b>${sorted[0] ? `Лучший в комнате #${sorted[0].rank}` : "Первый вариант в комнате"}</b>`} placeholder="Фамилия футболиста…" empty="Начни вводить фамилию — выбери футболиста из списка."
         find=${(q) => ctxApi("search", { query: q }).then((r) => r.players ?? [])} row=${playerRow} used=${used}
@@ -732,7 +779,7 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
           <button class="cb-btn main press" onClick=${share} aria-label="Поделиться"><${Icon} name="share" size="18" /></button>
         </div>
         <p class="hint-line small pad">${copied ? "Скопировано — отправь друзьям" : "Друзья войдут по коду во вкладке «С друзьями» или по ссылке."}</p>
-        <${Seats} v=${v} sit=${(i) => call("sit", { seat: i })} />
+        <${Seats} v=${v} sit=${(i) => call("sit", { seat: i })} invite=${account.profile?.registered ? () => setInviting(true) : null} />
         ${host ? html`<div class="ctx-level glass"><small class="cap">УРОВЕНЬ ДЛЯ РАУНДА</small>
             <div class="dg-levels">${(st?.levels ?? []).map((l) => html`<button class=${cx("dg-level press", v.level === l.level && "on")} style=${`--t:${LEVEL_TINT[l.level]}`}
               onClick=${() => v.level !== l.level && call("settings", { level: l.level })}><img src=${img(LEVEL_ICON[l.level])} alt="" /><b>${l.label}</b></button>`)}</div></div>`
