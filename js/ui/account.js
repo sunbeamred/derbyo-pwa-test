@@ -298,7 +298,7 @@ export function ProfileTab({ children }) {
     <h1 class="big-title">Профиль</h1>
     <div class="profile glass account-card">
       <div class="pf-head">
-        ${editable ? html`<button class="face-btn press" disabled=${busy} aria-label=${p.avatar ? "Сменить фото" : "Добавить фото"} onClick=${() => file.current.click()}><${Face} name=${account.name} photo=${p.avatar} /><span class="face-edit"><${Icon} name="camera" size="15" /></span></button>
+        ${editable ? html`<button class="face-btn press" disabled=${busy} aria-label=${p.avatar ? "Сменить фото" : "Добавить фото"} onClick=${() => (p.avatar ? openSheet({ kind: "photo" }) : file.current.click())}><${Face} name=${account.name} photo=${p.avatar} /><span class="face-edit"><${Icon} name="camera" size="15" /></span></button>
           <input ref=${file} type="file" accept="image/*" hidden onChange=${pickPhoto} />`
           : html`<${Face} name=${account.name} photo=${p.avatar} />`}
         <span class="pf-name"><b>${account.name}</b><span>${p.showFlag === false ? html`<i class="flag">${flagView("🌐")}</i>` : flagOrGlobe(p.country) ? html`<i class="flag">${flagView(flagOrGlobe(p.country))}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>${p.registered ? null : html`<small>гость</small>`}</span></span>
@@ -335,13 +335,16 @@ export function ProfileTab({ children }) {
     ${p.registered ? html`<div class="settings-list">
       <button class="toggle-card press" onClick=${() => openSheet({ kind: "password" })}><span class="tc-ic"><img src=${img("key")} alt="" /></span>
         <span class="tc-t"><b>Сменить пароль</b><small>Нужен текущий пароль</small></span><${Icon} name="right" size="14" style="opacity:.4" /></button>
-      ${editable && p.avatar ? html`<button class="text-btn muted" disabled=${busy} onClick=${dropPhoto}>Убрать фото профиля</button>` : null}
       <button class="navy-btn" disabled=${busy} onClick=${logout}>Выйти из аккаунта</button></div>` : null}
     ${err && !mode ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
     ${children}
   </div>
   ${sheet ? html`<${Panel} shut=${shut} onClose=${() => setSheet(null)}>
     ${sheet.kind === "password" ? html`<${ChangePassword} done=${() => setShut(true)} />`
+      : sheet.kind === "photo" ? html`<div class="profile photo-sheet">
+          <h3 class="sheet-title">Фото профиля</h3>
+          <button class="primary-btn" onClick=${() => { file.current.click(); setShut(true); }}><${Icon} name="camera" size="18" />Выбрать новое фото</button>
+          <button class="navy-btn tall danger" disabled=${busy} onClick=${() => { dropPhoto(); setShut(true); }}>Убрать фото</button></div>`
       : html`<${PlayerCard} id=${sheet.id} onChange=${() => setFriendsKey((k) => k + 1)} />`}<//>` : null}
   </div>`;
 }
