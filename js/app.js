@@ -15,11 +15,12 @@ import { ONLINE, account, createRoom, joinRoom, savedSession, social } from "./n
 import { OnlineMatch } from "./online.js";
 import { OnlineLobby, OnlineSearch, OnlineRoom, OnlineJoinCode, OnlineLocker } from "./ui/live.js";
 import { RatingTab, ProfileTab, takeInvite } from "./ui/account.js";
+import { DailyView } from "./ui/daily.js";
 import "./touch.js";
 
 // Online (this app's own host) the screens play on the site's server; the GitHub copy and demo links stay offline.
-const SCREENS = ONLINE ? { lobby: OnlineLobby, quickPick: QuickPickView, room: OnlineRoom, code: OnlineJoinCode, locker: OnlineLocker, settings: MatchSettingsView, minigame: MiniGameView }
-  : { lobby: GameLobby, quickPick: QuickPickView, room: RoomView, code: JoinCodeView, locker: LockerRoom, settings: MatchSettingsView, minigame: MiniGameView };
+const SCREENS = ONLINE ? { lobby: OnlineLobby, quickPick: QuickPickView, room: OnlineRoom, code: OnlineJoinCode, locker: OnlineLocker, settings: MatchSettingsView, minigame: MiniGameView, daily: DailyView }
+  : { lobby: GameLobby, quickPick: QuickPickView, room: RoomView, code: JoinCodeView, locker: LockerRoom, settings: MatchSettingsView, minigame: MiniGameView, daily: DailyView };
 const matchDemo = ["demoBoard", "demoWin", "demoWinLater", "demoLoseLater", "demoLongMatch", "demoMix", "demoLastMove", "demoOppReview", "demoMismatch", "demoHuman", "demoFriendAsk", "demoWatch"].some(has);
 const humanDemo = ["demoOppAway", "demoHuman", "demoFriendAsk", "demoWatch", "demoOppIdle", "demoOppLeaves", "demoOppPause"].some(has);
 /** How long a screen takes to slide in or out, and a cover to rise or fall (ms). */

@@ -98,7 +98,7 @@ export function HomeView({ nav }) {
         <button class="primary-btn" onClick=${() => nav.push("lobby")}><img src=${img("bolt")} alt="" />Играть</button>
       </div>
     </div>
-    ${TEST_BUILD ? html`<div class="mini-games">${MINI_GAMES.map((g) => html`<button class="mini-game glass press" onClick=${() => nav.push("minigame", { game: g })}>
+    ${TEST_BUILD ? html`<div class="mini-games">${MINI_GAMES.map((g) => html`<button class="mini-game glass press" onClick=${() => (g.id === "daily" ? nav.push("daily") : nav.push("minigame", { game: g }))}>
         <img src=${img("game-" + g.id)} alt="" /><span><b>${g.title}</b><small>${g.text}</small></span><${Icon} name="right" size="14" class="chev" /></button>`)}</div>`
     : html`<div class="soon">
       <span class="soon-ic"><${Icon} name="sparkles" size="18" weight="1.8" /></span>

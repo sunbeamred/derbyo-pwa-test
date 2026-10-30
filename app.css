@@ -1042,11 +1042,11 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 /* Header: the flag by the name (on the photo's side), the coins under the name. */
 .pname-row { display: flex; align-items: flex-end; gap: 4px; max-width: 100%; min-width: 0; }
 .pname-row .pname { min-width: 0; }
-.pflag { position: absolute; bottom: -3px; font-style: normal; font-size: 13px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); }
-.pflag img.globe { width: 15px; height: 15px; margin: 0; }
+.pflag { position: absolute; bottom: -2px; font-style: normal; font-size: 18px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); }
+.pflag img.globe { width: 19px; height: 19px; margin: 0; }
 /* The flag takes the photo's other bottom corner: the mark sits on one, the flag on the other. */
-.pavatar.mine .pflag { left: -5px; }
-.pavatar.theirs .pflag { right: -5px; }
+.pavatar.mine .pflag { left: -1px; }
+.pavatar.theirs .pflag { right: -1px; }
 /* The coins sit centred between the photo and the score. */
 .pinfo .ptokens { position: static; transform: none; align-self: center; }
 /* Level row: each side's status and the ring of its time-away budget. */
@@ -1061,3 +1061,11 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 .away-ring.low b { color: #FF8B97; }
 .away-ring.on.low { animation: ring-pulse 1s ease-in-out infinite; }
 @keyframes ring-pulse { 50% { transform: scale(1.15); } }
+
+/* Name and coins both centred between the photo and the score. */
+.pside .pinfo, .pside.theirs .pinfo { align-items: center; text-align: center; }
+.pside .pname { justify-content: center; }
+/* Status and the time-away ring share one bubble. */
+.side-st { padding: 3px 9px 3px 4px; border-radius: 999px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .1); }
+.side-st:not(.mine) { padding: 3px 4px 3px 9px; }
+.side-st:not(:has(.away-ring)) { padding: 3px 9px; }
