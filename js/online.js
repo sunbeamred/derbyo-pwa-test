@@ -237,6 +237,13 @@ export class OnlineMatch {
     const them = this.them, me = this.me;
     const until = them?.awayDeadline ?? them?.returnDeadline;
     this.oppAwayFor = them && (until || !them.online || them.status === "hidden") && !this.roundOver ? Math.max(0, Math.round((now - (them.since ?? now)) / 1000)) : null;
+    // Why a side is away, as the site says it: the tab hidden, another window, or the connection lost.
+    const why = (p) => (p?.status === "hidden" ? "hidden" : p?.status === "blurred" ? "blurred" : "offline");
+    this.oppAwayKind = this.oppAwayFor === null ? null : why(them);
+    // From the stands the left player can be away too.
+    const mineUntil = me?.awayDeadline ?? me?.returnDeadline;
+    this.leftAwayFor = this.watching && me && (mineUntil || !me.online || me.status === "hidden") && !this.roundOver ? Math.max(0, Math.round((now - (me.since ?? now)) / 1000)) : null;
+    this.leftAwayKind = this.leftAwayFor === null ? null : why(me);
     // Rings scale to the server's own numbers: the level's time-away budget (45…25 s), the deadline's whole span, the room's turn time.
     this.awayTotal = g.hideBudget ? Math.round(g.hideBudget / 1000) : 45;
     this.oppAwayTotal = until && them?.since ? Math.max(1, Math.round((until - them.since) / 1000)) : this.awayTotal;
