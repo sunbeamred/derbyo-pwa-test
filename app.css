@@ -1443,3 +1443,8 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 
 .ctx-av { position: relative; overflow: hidden; }
 .ctx-av .ctx-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* Not installed yet: a red «!» on the install button, on its row in the profile and on the Profile tab. */
+.sound-btn, .mode-ic { position: relative; }
+.sound-btn .badge { top: -5px; right: -5px; }
+.mode-ic .badge { top: -6px; right: -7px; }
