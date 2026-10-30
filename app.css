@@ -1449,55 +1449,57 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .sound-btn .badge { top: -5px; right: -5px; }
 .mode-ic .badge { top: -6px; right: -7px; }
 
-/* Shared by the search scene (from the site's queue animation): a piece's stride and the ball's spin. */
+/* The quick game's search, as on the site: a twenty-second derby on a little pitch — two red crosses and a mint
+   nought chase the ball and each side scores once — while the real matchmaking runs (site foundation.css). */
+.queue-football{width:min(100%,540px);aspect-ratio:2.05;position:relative;isolation:isolate;pointer-events:none;margin:0;border-radius:32px;background:radial-gradient(ellipse at 25% 70%,#ff647413,transparent 50%),radial-gradient(ellipse at 80% 30%,#4fe3b51a,transparent 50%),linear-gradient(145deg,#203b50,#0b1928 75%);border:1px solid #466176;box-shadow:inset 0 1px #c2e8ff22,inset 0 -8px 18px #0003,0 20px 35px #0004;contain:paint}
+.queue-pitch{position:absolute;inset:14% 8%;border:1px solid #acc9db30;border-radius:3px;background:repeating-linear-gradient(90deg,#abcfe904 0 16.66%,transparent 16.66% 33.33%)}
+.queue-pitch:before{content:'';position:absolute;left:50%;top:0;bottom:0;border-left:1px solid #acc9db30}
+.queue-pitch:after{content:'';position:absolute;width:20%;aspect-ratio:1;left:40%;top:50%;transform:translateY(-50%);border:1px solid #acc9db30;border-radius:50%;background:radial-gradient(circle,#acc9db55 0 2px,transparent 3px)}
+.queue-box{position:absolute;top:29%;height:42%;width:14%;border:1px solid #acc9db30}
+.queue-box.left{left:0;border-left:0}
+.queue-box.right{right:0;border-right:0}
+.queue-goal{position:absolute;top:36%;width:6%;height:28%;z-index:1;background:repeating-linear-gradient(0deg,transparent 0 7px,#c5e6f526 7px 8px),repeating-linear-gradient(90deg,#081727 0 7px,#c5e6f526 7px 8px);border:2px solid #bfd5e2aa;border-radius:4px;box-shadow:0 5px 7px #0005,inset 0 0 8px #0005}
+.queue-goal.left{left:3%;transform:skewY(-8deg);--goal-color:#56eab7;animation:queue-goal-left 20s infinite}
+.queue-goal.right{right:3%;transform:skewY(8deg);--goal-color:#ff7183;animation:queue-goal-right 20s infinite}
+.queue-goal:after{content:'';position:absolute;inset:-22px;background:radial-gradient(ellipse,var(--goal-color),transparent 68%);opacity:0;animation:inherit;animation-name:queue-goal-glow-left;z-index:-1}
+.queue-goal.right:after{animation-name:queue-goal-glow-right}
+.queue-runner,.queue-ball-runner{position:absolute;inset:0;pointer-events:none;animation-duration:20s;animation-iteration-count:infinite;animation-timing-function:linear}
+.queue-piece{position:absolute;left:0;top:0;width:clamp(38px,10.3vw,55px);height:clamp(38px,10.3vw,55px);transform:translate(-50%,-62%)}
+.queue-piece:after{content:'';position:absolute;left:12%;right:12%;height:15%;bottom:-6%;border-radius:50%;background:#0005;filter:blur(2px);z-index:-1}
+.queue-piece img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 4px 2px #0004);animation:queue-stride .65s ease-in-out infinite alternate}
+.queue-red-one{transform:translate(23%,66%);animation-name:queue-red-one}
+.queue-red-two{transform:translate(46%,30%);animation-name:queue-red-two}
+.queue-green{transform:translate(68%,58%);animation-name:queue-green}
+.queue-red-two img{animation-delay:-.25s}
+.queue-green img{animation-delay:-.4s}
+.queue-ball-runner{transform:translate(29%,64%);animation-name:queue-ball;z-index:3}
+.queue-ball{position:absolute;left:0;top:0;width:clamp(15px,4.4vw,23px);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 50% 45%,#243240 0 18%,transparent 20%),radial-gradient(circle at 7% 23%,#243240 0 13%,transparent 15%),radial-gradient(circle at 88% 20%,#243240 0 15%,transparent 17%),radial-gradient(circle at 25% 90%,#243240 0 16%,transparent 18%),radial-gradient(circle at 95% 78%,#243240 0 16%,transparent 18%),#edf4f8;box-shadow:inset -3px -4px 5px #12283980,inset 2px 2px 4px #fff,0 4px 4px #0007;animation:queue-ball-spin 2s linear infinite}
+.queue-football .queue-celebrate{position:absolute;top:15%;font-size:10px;letter-spacing:3px;font-weight:800;opacity:0;transform:translateY(6px);animation:queue-celebrate-left 20s infinite;color:#9affd9;left:12%}
+.queue-football .queue-celebrate.right{left:auto;right:12%;color:#ffadb8;animation-name:queue-celebrate-right}
 @keyframes queue-stride{from{transform:translateY(0) rotate(-4deg)}to{transform:translateY(-4px) rotate(4deg)}}
+@keyframes queue-red-one{0%,5%,60%,100%{transform:translate(23%,66%)}10%{transform:translate(25%,62%)}20%{transform:translate(33%,69%)}30%{transform:translate(43%,66%)}42%,51%{transform:translate(28%,63%)}65%{transform:translate(28%,65%)}73%{transform:translate(50%,68%)}80%{transform:translate(65%,59%)}84%{transform:translate(71%,57%)}88%{transform:translate(75%,53%)}90%{transform:translate(75%,48%)}92%{transform:translate(75%,53%)}95%{transform:translate(49%,65%)}}
+@keyframes queue-red-two{0%,8%,60%,100%{transform:translate(46%,30%)}17%,21%{transform:translate(46%,29%)}26%{transform:translate(55%,32%)}35%{transform:translate(45%,36%)}44%,52%{transform:translate(32%,33%)}68%,72%{transform:translate(48%,29%)}80%{transform:translate(62%,31%)}88%,93%{transform:translate(75%,30%)}}
+@keyframes queue-green{0%,10%,60%,100%{transform:translate(68%,58%)}20%{transform:translate(63%,51%)}25%{transform:translate(58%,43%)}30%{transform:translate(48%,50%)}36%{transform:translate(32%,50%)}42%{transform:translate(23%,46%)}46%{transform:translate(20%,46%)}49%{transform:translate(20%,39%)}52%{transform:translate(20%,46%)}54%{transform:translate(20%,41%)}56%{transform:translate(20%,46%)}66%{transform:translate(59%,57%)}73%{transform:translate(51%,44%)}80%{transform:translate(65%,45%)}85%,91%{transform:translate(82%,43%)}95%{transform:translate(75%,52%)}}
+@keyframes queue-ball{0%,5%,59%,60%,100%{transform:translate(29%,64%);opacity:1}10%{transform:translate(30%,59%)}17%{transform:translate(43%,35%)}21%{transform:translate(46%,36%)}25%{transform:translate(57%,46%)}30%{transform:translate(50%,54%)}36%{transform:translate(34%,54%)}42%{transform:translate(24%,51%)}46%,50%{transform:translate(7%,50%);opacity:1}53%{transform:translate(7%,50%);opacity:0}56%{transform:translate(29%,64%);opacity:0}65%{transform:translate(34%,64%)}70%{transform:translate(47%,34%)}74%{transform:translate(50%,38%)}80%{transform:translate(69%,58%)}84%{transform:translate(75%,55%)}87%,91%{transform:translate(93%,50%);opacity:1}94%{transform:translate(93%,50%);opacity:0}97%{transform:translate(29%,64%);opacity:0}}
 @keyframes queue-ball-spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes queue-goal-left{0%,44%,55%,100%{transform:skewY(-8deg)}47%{transform:skewY(-8deg) scaleX(1.18)}50%{transform:skewY(-8deg) scaleX(.96)}}
+@keyframes queue-goal-right{0%,85%,94%,100%{transform:skewY(8deg)}88%{transform:skewY(8deg) scaleX(1.18)}91%{transform:skewY(8deg) scaleX(.96)}}
+@keyframes queue-goal-glow-left{0%,44%,57%,100%{opacity:0}48%,51%{opacity:.4}}
+@keyframes queue-goal-glow-right{0%,85%,96%,100%{opacity:0}89%,92%{opacity:.4}}
+@keyframes queue-celebrate-left{0%,45%,58%,100%{opacity:0;transform:translateY(6px)}48%,53%{opacity:1;transform:translateY(0)}}
+@keyframes queue-celebrate-right{0%,86%,98%,100%{opacity:0;transform:translateY(6px)}89%,93%{opacity:1;transform:translateY(0)}}
+.queue-football { border-radius: 23px; }
+.queue-goal { border-width: 1.5px; }
+.queue-football .queue-celebrate { font-size: 8px; }
+.search.found .queue-football *, .search.failed .queue-football *, .search.found .queue-football :after { animation-play-state: paused !important; }
 .search-copy { display: flex; flex-direction: column; gap: 8px; }
 .search-copy p { margin-top: 0; }
 .search-time { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
 
-/* The search on a phone: the site's derby turned upright. Two red crosses attack the top goal, the mint keeper
-   saves the first shot and is beaten by the rebound; then everyone walks back for the next go (12 s a loop). */
-.vderby { --u: 12s; position: relative; width: min(100%, 300px); aspect-ratio: .68; isolation: isolate; pointer-events: none; border-radius: 26px; contain: paint;
-  background: radial-gradient(ellipse at 50% 12%, #ff647418, transparent 45%), radial-gradient(ellipse at 50% 85%, #4fe3b512, transparent 50%), linear-gradient(170deg, #203b50, #0b1928 80%);
-  border: 1px solid #466176; box-shadow: inset 0 1px #c2e8ff22, inset 0 -8px 18px #0003, 0 20px 35px #0004; }
-.vd-pitch { position: absolute; inset: 9% 9%; border: 1px solid #acc9db30; border-radius: 3px; background: repeating-linear-gradient(0deg, #abcfe905 0 12.5%, transparent 12.5% 25%); }
-.vd-pitch::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid #acc9db30; }
-.vd-pitch::after { content: ""; position: absolute; width: 30%; aspect-ratio: 1; left: 35%; top: 50%; transform: translateY(-50%); border: 1px solid #acc9db30; border-radius: 50%;
-  background: radial-gradient(circle, #acc9db55 0 2px, transparent 3px); }
-.vd-box { position: absolute; left: 25%; width: 50%; height: 15%; border: 1px solid #acc9db30; }
-.vd-box.top { top: 0; border-top: 0; }
-.vd-box.bottom { bottom: 0; border-bottom: 0; }
-.vd-goal { position: absolute; left: 34%; width: 32%; height: 5%; z-index: 1; border: 1.5px solid #bfd5e2aa; border-radius: 4px; box-shadow: 0 5px 7px #0005, inset 0 0 8px #0005;
-  background: repeating-linear-gradient(0deg, transparent 0 6px, #c5e6f526 6px 7px), repeating-linear-gradient(90deg, #081727 0 6px, #c5e6f526 6px 7px); }
-.vd-goal.top { top: 3%; transform: perspective(200px) rotateX(-18deg); animation: vd-net var(--u) infinite; }
-.vd-goal.bottom { bottom: 3%; transform: perspective(200px) rotateX(18deg); }
-.vd-goal.top::after { content: ""; position: absolute; inset: -24px -16px; z-index: -1; background: radial-gradient(ellipse, #ff7183, transparent 68%); opacity: 0; animation: vd-glow var(--u) infinite; }
-@keyframes vd-net { 0%, 58%, 68%, 100% { transform: perspective(200px) rotateX(-18deg); } 61% { transform: perspective(200px) rotateX(-18deg) scaleY(1.35); } 64% { transform: perspective(200px) rotateX(-18deg) scaleY(.94); } }
-@keyframes vd-glow { 0%, 58%, 72%, 100% { opacity: 0; } 61%, 66% { opacity: .45; } }
-.vd-run, .vd-ballrun { position: absolute; inset: 0; animation: var(--u) linear infinite; }
-.vd-piece { position: absolute; left: 0; top: 0; width: clamp(38px, 12vw, 48px); aspect-ratio: 1; transform: translate(-50%, -62%); }
-.vd-piece::after { content: ""; position: absolute; left: 12%; right: 12%; height: 15%; bottom: -6%; border-radius: 50%; background: #0005; filter: blur(2px); z-index: -1; }
-.vd-piece img { display: block; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 2px #0004); animation: queue-stride .65s ease-in-out infinite alternate; }
-.vd-x1 { animation-name: vd-x1; } .vd-x2 { animation-name: vd-x2; } .vd-x2 img { animation-delay: -.25s; }
-.vd-keeper { animation-name: vd-keeper; } .vd-keeper img { animation-delay: -.4s; }
-.vd-back { animation-name: vd-back; } .vd-back img { animation-delay: -.15s; }
-.vd-ballrun { animation-name: vd-ball; z-index: 3; }
-.vd-ball { position: absolute; left: 0; top: 0; width: clamp(15px, 4.6vw, 20px); aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%);
-  background: radial-gradient(circle at 50% 45%, #243240 0 18%, transparent 20%), radial-gradient(circle at 7% 23%, #243240 0 13%, transparent 15%), radial-gradient(circle at 88% 20%, #243240 0 15%, transparent 17%),
-    radial-gradient(circle at 25% 90%, #243240 0 16%, transparent 18%), radial-gradient(circle at 95% 78%, #243240 0 16%, transparent 18%), #edf4f8;
-  box-shadow: inset -3px -4px 5px #12283980, inset 2px 2px 4px #fff, 0 4px 4px #0007; animation: queue-ball-spin 1.6s linear infinite; }
-.vd-goal-text { position: absolute; z-index: 4; left: 0; right: 0; top: calc(50% - 14px); text-align: center; font-size: 24px; font-weight: 900; letter-spacing: 4px; color: #ffadb8;
-  text-shadow: 0 0 14px #ff7183; opacity: 0; animation: vd-goaltext var(--u) infinite; }
-@keyframes vd-goaltext { 0%, 59%, 76%, 100% { opacity: 0; transform: translateY(8px) scale(.8); } 62% { opacity: 1; transform: translateY(0) scale(1.15); } 66%, 72% { opacity: 1; transform: none; } }
-.vd-save-text { position: absolute; z-index: 4; left: 0; right: 0; top: calc(50% - 12px); text-align: center; font-size: 20px; font-weight: 900; letter-spacing: 3px; color: #9affd9;
-  opacity: 0; animation: vd-savetext var(--u) infinite; }
-@keyframes vd-savetext { 0%, 39%, 50%, 100% { opacity: 0; transform: translateY(6px); } 42%, 46% { opacity: 1; transform: none; } }
-/* Positions are fractions of the scene: x across, y down; the top goal mouth is at about y 8 %. */
-@keyframes vd-x1 { 0%, 4%, 92%, 100% { transform: translate(35%, 82%); } 14% { transform: translate(42%, 64%); } 24% { transform: translate(30%, 50%); } 36% { transform: translate(36%, 40%); } 46% { transform: translate(41%, 34%); } 52%, 56% { transform: translate(44%, 31%); } 62% { transform: translate(42%, 25%); } 65% { transform: translate(42%, 21%); } 68% { transform: translate(42%, 25%); } 71% { transform: translate(42%, 21%); } 74% { transform: translate(42%, 25%); } 84% { transform: translate(38%, 60%); } }
-@keyframes vd-x2 { 0%, 6%, 92%, 100% { transform: translate(68%, 70%); } 16% { transform: translate(68%, 52%); } 22%, 26% { transform: translate(66%, 46%); } 34%, 38% { transform: translate(60%, 37%); } 46% { transform: translate(63%, 34%); } 56% { transform: translate(66%, 31%); } 66%, 74% { transform: translate(54%, 25%); } 84% { transform: translate(66%, 56%); } }
-@keyframes vd-keeper { 0%, 30%, 80%, 100% { transform: translate(50%, 12%); } 36% { transform: translate(46%, 12%); } 39% { transform: translate(39%, 11%); } 44% { transform: translate(41%, 12%); } 52% { transform: translate(46%, 12%); } 57% { transform: translate(44%, 12%); } 60% { transform: translate(37%, 12%); } 70% { transform: translate(39%, 13%); } }
-@keyframes vd-back { 0%, 8%, 90%, 100% { transform: translate(32%, 46%); } 20% { transform: translate(48%, 48%); } 30% { transform: translate(55%, 41%); } 40% { transform: translate(51%, 38%); } 50% { transform: translate(48%, 36%); } 60% { transform: translate(52%, 31%); } 74% { transform: translate(46%, 38%); } }
-@keyframes vd-ball { 0%, 4%, 97%, 100% { transform: translate(36%, 79%); opacity: 1; } 14% { transform: translate(43%, 61%); } 22% { transform: translate(65%, 44%); } 26% { transform: translate(64%, 43%); } 34% { transform: translate(59%, 35%); } 36% { transform: translate(57%, 34%); } 39% { transform: translate(40%, 10%); } 46% { transform: translate(43%, 30%); } 52%, 56% { transform: translate(45%, 29%); } 60% { transform: translate(62%, 7%); opacity: 1; } 76% { transform: translate(62%, 7%); opacity: 1; } 80% { transform: translate(62%, 7%); opacity: 0; } 92% { transform: translate(36%, 79%); opacity: 0; } }
-.search.found .vderby *, .search.failed .vderby *, .search.found .vderby :after { animation-play-state: paused !important; }
 
+
+/* Контекстно: the seat that calls a friend, and the friends sheet. */
+.lb-name small.pres-in_minigame { color: #6FA8FF; }
+.ctx-pick .board-list { padding: 4px 12px; border-radius: 18px; }
+.ctx-pick .hint-line.small { text-align: center; }
+.ctx-seat.call .ctx-av.free img[src*="invite"] { width: 28px; height: 28px; opacity: 1; }
