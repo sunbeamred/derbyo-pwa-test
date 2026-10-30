@@ -1037,3 +1037,4 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 .return-bar .rb-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; text-align: left; color: inherit; }
 .return-bar > .round-no { width: 34px; height: 34px; flex: none; }
 .chip-btn:disabled { opacity: .4; }
+.home-head .logo-img { height: 30px; max-width: 62%; object-fit: contain; width: auto; filter: drop-shadow(0 4px 12px rgba(255, 70, 85, .25)); }

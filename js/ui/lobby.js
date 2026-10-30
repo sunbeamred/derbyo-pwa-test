@@ -80,7 +80,7 @@ export function HomeView({ nav }) {
   useEffect(() => { if (ONLINE) siteStats().then((s) => setVisitors(s.visitors)).catch(() => {}); }, []);
   return html`<div class="screen-scroll"><div class="page">
     <div class="home-head">
-      <b class="logo">DERBYO</b><span class="sp"></span>
+      <img class="logo-img" src=${img("derbyo-logo")} alt="DERBYO" /><span class="sp"></span>
       <button class="sound-btn glass press" aria-label=${sound ? "Выключить звук" : "Включить звук"}
         onClick=${() => { Sound.enabled = !sound; setSound(!sound); Sound.play("turn"); }}>
         <img src=${img("sound")} alt="" class=${sound ? "" : "off"} />${sound ? null : html`<i class="slash"></i>`}</button>
