@@ -384,7 +384,7 @@ function Seats({ v, sit, compact }) {
       if (!p) return html`<button class="ctx-seat free press" onClick=${() => sit(i)} aria-label=${`Сесть на место ${i + 1}`}>
         <span class="ds-av wait">${meSeated ? null : html`<i></i>`}<b class="ctx-plus">+</b></span><small>${meSeated ? "свободно" : "сесть"}</small></button>`;
       const me = p.id === v.you;
-      return html`<button class=${cx("ctx-seat press", me && "me", p.id === v.winner && "won")} onClick=${me ? () => sit(null) : null} aria-label=${me ? "Встать на трибуну" : p.name}>
+      return html`<button class=${cx("ctx-seat press", me && "me", p.id === v.winner && "won")} onClick=${me && v.status !== "playing" ? () => sit(null) : null} aria-label=${me ? "Встать на трибуну" : p.name}>
         <span class=${cx("ds-av", me ? "green" : "red")}><b>${p.name.slice(0, 2).toUpperCase()}</b>
           ${p.id === v.host ? html`<img class="ctx-key" src=${img("key")} alt="создатель" />` : null}</span>
         <b class="ctx-seat-name">${me ? "Ты" : p.name}</b>
