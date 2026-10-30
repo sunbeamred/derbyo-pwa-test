@@ -68,7 +68,8 @@ export const social = {
   state: () => api("/api/social/state"),
   search: (q) => api(`/api/social/search?q=${encodeURIComponent(q)}`).then((r) => r.players),
   friend: (target, action) => api("/api/social/friend", { target, action }),
-  invite: (target) => api("/api/social/invite", { target }),
+  // `contexto`: a Контекстно room code to call the friend into, instead of a new tic-tac-toe match.
+  invite: (target, contexto) => api("/api/social/invite", contexto ? { target, contexto } : { target }),
   invitation: (id, action) => api("/api/social/invitation", { id, action }),
 };
 export const openRooms = () => api("/api/rooms").then((r) => r.rooms);
@@ -98,10 +99,25 @@ export const createRoom = (settings) => admit("/api/create", { name: account.nam
 export const joinRoom = (code, { password, role = "player" } = {}) => admit("/api/join", { code, name: account.name, password, role }).then(adopt);
 
 /** The quick game's search: a ticket polled every second until the server pairs it. */
+// The search ticket is kept on the phone: a search left running when the app was closed is called off before a
+// new one starts (the server allows one search per account: «Поиск уже запущен в другой вкладке»).
+const QUICK_KEY = "derbyo-quick-ticket";
+const keepTicket = (t) => { try { if (t) localStorage.setItem(QUICK_KEY, t); else localStorage.removeItem(QUICK_KEY); } catch {} };
 export const quick = {
-  start: (presets, allowBot = false, people = {}) => admit("/api/quick", { name: account.name, presets, allowBot, ...(people.coaches === false ? { coaches: false } : {}), ...(people.teammates === false ? { teammates: false } : {}) }),
-  status: (ticket) => api("/api/quick/status", { ticket }),
-  cancel: (ticket) => api("/api/quick/cancel", { ticket }).catch(() => null),
+  async start(presets, allowBot = false, people = {}) {
+    let old = null;
+    try { old = localStorage.getItem(QUICK_KEY); } catch {}
+    if (old) { await api("/api/quick/cancel", { ticket: old }).catch(() => null); keepTicket(null); }
+    const r = await admit("/api/quick", { name: account.name, presets, allowBot, ...(people.coaches === false ? { coaches: false } : {}), ...(people.teammates === false ? { teammates: false } : {}) });
+    keepTicket(r.status === "matched" ? null : r.ticket);
+    return r;
+  },
+  async status(ticket) {
+    const r = await api("/api/quick/status", { ticket });
+    if (r.status === "matched") keepTicket(null);
+    return r;
+  },
+  cancel: (ticket) => { keepTicket(null); return api("/api/quick/cancel", { ticket }).catch(() => null); },
 };
 
 /** The match stream: fetch with the room token (EventSource cannot send it), `data:` frames only.

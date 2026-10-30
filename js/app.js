@@ -330,6 +330,12 @@ function App() {
     if (ONLINE && /^#(invite=|friends$)/.test(location.hash)) { const h = location.hash; history.replaceState(history.state, "", location.pathname + location.search); route(h); }
   }, []);
 
+  // A friend's Контекстно room (an accepted call, «Войти»/«Смотреть» in the friends list): straight into it.
+  useEffect(() => {
+    const on = (e) => { setTab(1); nav.push("contexto", { join: e.detail.code, auto: true }); };
+    addEventListener("derbyo-contexto", on);
+    return () => removeEventListener("derbyo-contexto", on);
+  }, []);
   // The site's room link (derbyo.online/#join=123456, #watch=, #room=) reaches a phone here: join once, then forget it.
   useEffect(() => {
     // A friend's link to a Контекстно room (#ctx=123456): the game's friends tab with the code filled in.
@@ -379,7 +385,7 @@ function App() {
     ${install && !match ? html`<${InstallSheet} close=${() => setInstall(false)} />` : null}
     ${askPush && !install && !match ? html`<${PushAskSheet} close=${() => setAskPush(false)} />` : null}
     ${invite && !match ? html`<div class="invite-toast glass" role="alert">
-      <img src=${img("invite")} alt="" /><span><b>${invite.nickname}</b><small>зовёт сыграть</small></span>
+      <img src=${img("invite")} alt="" /><span><b>${invite.nickname}</b><small>${invite.game === "contexto" ? "зовёт в Контекстно" : "зовёт сыграть"}</small></span>
       <button class="chip-btn press accept" onClick=${() => { const i = invite; setInvite(null); takeInvite(i).catch((e) => alert(e.message)); }}>Играть</button>
       <button class="round-no press" aria-label="Скрыть" onClick=${() => setInvite(null)}><${Icon} name="x" size="14" weight="2.5" /></button></div>` : null}
     ${feedback ? html`<${FeedbackSheet} context=${feedback} close=${() => setFeedback(null)} />` : null}

@@ -141,22 +141,29 @@ export function OnlineSearch({ done }) {
     if (r?.session) { done({ session: r.session }); return; }
     done(bot ? { bot: true } : null);
   };
-  const C = 2 * Math.PI * 85;
-  const f = Math.min(1, s / 20);
-  return html`<div class="search">
+  return html`<div class=${cx("search", found && "found", err && "failed")}>
     <div class="search-head"><button class="text-btn red" onClick=${() => cancel(false)}>Отмена</button><b>Быстрая игра</b><span style="width:60px"></span></div>
     <div class="search-mid">
-      <span class="search-ring"><svg viewBox="0 0 180 180"><circle cx="90" cy="90" r="85" fill="none" stroke="#17283A" stroke-width="10" />
-        <circle class="arc slow" cx="90" cy="90" r="85" fill="none" stroke="#FF5364" stroke-width="10" stroke-linecap="round" stroke-dasharray=${C}
-          stroke-dashoffset=${C * (1 - (found ? 1 : f))} transform="rotate(-90 90 90)" /></svg>
-        <span><b>${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}</b><small>${found ? "найден" : "ищем"}</small></span></span>
-      <h2>${err ? "Не получилось" : found ? "Соперник найден" : "Ищем соперника…"}</h2>
-      <p>${err ?? (found ? `Комната ${found.code ?? ""} · ${lvl}` : QuickChoice.summary)}</p>
+      <${Derby} />
+      <div class="search-copy">
+        <h2>${err ? "Не получилось" : found ? "Соперник найден" : "Ищем соперника"}</h2>
+        <p>${err ?? (found ? `Комната ${found.code ?? ""} · ${lvl}` : html`${QuickChoice.summary} · <b class="search-time">${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}</b>`)}</p>
+      </div>
       ${s >= 5 && !found && !err ? html`<button class="navy-btn fade-in" onClick=${() => cancel(true)}><img src=${img("bot")} alt="" />Пока никого — играть с ботом</button>` : null}
     </div>
-    <p class="search-foot">Ищем среди игроков derbyo.online. Можно открыть сайт на компьютере и сыграть с собой.</p>
   </div>`;
 }
+
+/** The site's search scene: a twenty-second derby on a little pitch while the real matchmaking runs. */
+const Derby = () => html`<div class="queue-football" aria-hidden="true">
+  <div class="queue-pitch"><i class="queue-box left"></i><i class="queue-box right"></i></div>
+  <div class="queue-goal left"></div><div class="queue-goal right"></div>
+  <div class="queue-runner queue-red-one"><span class="queue-piece"><img src=${img("mark-x")} alt="" /></span></div>
+  <div class="queue-runner queue-red-two"><span class="queue-piece"><img src=${img("mark-x")} alt="" /></span></div>
+  <div class="queue-runner queue-green"><span class="queue-piece"><img src=${img("mark-o")} alt="" /></span></div>
+  <div class="queue-ball-runner"><span class="queue-ball"></span></div>
+  <span class="queue-celebrate">ГОЛ!</span><span class="queue-celebrate right">ГОЛ!</span>
+</div>`;
 
 /** One player in the duel bubble: photo, name, flag with rating and place, readiness. */
 function DuelSide({ p, red, side }) {

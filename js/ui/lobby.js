@@ -458,7 +458,7 @@ export function MatchSettingsView({ nav, settings: initial, set = () => {}, kind
   return html`<div class=${cx(start && "screen-with-bar")}><div class="screen-scroll"><div class="page">
     <${LobbyHeader} title=${PRACTICE[kind] ?? "Настройки матча"} back=${nav.back} />
     ${kind === "hotseat" ? html`<p class="hint-line small pad">Двое за одним телефоном: «Игрок 1» и «Игрок 2» ходят по очереди, телефон передаёте друг другу. Без рейтинга.</p>`
-      : kind === "bot" ? html`<p class="hint-line small pad">Тренировка с учебным ботом на настоящем поле. Без рейтинга.</p>` : null}
+ : null}
     <div class="set-head"><small class="cap">${manual ? "РУЧНАЯ НАСТРОЙКА" : "СЛОЖНОСТЬ"}</small>
       <button class="chip-btn press" onClick=${flipManual}><img src=${img("settings")} alt="" />${manual ? "Готовые уровни" : "Настроить вручную"}</button></div>
     ${manual ? html`<div class="manual glass">
