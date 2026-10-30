@@ -421,9 +421,8 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
     : m.paused ? "Пауза — часы стоят" : mine ? (m.hotseat ? `Ходит ${m.leftName}` : "Твой ход") : m.oppSelected !== null ? `${opp} думает…` : `Ходит ${opp}`;
   const color = m.review ? GOLD : m.paused ? MUTED : m.seat(m.turn) === 0 ? "#FFB3C1" : "#91FFD3";
   const sub = m.watching ? html`<small>${m.review ? `зачёт: ${m.review.name ?? ""}` : m.paused ? "игроки взяли паузу" : "ты на трибуне"}</small>`
-    : m.review ? html`<small>зачёт: ${m.review.name ?? byId[m.review.playerId].name}</small>`
-    : m.oppAwayFor !== null ? html`<small style=${`color:${m.mySeat === 1 ? "#FFB3C1" : "#91FFD3"}`}>◒ ${opp} · ещё ${m.oppAwayBudget} с</small>`
-    : m.awaySeconds < (m.awayTotal ?? 45) ? html`<small>${m.awaySeconds > 0 ? `вне игры: ещё ${m.awaySeconds} с` : "время вне игры вышло"}</small>` : null;
+    // Time away is shown only at the top (the ring by the player's status, the opponent-away bubble), not down here.
+    : m.review ? html`<small>зачёт: ${m.review.name ?? byId[m.review.playerId].name}</small>` : null;
 
   return html`<div class="tray-row">
     <div class=${cx("tray turn-tray glass", m.roundOver && !m.watching && "over")}>
