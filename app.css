@@ -932,7 +932,7 @@ button.toggle-card { width: 100%; color: inherit; text-align: left; }
 .lvl { white-space: nowrap; flex: none; }
 .pf-name > span { flex-wrap: wrap; }
 /* The hidden flag: our globe picture, sized like an emoji flag. */
-img.globe { width: 1.5em; height: 1.5em; margin: -.25em -.1em; vertical-align: middle; object-fit: contain; }
+img.globe { display: inline-block; width: 1.5em; height: 1.5em; margin: -.25em -.1em; vertical-align: middle; object-fit: contain; }
 /* A bot (or any picture that is not a photo) sits inside a small avatar instead of filling it. */
 .pf-avatar.mini img:not(.photo) { width: 74%; height: 74%; object-fit: contain; }
 /* The room block in the settings: access, stands and chat as one grouped card. */
@@ -969,7 +969,7 @@ img.globe { width: 1.5em; height: 1.5em; margin: -.25em -.1em; vertical-align: m
 .ds-none { font-size: 12px; color: var(--muted); }
 .duel-vs { align-self: center; margin-top: -22px; position: relative; width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center;
   background: radial-gradient(circle at 50% 35%, #22385A, #0B1626); box-shadow: 0 0 0 1.5px rgba(246, 212, 130, .45), 0 0 22px rgba(246, 212, 130, .22); }
-.duel-vs i { font-style: italic; font-size: 17px; font-weight: 900; letter-spacing: -.02em; background: linear-gradient(#FFF1C2, #E8B04A); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.duel-vs i { display: inline-block; padding: 0 .16em 0 .06em; font-style: italic; font-size: 17px; font-weight: 900; letter-spacing: -.02em; background: linear-gradient(#FFF1C2, #E8B04A); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .duel-vs::before, .duel-vs::after { content: ""; position: absolute; left: 50%; width: 1.5px; height: 30px; transform: translateX(-50%); background: linear-gradient(rgba(246, 212, 130, 0), rgba(246, 212, 130, .35)); }
 .duel-vs::before { bottom: 100%; }
 .duel-vs::after { top: 100%; transform: translateX(-50%) rotate(180deg); }

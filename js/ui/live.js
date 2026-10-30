@@ -23,7 +23,7 @@ export function createBody(s) {
 export function fromServer(x = {}, locked = false) {
   const presets = Array.isArray(x.roundPresets) ? [...new Set(x.roundPresets)] : [];
   const preset = presets[0] ?? (PRESETS.some((p) => p.id === x.id) ? x.id : null);
-  return newSettings({ preset, presets: preset ? (presets.length ? presets : [preset]) : [], level: x.level ?? 2, seconds: x.seconds ?? 60, tokens: x.tokens ?? 4, theme: x.theme ?? "mixed", progressive: !!x.progressive,
+  return newSettings({ preset, presets: preset ? (presets.length ? presets : [preset]) : [], level: x.level ?? 2, seconds: x.seconds ?? 60, tokens: x.tokens ?? 6, theme: x.theme ?? "mixed", progressive: !!x.progressive,
     format: x.winsRequired === 2 ? "twoWins" : x.tiebreak ? "tiebreak" : "rounds", rounds: x.rounds ?? 3,
     penaltiesOnDraw: !!x.penaltiesOnDraw, penaltiesEachRound: x.penaltiesScope === "round", lastChance: !!x.lastChance, closed: locked, password: locked ? "••••" : "", coaches: x.coaches !== false, teammates: x.teammates !== false, awayTimer: x.awayTimer !== false });
 }

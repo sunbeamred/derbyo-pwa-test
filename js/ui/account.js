@@ -34,7 +34,7 @@ export function RatingTab({ visible }) {
           <${Face} name=${e.nickname} photo=${e.avatar} small=${true} /><span class="lb-name"><b>${flagOrGlobe(e.country) ? html`<i class="flag">${flagView(flagOrGlobe(e.country))}</i> ` : null}${e.nickname}</b><small>${e.games} игр · ${e.winRate}% побед</small></span>
           <b class="lb-pts grad num" style=${tierStyle(e.rating ?? 0)}>${period === "week" ? (e.points > 0 ? "+" : "") + e.points : e.rating}</b>
         </button>`)}</div>
-        <p class="hint-line small center">${data.total} игроков в рейтинге · рейтинг после 5 игр с двумя разными соперниками</p>`}
+        <p class="hint-line small center">Рейтинг — после 5 игр с двумя разными соперниками</p>`}
   </div>
   ${open ? html`<${Panel} onClose=${() => setOpen(null)}><${PlayerCard} id=${open} /><//>` : null}
   </div>`;

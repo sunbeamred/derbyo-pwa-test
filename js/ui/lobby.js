@@ -12,9 +12,9 @@ import { ViewerList } from "./sheets.js";
 export const PRESETS = [
   { id: "easy", name: "Новичок", description: "Сборные и позиции, только звёзды", icon: "level-rookie", level: 1, tokens: 6 },
   { id: "amateur", name: "Любитель", description: "Известные игроки топ-лиг, без тренеров", icon: "level-amateur", level: 2, tokens: 6 },
-  { id: "medium", name: "Знаток", description: "Не только звёзды, бывают тренер и одноклубник", icon: "level-knower", level: 3, tokens: 5 },
-  { id: "hard", name: "Легенда", description: "Глубокие составы, тренеры и одноклубники", icon: "level-legend", level: 4, tokens: 4 },
-  { id: "encyclopedia", name: "Энциклопедия", description: "Редкие игроки, тренеры и одноклубники", icon: "expert", level: 5, tokens: 4 },
+  { id: "medium", name: "Знаток", description: "Не только звёзды, бывают тренер и одноклубник", icon: "level-knower", level: 3, tokens: 6 },
+  { id: "hard", name: "Легенда", description: "Глубокие составы, тренеры и одноклубники", icon: "level-legend", level: 4, tokens: 6 },
+  { id: "encyclopedia", name: "Энциклопедия", description: "Редкие игроки, тренеры и одноклубники", icon: "expert", level: 5, tokens: 6 },
 ];
 export const LEVELS = ["Новичок", "Любитель", "Знаток", "Легенда", "Энциклопедия"];
 export const SECONDS = [0, 15, 20, 30, 45, 60, 90, 120];
@@ -42,7 +42,6 @@ export function settingRows(s) {
   const out = [
     ["Сложность", p ? levelNames(s) : LEVELS[s.level - 1] + (s.progressive ? " и выше каждый раунд" : "")],
     ["На ход", p ? "60 секунд" : s.seconds === 0 ? "без таймера" : `${s.seconds} секунд`],
-    ["Жетонов скаута", p ? (presetsOf(s).length > 1 ? "по уровню раунда" : `${p.tokens} на раунд`) : `${s.tokens} на раунд`],
     ["Формат", p ? "до двух побед" : fmtOf(s)],
     ["Условия поля", p ? "Разные условия" : THEMES.find((t) => t[0] === s.theme)?.[1] ?? s.theme],
   ];
@@ -196,7 +195,7 @@ export function LevelCards({ chosen, set }) {
     });
     return html`<button class=${cx("pick-card press", on && "on")} disabled=${lockedEnc} onClick=${flip}>
       <img src=${img(p.icon)} alt="" /><span class="pc-t"><b>${p.name}</b>
-      <small>${enc ? (lockedEnc ? "только вместе с Легендой" : "раунды после Легенды") : `${p.description} · ${p.tokens} ${p.tokens === 4 ? "жетона" : "жетонов"}`}</small></span>
+      <small>${enc ? (lockedEnc ? "только вместе с Легендой" : "раунды после Легенды") : p.description}</small></span>
       <${PickMark} on=${on} /></button>`;
   });
 }
@@ -370,7 +369,7 @@ export function Collapsible({ title, summary: sum, open, toggle, children }) {
 
 /** «Раздевалка»: you took the free seat of someone's room; the match starts when both pressed «Я готов». */
 export function LockerRoom({ nav, app, host }) {
-  const [settings] = useState(() => newSettings({ preset: null, level: 2, progressive: true, seconds: 45, tokens: 5, closed: true, password: "1234" }));
+  const [settings] = useState(() => newSettings({ preset: null, level: 2, progressive: true, seconds: 45, tokens: 6, closed: true, password: "1234" }));
   const [chat, setChat] = useState([{ who: host, text: "Привет! Сейчас подойду", spectator: false }, { who: "alex_99", text: "Жду этот матч 🔥", spectator: true }]);
   const [draft, setDraft] = useState("");
   const [open, setOpen] = useState({ settings: true, chat: true, stands: false });
