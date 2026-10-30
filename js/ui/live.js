@@ -320,12 +320,17 @@ export function OnlineLocker({ nav, app, m }) {
   const settings = fromServer(st?.settings, st?.locked);
   const flip = (k) => setOpen({ ...open, [k]: !open[k] });
   const meReady = !!m.me?.ready;
+  // A friend's room: the caller has a minute to come in, counted down on their side of the duel.
+  const deadline = st?.inviteDeadline ?? null, waitLeft = deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : null;
+  const [, tick] = useState(0);
+  useEffect(() => { if (!deadline || host?.online) return; const t = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(t); }, [deadline, host?.online]);
+  const awayNote = deadline && !host?.online ? (waitLeft > 0 ? `зайдёт · ${waitLeft} с` : "не зашёл") : "не в сети";
   return html`<div class="screen-with-bar"><div class="screen-scroll"><div class="page">
     <${LobbyHeader} title=${`Комната ${m.code}`} back=${nav.back} />
     <div class="locker-title"><small class="cap gold">РАЗДЕВАЛКА</small><h2>${m.closed ? "Комната закрыта" : !host ? "Ждём второго игрока" : "Оба на месте. Пора играть."}</h2></div>
     <${Duel} leftRed=${m.mySeat === 0}
       left=${{ name: m.leftName, photo: m.avatarOf(0), flag: m.myFlag, rating: m.myRating, rank: m.myRank, ready: meReady, open: () => setProfile({ owner: 0 }) }}
-      right=${host ? { name: host.name, bot: !!host.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!host.ready, gone: !host.online, note: "не в сети", open: () => setProfile({ owner: 1 }) } : null} />
+      right=${host ? { name: host.name, bot: !!host.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!host.ready, gone: !host.online, note: awayNote, open: () => setProfile({ owner: 1 }) } : null} />
     <${Collapsible} title="НАСТРОЙКИ МАТЧА" summary=${summary(settings)} open=${open.settings} toggle=${() => flip("settings")}>
       <div class="set-rows">${settingRows(settings).map(([k, v]) => html`<div><span>${k}</span><b>${v}</b></div>`)}</div>
     <//>

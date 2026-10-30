@@ -6,6 +6,7 @@ import { Sound } from "../sound.js";
 import { flagOf, flagOrGlobe } from "../online.js";
 import { Panel } from "./common.js";
 import { notifications, PUSH_KINDS } from "../push.js";
+import { invites, secondsLeft } from "../invites.js";
 
 const PERIODS = [["rating", "Рейтинг"], ["week", "Неделя"], ["friends", "Друзья"]];
 
@@ -91,6 +92,9 @@ function Friends({ open }) {
   const [found, setFound] = useState(null);
   const [err, setErr] = useState(null);
   const load = () => social.state().then(setSt).catch((e) => setErr(e.message));
+  // Calls change by the second (countdowns, answers): the shared poll keeps them fresh here too.
+  const [calls, setCalls] = useState(invites.list);
+  useEffect(() => { const off = invites.on(setCalls); const t = setInterval(() => setCalls(invites.list.filter((i) => i.expires > Date.now())), 1000); return () => { off(); clearInterval(t); }; }, []);
   useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t); }, []);
   useEffect(() => {
     const v = q.trim();
@@ -100,8 +104,16 @@ function Friends({ open }) {
   }, [q]);
   const answer = async (id, action) => { try { await social.friend(id, action); vibrate(10); load(); } catch (x) { setErr(x.message); } };
   // A call to a game: the friend gets it in the app and as a push; accepting opens a closed room for the two.
-  const call = async (id) => { setErr(null); try { await social.invite(id); vibrate(10); load(); } catch (x) { setErr(x.message); } };
-  const invitation = async (i, action) => { setErr(null); try { await takeInvite(i, action); load(); } catch (x) { setErr(x.message); load(); } };
+  const call = async (id) => { setErr(null); try { await social.invite(id); vibrate(10); invites.refresh(); } catch (x) { setErr(x.message); } };
+  const invitation = async (i, action) => { setErr(null); try { await takeInvite(i, action); } catch (x) { setErr(x.message); } invites.refresh(); };
+  /** The friend's call, in the row instead of «Позвать»: invited with a countdown, then «Войти»; or theirs to accept. */
+  const callSide = (p) => {
+    const i = calls.find((x) => x.friend === p.id);
+    if (!i) return html`<button class="chip-btn press" onClick=${() => call(p.id)}><img src=${img("invite")} alt="" />Позвать</button>`;
+    if (i.status === "accepted") return html`<button class="chip-btn press go" onClick=${() => invitation(i, "go")}>Войти · ${secondsLeft(i)}</button>`;
+    if (i.direction === "incoming") return html`<button class="chip-btn press go" onClick=${() => invitation(i, "go")}>Принять · ${secondsLeft(i)}</button>`;
+    return html`<span class="chip-btn invited"><span class="spinner"></span>Приглашён · ${secondsLeft(i)}</span>`;
+  };
   const row = (p, side) => html`<div class="fr-row">
     <button class="fr-who press" onClick=${() => open(p.id, load)}><${Face} name=${p.nickname} photo=${p.avatar} small=${true} />
       <span class="lb-name"><b>${flagOrGlobe(p.country) ? html`<i class="flag">${flagView(flagOrGlobe(p.country))}</i> ` : null}${p.nickname}</b>
@@ -118,16 +130,8 @@ function Friends({ open }) {
     ${st.incoming.length ? html`<h4 class="section">ЗАЯВКИ · ${st.incoming.length}</h4><div class="board-list glass">${st.incoming.map((p) => row(p, html`<span class="fr-btns">
       <button class="round-ok press" aria-label="Принять" onClick=${() => answer(p.id, "accept")}><${Icon} name="check" size="16" weight="2.5" /></button>
       <button class="round-no press" aria-label="Отклонить" onClick=${() => answer(p.id, "decline")}><${Icon} name="x" size="14" weight="2.5" /></button></span>`))}</div>` : null}
-    ${st.invites?.length ? html`<h4 class="section">ПРИГЛАШЕНИЯ В ИГРУ</h4><div class="board-list glass">${st.invites.map((i) => html`<div class="fr-row invite-row">
-      <span class="lb-name"><b>${i.nickname}</b><small>${i.status === "accepted" ? "комната готова" : i.direction === "incoming" ? "зовёт сыграть" : "ждём ответа"}</small></span>
-      ${i.status === "accepted" ? html`<button class="chip-btn press" onClick=${() => invitation(i, "go")}>Зайти</button>`
-        : i.direction === "incoming" ? html`<span class="fr-btns">
-          <button class="round-ok press" aria-label="Принять" onClick=${() => invitation(i, "go")}><${Icon} name="check" size="16" weight="2.5" /></button>
-          <button class="round-no press" aria-label="Отклонить" onClick=${() => invitation(i, "decline")}><${Icon} name="x" size="14" weight="2.5" /></button></span>`
-        : html`<button class="text-btn muted" onClick=${() => invitation(i, "cancel")}>Отменить</button>`}</div>`)}</div>` : null}
     <h4 class="section">ДРУЗЬЯ · ${st.friends.length}</h4>
-    ${st.friends.length ? html`<div class="board-list glass">${st.friends.map((p) => row(p, st.invites?.some((i) => i.nickname === p.nickname) ? html`<${Icon} name="right" size="14" style="opacity:.4" />`
-      : html`<button class="chip-btn press" onClick=${() => call(p.id)}><img src=${img("invite")} alt="" />Позвать</button>`))}</div>`
+    ${st.friends.length ? html`<div class="board-list glass">${st.friends.map((p) => row(p, callSide(p)))}</div>`
       : html`<p class="hint-line small pad">Пока никого. Найди друга по нику или открой профиль соперника после матча.</p>`}
     ${st.outgoing.length ? html`<h4 class="section">ОТПРАВЛЕННЫЕ</h4><div class="board-list glass">${st.outgoing.map((p) => row(p,
       html`<button class="text-btn muted" onClick=${() => answer(p.id, "cancel")}>Отменить</button>`))}</div>` : null}
