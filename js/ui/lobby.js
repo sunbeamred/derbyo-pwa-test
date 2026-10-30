@@ -96,11 +96,35 @@ export function HomeView({ nav }) {
         <button class="primary-btn" onClick=${() => nav.push("lobby")}><img src=${img("bolt")} alt="" />Играть</button>
       </div>
     </div>
-    <div class="soon">
+    ${TEST_BUILD ? html`<div class="mini-games">${MINI_GAMES.map((g) => html`<button class="mini-game glass press" onClick=${() => nav.push("minigame", { game: g })}>
+        <img src=${img("game-" + g.id)} alt="" /><span><b>${g.title}</b><small>${g.text}</small></span><${Icon} name="right" size="14" class="chev" /></button>`)}</div>`
+    : html`<div class="soon">
       <span class="soon-ic"><${Icon} name="sparkles" size="18" weight="1.8" /></span>
       <span><b>Новые игры скоро</b><small>Футбольные викторины и дуэли — в одном приложении</small></span>
-    </div>
+    </div>`}
   </div></div>`;
+}
+
+// The test build (app-sandbox, or this computer) shows the mini-games from the games sandbox; the main app keeps «скоро».
+const TEST_BUILD = /app-sandbox|localhost|127\.0\.0\.1/.test(location.host);
+const GAMES_ORIGIN = "https://site-games.up.railway.app";
+const MINI_GAMES = [
+  { id: "daily", path: "/daily", title: "Футболист дня", text: "Угадай одного футболиста за день" },
+  { id: "contexto", path: "/contexto", title: "Контекстно", text: "Кто ближе к загаданному — с друзьями" },
+  { id: "links", path: "/links", title: "Что их связывает", text: "Пять футболистов, одна связь" },
+];
+
+/** A mini-game from the games sandbox, full screen under the app's own back bar. */
+export function MiniGameView({ nav, game }) {
+  const src = `${GAMES_ORIGIN}${game.path}?app=1`;
+  return html`<div class="screen mini-game-screen">
+    <div class="lobby-header">
+      <button class="back-btn glass press" onClick=${nav.back} aria-label="Назад"><${Icon} name="left" size="16" weight="2.8" /></button>
+      <h1>${game.title}</h1>
+      <a class="mg-open press" href=${src.replace("?app=1", "")} target="_blank" rel="noopener" aria-label="Открыть в браузере"><${Icon} name="share" size="16" /></a>
+    </div>
+    <iframe class="mg-frame" src=${src} title=${game.title} allow="clipboard-write"></iframe>
+  </div>`;
 }
 
 const ROOMS = [

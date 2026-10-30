@@ -1008,3 +1008,16 @@ img.globe { width: 1.5em; height: 1.5em; margin: -.25em -.1em; vertical-align: m
 .rb-go.up { background: linear-gradient(#3FE0A0, #22B57C); color: #062016; }
 .photo-sheet { display: flex; flex-direction: column; gap: 10px; }
 .photo-sheet .danger { color: #FF9AA8; }
+
+/* Mini-games (test build): a list on the home screen and a game full screen under the back bar. */
+.mini-games { display: flex; flex-direction: column; gap: 8px; }
+.mini-game { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; text-align: left; color: var(--ink); }
+.mini-game img { width: 40px; height: 40px; flex: none; }
+.mini-game span { flex: 1; min-width: 0; }
+.mini-game b { display: block; font-size: 15px; font-weight: 600; }
+.mini-game small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.mini-game .chev { opacity: .4; }
+.mini-game-screen { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px; padding: calc(var(--safe-t) + 10px) 12px calc(var(--tb-space) + 8px); }
+.mini-game-screen .lobby-header h1 { flex: 1; }
+.mg-open { flex: none; width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; color: var(--soft); background: rgba(255, 255, 255, .06); }
+.mg-frame { flex: 1; width: 100%; border: 0; border-radius: 18px; background: #0B1726; }
