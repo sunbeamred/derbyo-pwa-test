@@ -1211,23 +1211,23 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 .match-intro { position: fixed; inset: 0; z-index: 70; overflow: hidden; background: #03050A; animation: intro-shake .42s .5s both; }
 .match-intro.open { background: transparent; transition: background .2s; }
 @keyframes intro-shake { 0%, 100% { transform: none; } 20% { transform: translate(-7px, 4px); } 40% { transform: translate(6px, -5px); } 60% { transform: translate(-4px, 2px); } 80% { transform: translate(2px, -1px); } }
-.intro-bg { position: absolute; inset: -30px; background: url(img/stadium.jpg) center / cover; filter: blur(14px) saturate(1.3) brightness(.35); transition: opacity .3s; }
+.intro-bg { position: absolute; inset: 0; background: radial-gradient(120% 60% at 50% 50%, #141B2B, #03050A 70%); transition: opacity .3s; }
 .match-intro.open .intro-bg { opacity: 0; }
-.intro-door { position: absolute; top: 0; bottom: 0; width: 58%; overflow: hidden; animation: door-in .5s cubic-bezier(.7, 0, .9, .6) both;
-  transition: transform .65s cubic-bezier(.5, 0, .2, 1); }
+.intro-door { position: absolute; top: 0; bottom: 0; width: 58%; overflow: hidden; animation: door-in .5s cubic-bezier(.7, 0, .9, .6) backwards;
+  transition: transform .65s cubic-bezier(.5, 0, .2, 1); will-change: transform; backface-visibility: hidden; }
 .intro-door.l { left: 0; --from: -110%; clip-path: polygon(0 0, 100% 0, 72.4% 100%, 0 100%); }
 .intro-door.r { right: 0; --from: 110%; clip-path: polygon(27.6% 0, 100% 0, 100% 100%, 0 100%); }
-.intro-door.red { --team: #FF2E3F; --team-glow: rgba(255, 46, 63, .55); }
-.intro-door.green { --team: #18E08C; --team-glow: rgba(24, 224, 140, .5); }
-.intro-door.l { background: linear-gradient(86deg, rgba(10, 13, 22, .97) 0%, rgba(14, 17, 28, .95) 48%, color-mix(in srgb, var(--team) 30%, #0A0D16) 72%, var(--team) 100%); }
-.intro-door.r { background: linear-gradient(266deg, rgba(10, 13, 22, .97) 0%, rgba(14, 17, 28, .95) 48%, color-mix(in srgb, var(--team) 30%, #0A0D16) 72%, var(--team) 100%); }
+.intro-door.red { --team: #FF2E3F; --team-mid: #4F1520; --team-glow: rgba(255, 46, 63, .55); }
+.intro-door.green { --team: #18E08C; --team-mid: #0E4A36; --team-glow: rgba(24, 224, 140, .5); }
+.intro-door.l { background: linear-gradient(86deg, rgba(10, 13, 22, .97) 0%, rgba(14, 17, 28, .95) 48%, var(--team-mid) 72%, var(--team) 100%); }
+.intro-door.r { background: linear-gradient(266deg, rgba(10, 13, 22, .97) 0%, rgba(14, 17, 28, .95) 48%, var(--team-mid) 72%, var(--team) 100%); }
 /* Brushed-steel grain and a slow light sweep over each door. */
 .intro-door::before { content: ""; position: absolute; inset: 0; pointer-events: none;
   background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 3px), radial-gradient(90% 60% at 50% 50%, transparent 40%, rgba(0, 0, 0, .55)); }
-.intro-door::after { content: ""; position: absolute; top: -20%; bottom: -20%; width: 40%; left: -60%; pointer-events: none; transform: skewX(-16deg);
+.intro-door::after { content: ""; position: absolute; top: -20%; bottom: -20%; width: 40%; left: 0; pointer-events: none; transform: translateX(-150%) skewX(-16deg);
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .09), transparent); animation: door-sweep 2.4s .9s ease-in-out infinite; }
 .intro-door.r::after { animation-delay: 1.5s; }
-@keyframes door-sweep { from { left: -60%; } 60%, to { left: 130%; } }
+@keyframes door-sweep { from { transform: translateX(-150%) skewX(-16deg); } 60%, to { transform: translateX(330%) skewX(-16deg); } }
 @keyframes door-in { from { transform: translateX(var(--from)); } }
 .match-intro.open .intro-door.l { transform: translate(-115%, -6%); }
 .match-intro.open .intro-door.r { transform: translate(115%, 6%); }
@@ -1241,7 +1241,7 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
   box-shadow: 0 0 0 3px var(--team), 0 0 34px var(--team-glow), 0 14px 30px rgba(0, 0, 0, .6); font-size: 34px; font-weight: 900; color: #fff; }
 .intro-face .photo { width: 100%; height: 100%; border-radius: 22px; object-fit: cover; }
 .intro-face .bot { width: 62%; }
-.intro-flag { position: absolute; right: -10px; bottom: -10px; font-style: normal; font-size: 30px; line-height: 1; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .7)); }
+.intro-flag { position: absolute; right: -10px; bottom: -10px; font-style: normal; font-size: 30px; line-height: 1; text-shadow: 0 3px 4px rgba(0, 0, 0, .7); }
 .intro-flag img.globe { width: 30px; height: 30px; margin: 0; }
 .intro-name { max-width: 100%; margin-top: 6px; font-size: 22px; line-height: 1.05; font-weight: 900; font-style: italic; letter-spacing: .01em; text-transform: uppercase;
   color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 0 18px var(--team-glow), 0 3px 0 rgba(0, 0, 0, .5); }
@@ -1249,18 +1249,20 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 .intro-door.l .intro-rating { align-items: flex-start; }
 .intro-door.r .intro-rating { align-items: flex-end; }
 .intro-rating b { font-family: var(--rounded); font-size: 40px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums;
-  background: linear-gradient(#FFF6D6, #F2B544); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 12px rgba(255, 190, 70, .45)); }
+  color: #FFD978; text-shadow: 0 0 14px rgba(255, 190, 70, .5), 0 2px 0 rgba(0, 0, 0, .45); }
 .intro-rating small { white-space: nowrap; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .7); }
 .intro-rating em { font-style: normal; color: #FFE7A3; }
 /* The seam: a white-hot diagonal that flares on impact. */
 .intro-seam { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; overflow: visible; animation: seam-in .5s .48s ease-out both; transition: opacity .2s; }
-.intro-seam line { stroke: #FFF3D1; stroke-width: 3; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px #FFD27A) drop-shadow(0 0 18px rgba(255, 190, 80, .8)); }
-@keyframes seam-in { from { opacity: 0; } 30% { opacity: 1; stroke-width: 10; } }
+.intro-seam line { stroke: #FFF3D1; stroke-width: 3; vector-effect: non-scaling-stroke; }
+.intro-seam line.glow { stroke: rgba(255, 200, 100, .35); stroke-width: 14; }
+@keyframes seam-in { from { opacity: 0; } }
 .intro-flash { position: absolute; inset: 0; z-index: 3; pointer-events: none; background: radial-gradient(circle at 50% 50%, #fff, rgba(255, 240, 210, .6) 40%, transparent 75%);
   opacity: 0; animation: intro-flash .55s .47s ease-out both; }
 @keyframes intro-flash { 0% { opacity: 0; } 12% { opacity: .95; } 100% { opacity: 0; } }
 .match-intro.open .intro-seam, .match-intro.open .intro-center { opacity: 0; transition: opacity .2s; }
-.intro-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+.intro-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; display: flex; flex-direction: column; align-items: center; pointer-events: none; animation: center-in .01s .5s both; }
+@keyframes center-in { from { visibility: hidden; } }
 .intro-level { position: absolute; bottom: calc(100% + 18px); white-space: nowrap; padding: 6px 12px; border-radius: 4px; transform: skewX(-12deg);
   background: rgba(5, 8, 15, .8); box-shadow: inset 0 0 0 1px rgba(255, 231, 163, .45); font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: #FFE7A3;
   animation: level-in .4s 1s ease-out both; }
@@ -1272,16 +1274,16 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 @keyframes vs-slam { from { opacity: 0; transform: scale(4) rotate(-25deg); } to { opacity: 1; transform: scale(.92); } }
 @keyframes vs-settle { to { transform: scale(1); } }
 @keyframes vs-shock { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(2.6); border-width: 1px; } }
-.intro-vs i { display: inline-block; padding: 0 .14em 0 .04em; font-style: italic; font-size: 44px; font-weight: 900; letter-spacing: -.04em; background: linear-gradient(#FFFBEA 20%, #F2B544 75%, #B4741C);
-  -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .6)); }
+.intro-vs i { display: inline-block; padding: 0 .14em 0 .04em; font-style: italic; font-size: 44px; font-weight: 900; letter-spacing: -.04em;
+  color: #FFD978; text-shadow: 0 0 18px rgba(255, 200, 100, .55), 0 3px 0 rgba(0, 0, 0, .6); }
 .intro-vs svg { position: absolute; inset: -8px; width: calc(100% + 16px); height: calc(100% + 16px); transform: rotate(-90deg); }
 .intro-vs circle { fill: none; stroke-width: 3; }
 .intro-vs .track { stroke: rgba(255, 255, 255, .1); }
-.intro-vs .drain { stroke: #FFE7A3; stroke-linecap: round; stroke-dasharray: 100; filter: drop-shadow(0 0 4px rgba(255, 210, 120, .9)); animation: ring-drain 4.4s .6s linear both; }
+.intro-vs .drain { stroke: #FFE7A3; stroke-linecap: round; stroke-dasharray: 100; animation: ring-drain 4.4s .6s linear both; }
 @keyframes ring-drain { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 100; } }
 .intro-count { position: absolute; top: calc(100% + 14px); font-family: var(--rounded); font-size: 76px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; color: #fff;
   text-shadow: 0 0 24px rgba(255, 255, 255, .55), 0 4px 0 rgba(0, 0, 0, .5); animation: count-pop .95s ease-out both; }
-@keyframes count-pop { 0% { opacity: 0; transform: scale(2.4); filter: blur(4px); } 20% { opacity: 1; transform: scale(1); filter: none; } 80% { opacity: 1; } 100% { opacity: .15; transform: scale(.8); } }
+@keyframes count-pop { 0% { opacity: 0; transform: scale(2.4); } 20% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: .15; transform: scale(.8); } }
 @media (prefers-reduced-motion: reduce) {
   .match-intro, .intro-door, .intro-door::after, .intro-player, .intro-vs, .intro-vs::after, .intro-count, .intro-seam, .intro-flash, .intro-level { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
 }

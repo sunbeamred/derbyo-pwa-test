@@ -166,7 +166,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${confirmSurrender ? html`<${Alert} title=${`Сдаться в раунде ${m.round}?`} message=${`Раунд выиграет ${m.opponent.name}. Счёт станет ${m.score[0]}:${m.score[1] + 1}.`}
       onClose=${() => setConfirmSurrender(false)}
       actions=${[{ title: "Играть дальше", run: () => setConfirmSurrender(false) }, { title: "Сдаться", kind: "destructive", run: () => { setConfirmSurrender(false); m.surrender(); store.changed(); } }]} />` : null}
-    ${entering ? html`<${Entrance} />` : null}
+    ${entering && !intro ? html`<${Entrance} />` : null}
     ${intro ? html`<${MatchIntro} m=${m} key=${intro} done=${() => setIntro(null)} />` : null}
   </div>`;
 }
@@ -532,7 +532,7 @@ function MatchIntro({ m, done }) {
   return html`<div class=${cx("match-intro", open && "open")} onClick=${skip} role="dialog" aria-label=${`${m.leftName} против ${m.opponent.name}, старт через ${n}`}>
     <div class="intro-bg"></div>
     ${side(0)}${side(1)}
-    <svg class="intro-seam" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="58" y1="-2" x2="42" y2="102" /></svg>
+    <svg class="intro-seam" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line class="glow" x1="58" y1="-2" x2="42" y2="102" /><line x1="58" y1="-2" x2="42" y2="102" /></svg>
     <div class="intro-flash"></div>
     <div class="intro-center">
       ${level ? html`<small class="intro-level">${level}</small>` : null}
