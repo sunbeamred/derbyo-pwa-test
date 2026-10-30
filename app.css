@@ -1223,18 +1223,15 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 .intro-door.green { --team: #18E08C; --team-mid: #0E4A36; --team-glow: rgba(24, 224, 140, .5); }
 .intro-door.l { background: linear-gradient(86deg, rgba(10, 13, 22, .97) 0%, rgba(14, 17, 28, .95) 48%, var(--team-mid) 72%, var(--team) 100%); }
 .intro-door.r { background: linear-gradient(266deg, rgba(10, 13, 22, .97) 0%, rgba(14, 17, 28, .95) 48%, var(--team-mid) 72%, var(--team) 100%); }
-/* Brushed-steel grain and a slow light sweep over each door. */
-.intro-door::before { content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 3px), radial-gradient(90% 60% at 50% 50%, transparent 40%, rgba(0, 0, 0, .55)); }
-.intro-door::after { content: ""; position: absolute; top: -20%; bottom: -20%; width: 40%; left: 0; pointer-events: none; transform: translateX(-150%) skewX(-16deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .09), transparent); animation: door-sweep 2.4s .9s ease-in-out infinite; }
-.intro-door.r::after { animation-delay: 1.5s; }
-@keyframes door-sweep { from { transform: translateX(-150%) skewX(-16deg); } 60%, to { transform: translateX(330%) skewX(-16deg); } }
+/* A soft vignette on each door (fine stripes or a moving shine flicker on phone screens). */
+.intro-door::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(90% 60% at 50% 50%, transparent 40%, rgba(0, 0, 0, .55)); }
 @keyframes door-in { from { transform: translateX(var(--from)); } }
 .match-intro.open .intro-door.l { transform: translate(-115%, -6%); }
 .match-intro.open .intro-door.r { transform: translate(115%, 6%); }
 /* The fighters: one high on the left, one low on the right, like a fight card. */
-.intro-player { position: absolute; z-index: 1; display: flex; flex-direction: column; gap: 8px; max-width: 76%; }
+.intro-player { position: absolute; z-index: 1; display: flex; flex-direction: column; gap: 8px; max-width: 80%; }
+.intro-name.m { font-size: 18px; }
+.intro-name.s { font-size: 17px; }
 .intro-door.l .intro-player { left: 22px; top: max(64px, calc(env(safe-area-inset-top) + 40px)); align-items: flex-start; text-align: left; animation: fighter-l .5s .55s cubic-bezier(.2, .9, .3, 1.1) both; }
 .intro-door.r .intro-player { right: 22px; bottom: max(64px, calc(env(safe-area-inset-bottom) + 40px)); align-items: flex-end; text-align: right; animation: fighter-r .5s .65s cubic-bezier(.2, .9, .3, 1.1) both; }
 @keyframes fighter-l { from { opacity: 0; transform: translateX(-60px) skewX(-8deg); } }
@@ -1245,8 +1242,8 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 .intro-face .bot { width: 62%; }
 .intro-flag { position: absolute; right: -10px; bottom: -10px; font-style: normal; font-size: 30px; line-height: 1; text-shadow: 0 3px 4px rgba(0, 0, 0, .7); }
 .intro-flag img.globe { width: 30px; height: 30px; margin: 0; }
-.intro-name { max-width: 100%; margin-top: 6px; font-size: 22px; line-height: 1.05; font-weight: 900; font-style: italic; letter-spacing: .01em; text-transform: uppercase;
-  color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 0 18px var(--team-glow), 0 3px 0 rgba(0, 0, 0, .5); }
+.intro-name { max-width: 100%; margin-top: 6px; padding: 0 .14em; font-size: 22px; line-height: 1.05; font-weight: 900; font-style: italic; letter-spacing: .01em; text-transform: uppercase;
+  color: #fff; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; text-shadow: 0 0 18px var(--team-glow), 0 3px 0 rgba(0, 0, 0, .5); }
 .intro-rating { display: flex; flex-direction: column; gap: 0; }
 .intro-door.l .intro-rating { align-items: flex-start; }
 .intro-door.r .intro-rating { align-items: flex-end; }
@@ -1256,8 +1253,7 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 .intro-rating em { font-style: normal; color: #FFE7A3; }
 /* The seam: a white-hot diagonal that flares on impact. */
 .intro-seam { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; overflow: visible; animation: seam-in .5s .48s ease-out both; transition: opacity .2s; }
-.intro-seam line { stroke: #FFF3D1; stroke-width: 3; vector-effect: non-scaling-stroke; }
-.intro-seam line.glow { stroke: rgba(255, 200, 100, .35); stroke-width: 14; }
+.intro-seam line { stroke: #FFF3D1; stroke-width: 4; stroke-linecap: square; vector-effect: non-scaling-stroke; }
 @keyframes seam-in { from { opacity: 0; } }
 .intro-flash { position: absolute; inset: 0; z-index: 3; pointer-events: none; background: radial-gradient(circle at 50% 50%, #fff, rgba(255, 240, 210, .6) 40%, transparent 75%);
   opacity: 0; animation: intro-flash .55s .47s ease-out both; }
@@ -1287,7 +1283,7 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
   text-shadow: 0 0 24px rgba(255, 255, 255, .55), 0 4px 0 rgba(0, 0, 0, .5); animation: count-pop .95s ease-out both; }
 @keyframes count-pop { 0% { opacity: 0; transform: scale(2.4); } 20% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: .15; transform: scale(.8); } }
 @media (prefers-reduced-motion: reduce) {
-  .match-intro, .intro-door, .intro-door::after, .intro-player, .intro-vs, .intro-vs::after, .intro-count, .intro-seam, .intro-flash, .intro-level { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
+  .match-intro, .intro-door, .intro-player, .intro-vs, .intro-vs::after, .intro-count, .intro-seam, .intro-flash, .intro-level { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
 }
 
 /* Контекстно · с друзьями: the tic-tac-toe lobby and room, with eight seats in place of the duel. */

@@ -522,8 +522,8 @@ function MatchIntro({ m, done }) {
       <div class="intro-player">
         <span class="intro-face">${bot ? html`<img class="bot" src=${img("bot")} alt="" />` : photo ? html`<img class="photo" src=${photo} alt="" />` : html`<b>${name.slice(0, 2).toUpperCase()}</b>`}
           ${flag ? html`<i class="intro-flag">${flagView(flag)}</i>` : null}</span>
-        <b class="intro-name">${name}</b>
-        ${rating != null ? html`<span class="intro-rating"><b>${rating}</b><small>ЭЛО${rank ? html` · <em>#${rank}</em> место` : ""}</small></span>`
+        <b class=${cx("intro-name", name.length > 13 ? "s" : name.length > 9 && "m")}>${name}</b>
+        ${rating != null ? html`<span class="intro-rating"><b>${rating}</b>${rank ? html`<small><em>#${rank}</em> место</small>` : null}</span>`
           : html`<span class="intro-rating"><small>${bot ? "учебный бот" : "без рейтинга"}</small></span>`}
       </div>
     </div>`;
@@ -532,7 +532,7 @@ function MatchIntro({ m, done }) {
   return html`<div class=${cx("match-intro", open && "open")} onClick=${skip} role="dialog" aria-label=${`${m.leftName} против ${m.opponent.name}, старт через ${n}`}>
     <div class="intro-bg"></div>
     ${side(0)}${side(1)}
-    <svg class="intro-seam" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line class="glow" x1="58" y1="-2" x2="42" y2="102" /><line x1="58" y1="-2" x2="42" y2="102" /></svg>
+    <svg class="intro-seam" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="58" y1="0" x2="42" y2="100" /></svg>
     <div class="intro-flash"></div>
     <div class="intro-center">
       ${level ? html`<small class="intro-level">${level}</small>` : null}
