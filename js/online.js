@@ -244,6 +244,7 @@ export class OnlineMatch {
     const mineUntil = me?.awayDeadline ?? me?.returnDeadline;
     this.leftAwayFor = this.watching && me && (mineUntil || !me.online || me.status === "hidden") && !this.roundOver ? Math.max(0, Math.round((now - (me.since ?? now)) / 1000)) : null;
     this.leftAwayKind = this.leftAwayFor === null ? null : why(me);
+    this.leftAwayBudget = mineUntil ? Math.max(0, Math.ceil((mineUntil - now) / 1000)) : Math.round((me?.hideLeftMs ?? this.awayTotal * 1000) / 1000);
     // Rings scale to the server's own numbers: the level's time-away budget (45…25 s), the deadline's whole span, the room's turn time.
     this.awayTotal = g.hideBudget ? Math.round(g.hideBudget / 1000) : 45;
     this.oppAwayTotal = until && them?.since ? Math.max(1, Math.round((until - them.since) / 1000)) : this.awayTotal;

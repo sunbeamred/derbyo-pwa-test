@@ -1,5 +1,5 @@
 // The match screen (port of MatchView.swift and Motion.swift).
-import { html, useState, useEffect, useRef, cx, img, Icon, Panel, useSheet, Alert, Toast, RatingTag, breakable, vibrate } from "./common.js";
+import { html, useState, useEffect, useRef, cx, img, Icon, Panel, useSheet, Alert, Toast, RatingTag, breakable, vibrate, flagView } from "./common.js";
 import { byId } from "../data.js";
 import { photoOf } from "../net.js";
 import { store } from "../model.js";
@@ -171,13 +171,13 @@ function Scoreboard({ m, openProfile, openStands }) {
     </div>
     <div class="score-row">
       <${PlayerSide} name=${m.leftName} photo=${m.avatarOf?.(0)} mark=${m.mark(0)} red=${m.mySeat === 0} tokens=${m.tokens} active=${live(0)} mine=${true}
-        reaction=${m.myReaction} away=${m.leftAwayFor ?? null} awayKind=${m.leftAwayKind} left=${!!m.meLeft} onClick=${() => openProfile(0)} />
+        flag=${m.myFlag} reaction=${m.myReaction} away=${m.leftAwayFor ?? null} left=${!!m.meLeft} onClick=${() => openProfile(0)} />
       <div class="scorebug" aria-label=${`Счёт ${m.score[0]}:${m.score[1]}, раунд ${m.round}`}>
         <div class="digits"><b class="digit">${m.score[0]}</b><span class="colon">:</span><b class="digit">${m.score[1]}</b></div>
         <${RoundSteps} results=${m.roundResults.map((r) => (r === null ? null : m.seat(r)))} current=${m.round} live=${!m.roundOver} />
       </div>
       <${PlayerSide} name=${m.opponent.name} photo=${m.avatarOf?.(1)} mark=${m.mark(1)} red=${m.mySeat === 1} tokens=${m.oppTokens} active=${live(1)} mine=${false}
-        isBot=${m.opponent.isBot} reaction=${m.oppReaction} away=${m.oppAwayFor} awayKind=${m.oppAwayKind} left=${m.oppLeft} missed=${m.oppMissed} onClick=${() => openProfile(1)} />
+        isBot=${m.opponent.isBot} flag=${m.opponent.flag} reaction=${m.oppReaction} away=${m.oppAwayFor} left=${m.oppLeft} onClick=${() => openProfile(1)} />
     </div>
     <${LevelRow} m=${m} live=${live} />
     ${m.viewers.length ? html`<button class="eye-badge press" onClick=${openStands} aria-label=${`Трибуна: ${m.viewers.length}`}>
@@ -196,25 +196,37 @@ function LevelRow({ m, live }) {
   const chain = m.levelChain;
   const cur = chain?.cur ?? m.levelPath.find((s) => s.current)?.name ?? "";
   return html`<div class="level-row">
-    <span class="lr-side"><span class=${cx("fade", live(0) && "on")}><${SideTag} m=${m} owner=${0} /></span>
+    <span class="lr-side"><${SideTag} m=${m} owner=${0} />
       ${chain ? html`<span class="lv-side lv-prev">${chain.prev ? html`<span>${chain.prev}<i>•</i></span>` : null}</span>` : null}</span>
     <span class="level-path"><span class="cur" style=${lvColor(cur)}>${cur}</span></span>
     <span class="lr-side end">${chain ? html`<span class="lv-side lv-next">${chain.next ? html`<span><i>•</i>${chain.next}</span>` : null}</span>` : null}
-      <span class=${cx("fade", live(1) && "on")}><${SideTag} m=${m} owner=${1} /></span></span>
+      <${SideTag} m=${m} owner=${1} /></span>
   </div>`;
 }
 
-/** Under a player in the header: the rating with flag and place, when the player has one. */
+/** Under a player in the header: what the player is doing (in the game, minimised, offline…) and the ring of
+ * their time-away budget, emptying as it is spent. */
 function SideTag({ m, owner }) {
-  const mine = owner === 0;
-  const rating = mine ? m.myRating : m.opponent.rating;
-  if (rating != null) return mine ? html`<${RatingTag} flag=${m.myFlag} rating=${rating} rank=${m.myRank} />`
-    : html`<${RatingTag} flag=${m.opponent.flag} rating=${rating} rank=${m.opponent.rank} flagAfter=${true} />`;
-  return null;
+  const mine = owner === 0, isBot = !mine && m.opponent.isBot;
+  if (isBot) return html`<span class="side-st"><span class="st in">● в игре</span></span>`;
+  const away = mine ? m.leftAwayFor ?? null : m.oppAwayFor;
+  const kind = mine ? m.leftAwayKind : m.oppAwayKind;
+  const left = mine ? !!m.meLeft : m.oppLeft;
+  const missed = mine ? 0 : m.oppMissed || 0;
+  const status = left ? html`<span class="st left">○ покинул матч</span>`
+    : missed > 0 && away === null ? html`<span class=${cx("st", missed >= 2 ? "idle" : "missed")}>${missed >= 2 ? "⏱ не отвечает" : "⏱ пропустил ход"}</span>`
+    : away !== null ? html`<span class="st away">◒ ${kind === "offline" ? "нет связи" : kind === "blurred" ? "в другом окне" : "свернул"}</span>`
+    : html`<span class="st in">● в игре</span>`;
+  // The budget: the server's seconds left (counting down while away), out of the level's total.
+  const total = (mine || !m.oppAwayTotal ? m.awayTotal : m.oppAwayTotal) ?? 45;
+  const left_s = mine ? (m.watching ? m.leftAwayBudget : m.awaySeconds) : m.oppAwayBudget;
+  const ring = m.online && m.g?.hideBudget && left_s != null ? html`<span class=${cx("away-ring", away !== null && "on", left_s <= 5 && "low")}>
+    <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" pathLength="100" style=${`stroke-dashoffset:${100 - Math.max(0, Math.min(100, (left_s / total) * 100))}`} /></svg><b>${left_s}</b></span>` : null;
+  return html`<span class=${cx("side-st", mine && "mine")}>${mine ? html`${status}${ring}` : html`${ring}${status}`}</span>`;
 }
 
 /** A player as on the site's player card, folded into half the header width. */
-function PlayerSide({ name, photo, mark, red, tokens, active, mine, isBot, reaction, away = null, awayKind = "hidden", left = false, missed = 0, onClick }) {
+function PlayerSide({ name, photo, flag, mark, red, tokens, active, mine, isBot, reaction, away = null, left = false, onClick }) {
   const [echo, setEcho] = useState(null);
   useEffect(() => {
     if (!reaction) return;
@@ -222,23 +234,17 @@ function PlayerSide({ name, photo, mark, red, tokens, active, mine, isBot, react
     const t = setTimeout(() => setEcho(null), 1000);
     return () => clearTimeout(t);
   }, [reaction?.n]);
-  const status = left ? html`<span class="st left">○ покинул матч</span>`
-    : missed > 0 && away === null ? html`<span class=${cx("st", missed >= 2 ? "idle" : "missed")}>${missed >= 2 ? "⏱ не отвечает" : "⏱ пропустил ход"}</span>`
-    : away !== null ? html`<span class="st away">◒ ${awayKind === "offline" ? "нет связи" : awayKind === "blurred" ? "в другом окне" : "свернул"} ${away} с</span>`
-    : html`<span class="st in">● в игре</span>`;
-  // The coins sit on the photo's corner, so the status line has the side's whole width for bigger words.
-  const tokenCount = html`<span class="tokens ptokens"><img src=${img("coin")} alt="" /><b>${tokens}</b></span>`;
   const gone = away !== null || left;
+  const flagMark = flag ? html`<i class="pflag">${flagView(flag)}</i>` : null;
   const avatar = html`<span class=${cx("pavatar", red ? "red" : "green", active && "active", !mine && gone && "gone", mine ? "mine" : "theirs")}>
     <span class="face">${isBot ? html`<img class="bot" src=${img("bot")} alt="" />` : photo ? html`<img class="photo" src=${photo} alt="" />` : name.slice(0, 2).toUpperCase()}</span>
     <img class="pmark" src=${img(mark)} alt="" />
-    ${tokenCount}
   </span>`;
   return html`<button class=${cx("pside", mine ? "mine" : "theirs", active && "active")} onClick=${onClick} aria-label=${`${name}, открыть профиль`}>
     ${mine ? avatar : null}
     <span class="pinfo">
-      <span class=${cx("pname", !/[\s_.-]/.test(name) && "one")} style=${`--n:${name.length}`}>${breakable(name)}</span>
-      <span class="pstatus">${status}</span>
+      <span class="pname-row">${mine ? flagMark : null}<span class=${cx("pname", !/[\s_.-]/.test(name) && "one")} style=${`--n:${name.length}`}>${breakable(name)}</span>${!mine ? flagMark : null}</span>
+      <span class="tokens ptokens"><img src=${img("coin")} alt="" /><b>${tokens}</b></span>
     </span>
     ${!mine ? avatar : null}
     ${echo ? html`<span class="reaction-echo" key=${echo.n}><i></i><i></i><b>${echo.e}</b></span>` : null}
