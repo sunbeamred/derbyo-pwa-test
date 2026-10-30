@@ -8,6 +8,7 @@ import { MatchScreen } from "./ui/match.js";
 import { HomeView, GameLobby, QuickPickView, SearchView, RoomView, JoinCodeView, LockerRoom, MatchSettingsView } from "./ui/lobby.js";
 import { InstallSheet, installState, InstallRow, isStandalone, isIOS, PushAskSheet } from "./install.js";
 import { notifications } from "./push.js";
+import { updates } from "./update.js";
 import { TabBar } from "./ui/tabbar.js";
 import { ONLINE, account, createRoom, joinRoom, savedSession, social } from "./net.js";
 import { OnlineMatch } from "./online.js";
@@ -52,6 +53,7 @@ function App() {
   const [install, setInstall] = useState(() => installState.shouldOffer());
   const [askPush, setAskPush] = useState(false);
   const [invite, setInvite] = useState(null);
+  const [update, setUpdate] = useState(false);
   const live = useRef({});
   const stackRef = useRef();
   /** Our own history.back() for a cover: its popstate must not also pop a screen. */
@@ -241,6 +243,23 @@ function App() {
     })}
   </div>`;
 
+  // New versions (js/update.js): a quiet fix reloads at launch or while the app is in the background, never in a match;
+  // an announced one waits for the player's tap on the bubble.
+  useEffect(() => {
+    const started = Date.now();
+    const inMatch = () => !!(live.current.match || live.current.minimized);
+    const run = async () => {
+      const st = await updates.check();
+      if (st === "silent" && !inMatch() && (document.hidden || Date.now() - started < 6000)) { updates.apply(); return; }
+      setUpdate(st === "announce");
+    };
+    run();
+    const t = setInterval(run, 5 * 60000);
+    const vis = () => { if (!document.hidden) run(); else if (updates.state() === "silent" && !inMatch()) updates.apply(); };
+    document.addEventListener("visibilitychange", vis);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", vis); };
+  }, []);
+
   // Notifications (sandbox server): asked once in the installed app of a signed-in player; the phone's subscription follows the account.
   const sandbox = ONLINE && account.profile?.registered && "showFlag" in account.profile;
   useEffect(() => {
@@ -289,7 +308,7 @@ function App() {
     history.replaceState(history.state, "", location.pathname + location.search);
     app.joinRoom(m[2], { role: m[1] === "watch" ? "spectator" : "player" });
   }, []);
-  return html`<div class=${cx("app", minimized && !match && "has-return")}>
+  return html`<div class=${cx("app", (minimized || update) && !match && "has-return", minimized && update && !match && "has-two")}>
     <main class="tab-body">
       <section class="tab-pane" hidden=${tab !== 0}>${ONLINE ? html`<${RatingTab} visible=${tab === 0} />` : html`<${Placeholder} title="Рейтинг" text="Неделя и всё время, все и друзья, твоё место снизу. Следующий шаг прототипа." />`}</section>
       <section class="tab-pane" hidden=${tab !== 1}>${playTab}</section>
@@ -298,6 +317,10 @@ function App() {
     </main>
     <div class="edge-fade" aria-hidden="true"></div>
     ${minimized && !match && (!minimized.online || minimized.state) ? html`<${ReturnBar} m=${minimized} go=${ret} />` : null}
+    ${update && !match ? html`<button class=${cx("return-bar update-bar glass-bar press", minimized && "stacked")} onClick=${() => updates.apply()}>
+      <span class="rb-dot up"><img src=${img("sparkles")} alt="" /></span>
+      <span class="rb-t"><small>Вышло обновление</small><b>${updates.text}</b></span>
+      <span class="rb-go up">Обновить</span></button>` : null}
     <${TabBar} tab=${tab} pick=${pickTab} items=${[["Рейтинг", "trophy"], ["Играть", "bolt"], ["Профиль", "profile-v1", ONLINE ? (account.ready && !account.registered ? "!" : null) : 1]]} />
     ${searching ? html`<${Cover} class="search-cover" leaving=${searchLeaving}>${ONLINE ? html`<${OnlineSearch} done=${(r) => {
       coverClosed();

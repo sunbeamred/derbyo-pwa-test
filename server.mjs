@@ -61,7 +61,7 @@ http.createServer(async (req, res) => {
   const body = await readFile(file);
   const type = TYPES[extname(file)] || "application/octet-stream";
   // Code and the shell revalidate on every load; art can stay a day.
-  const cache = /\.(html|js|css|webmanifest)$/.test(file) ? "no-cache" : "public, max-age=86400";
+  const cache = /\.(html|js|css|webmanifest|json)$/.test(file) ? "no-cache" : "public, max-age=86400";
   res.writeHead(200, { "content-type": type, "cache-control": cache, "x-content-type-options": "nosniff" });
   res.end(req.method === "HEAD" ? undefined : body);
 }).listen(PORT, () => console.log(`derbyo app test on :${PORT} → ${UPSTREAM.origin}`));

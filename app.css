@@ -999,3 +999,10 @@ img.globe { width: 1.5em; height: 1.5em; margin: -.25em -.1em; vertical-align: m
 @keyframes toast-in { from { transform: translateY(-120%); opacity: 0; } }
 .notify-row.off { opacity: .5; }
 .notify-row.off .tc-ic img { filter: grayscale(1); }
+
+/* The «Обновить» bubble: the return bar's shape; over it when a match is minimised too. */
+.update-bar.stacked { bottom: calc(var(--tb-bottom) + var(--tb-h) + 78px); }
+.app.has-two { --tb-space: calc(var(--tb-bottom) + var(--tb-h) + 150px); }
+.rb-dot.up { background: rgba(255, 214, 92, .18); }
+.rb-dot.up img { width: 22px; height: 22px; }
+.rb-go.up { background: linear-gradient(#3FE0A0, #22B57C); color: #062016; }
