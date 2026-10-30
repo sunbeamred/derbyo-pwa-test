@@ -5,8 +5,8 @@ import { BUILD } from "../update.js";
 export { html, useState, useEffect, useRef };
 
 export const cx = (...a) => a.filter(Boolean).join(" ");
-// Pictures are cached for a day: the build number makes a replaced picture load at once.
-export const img = (n) => `img/${n}.png?v=${BUILD}`;
+// Pictures are WebP (a quarter of the PNG weight) and cached for a day: the build number makes a replaced picture load at once.
+export const img = (n) => `img/${n}.webp?v=${BUILD}`;
 /** A flag emoji as text; the hidden flag («🌐») as our globe picture. */
 export const flagView = (f) => (f === "🌐" ? html`<img class="globe" src=${img("globe-flag")} alt="флаг скрыт" />` : f);
 

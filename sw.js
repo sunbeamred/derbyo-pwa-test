@@ -1,9 +1,12 @@
-// Offline cache: the app shell and its art; a new version replaces the old cache.
-const VERSION = "derbyo-pwa-102";
+// Offline cache: the app shell and its art; a new version replaces the old cache. The API is never cached.
+const VERSION = "derbyo-pwa-103";
 
+const SHELL = ["./", "index.html", "app.css", "manifest.webmanifest", "vendor/preact-htm.js",
+  "js/app.js", "js/data.js", "js/model.js", "js/sound.js", "js/install.js", "js/push.js", "js/update.js", "js/invites.js", "js/ui/common.js", "js/ui/match.js", "js/ui/sheets.js", "js/ui/profile.js", "js/ui/lobby.js", "js/ui/tabbar.js", "js/touch.js", "js/net.js", "js/online.js", "js/ui/live.js", "js/ui/daily.js", "js/ui/games.js", "js/ui/account.js"];
+
+// One missing file must not stop the whole install: each is cached on its own.
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(["./", "index.html", "app.css", "manifest.webmanifest", "vendor/preact-htm.js",
-    "js/app.js", "js/data.js", "js/model.js", "js/sound.js", "js/install.js", "js/push.js", "js/update.js", "js/invites.js", "js/ui/common.js", "js/ui/match.js", "js/ui/sheets.js", "js/ui/profile.js", "js/ui/lobby.js", "js/ui/tabbar.js", "js/touch.js", "js/net.js", "js/online.js", "js/ui/live.js", "js/ui/daily.js", "js/ui/games.js", "js/ui/account.js"])));
+  e.waitUntil(caches.open(VERSION).then((c) => Promise.allSettled(SHELL.map((u) => c.add(u)))));
   self.skipWaiting();
 });
 
@@ -11,13 +14,26 @@ self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
-// Network first, so a new deploy shows at once; the cache answers when offline.
+const keep = (req, r) => { if (r.ok && r.type === "basic") { const copy = r.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); } return r; };
+// The network, but no longer than `ms`: on a slow line the cached copy answers and the fresh one still lands in the cache.
+function fresh(req, ms) {
+  const net = fetch(req).then((r) => keep(req, r));
+  const late = new Promise((ok) => setTimeout(ok, ms)).then(() => caches.match(req, { ignoreSearch: true })).then((r) => r || net);
+  return Promise.race([net.catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r ?? caches.match("index.html"))), late]);
+}
+
 self.addEventListener("fetch", (e) => {
-  if (e.request.method !== "GET" || new URL(e.request.url).origin !== location.origin) return;
-  e.respondWith(fetch(e.request).then((r) => {
-    if (r.ok) { const copy = r.clone(); caches.open(VERSION).then((c) => c.put(e.request, copy)); }
-    return r;
-  }).catch(() => caches.match(e.request, { ignoreSearch: true }).then((r) => r ?? caches.match("index.html"))));
+  const url = new URL(e.request.url);
+  if (e.request.method !== "GET" || url.origin !== location.origin) return;
+  // The server's answers and the match stream are never cached; version.json always asks the server.
+  if (url.pathname.startsWith("/api/") || url.pathname.endsWith("/version.json")) return;
+  // Pictures carry the build in their address: a cached one is the right one.
+  if (/\.(png|jpe?g|webp|svg|wav|woff2?)$/.test(url.pathname)) {
+    e.respondWith(caches.match(e.request).then((r) => r ?? fetch(e.request).then((x) => keep(e.request, x))));
+    return;
+  }
+  // The shell and code: fresh from the network when it answers within 2.5 s, else the cached copy.
+  e.respondWith(fresh(e.request, 2500));
 });
 
 // Pushes from the server: a friend's call or request. A tap opens the app there (an open app is told and brought forward).

@@ -112,6 +112,7 @@ export function OnlineSearch({ done }) {
   const [err, setErr] = useState(null);
   const ticket = useRef(null);
   const over = useRef(false);
+  const misses = useRef(0);
   const lvl = PRESETS.find((p) => QuickChoice.presets.includes(p.id))?.name ?? "Любитель";
   useEffect(() => {
     let timer = null;
@@ -123,8 +124,12 @@ export function OnlineSearch({ done }) {
         if (r.status === "matched" && r.session) return finish(r.session);
         if (r.status === "restart") { const n = await quick.start(QuickChoice.presets, false, QuickChoice.people); ticket.current = n.ticket; }
         setS(Math.round(r.elapsed ?? 0));
-      } catch (e) { setErr(e.message); return; }
-      timer = setTimeout(poll, 1000);
+        misses.current = 0;
+      } catch (e) {
+        // A bad line loses a poll now and then: the search goes on, and only gives up after several misses in a row.
+        if (++misses.current >= 6) { setErr(e.message); return; }
+      }
+      timer = setTimeout(poll, misses.current ? 2000 : 1000);
     };
     quick.start(QuickChoice.presets, false, QuickChoice.people).then((r) => {
       ticket.current = r.ticket;

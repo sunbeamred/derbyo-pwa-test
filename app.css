@@ -1568,3 +1568,21 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .tt-card.self { outline: 2px solid #fff; outline-offset: -2px; }
 .tt-gold-wrap .tt-card { z-index: 1; }
 
+/* A thin strip at the top while there is no network or the match stream is being restored. */
+.net-strip { position: fixed; z-index: 95; left: 50%; top: calc(var(--safe-t) + 6px); translate: -50% 0; display: flex; align-items: center; gap: 8px;
+  padding: 7px 14px; border-radius: 99px; background: rgba(60, 22, 30, .94); border: 1px solid rgba(255, 110, 130, .45); color: #FFD9DF;
+  font-size: 13px; font-weight: 700; white-space: nowrap; box-shadow: 0 8px 24px rgba(0, 0, 0, .4); animation: fade-in .25s ease-out; }
+.net-strip .spinner { width: 14px; height: 14px; border-color: rgba(255, 217, 223, .3); border-top-color: #FFD9DF; }
+
+/* The opponent is away: a pill under the header with the time left on their away budget, red in the last ten seconds. */
+.away-bubble { position: absolute; z-index: 7; left: 50%; top: calc(var(--safe-t) + 118px); translate: -50% 0; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 32px);
+  padding: 8px 14px; border-radius: 99px; background: rgba(14, 26, 42, .95); border: 1px solid rgba(246, 212, 130, .45); box-shadow: 0 10px 26px rgba(0, 0, 0, .45);
+  font-size: 13px; color: var(--soft); white-space: nowrap; animation: fade-in .25s ease-out; }
+.away-bubble span:not(.ab-dot) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.away-bubble b { color: var(--ink); }
+.ab-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); animation: breathe 1.4s ease-in-out infinite; }
+.ab-time { flex: none; font-family: var(--rounded); font-size: 15px; color: var(--gold) !important; }
+.away-bubble.low { border-color: rgba(255, 83, 100, .6); }
+.away-bubble.low .ab-dot { background: #FF5364; }
+.away-bubble.low .ab-time { color: #FF8A96 !important; }
+
