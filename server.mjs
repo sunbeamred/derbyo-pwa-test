@@ -14,6 +14,7 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
   ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml", ".json": "application/json", ".webmanifest": "application/manifest+json", ".wav": "audio/wav" };
 // The proxy's own source never goes out as a page.
 const PRIVATE = new Set(["/server.mjs", "/package.json"]);
+const GAME = /^\/(daily|contexto|links|games)$/;
 
 async function local(path) {
   if (PRIVATE.has(path)) return null;
@@ -43,6 +44,9 @@ function proxy(req, res) {
     delete out["strict-transport-security"];
     // The site's policy names its own origin; this host serves other files and must not inherit it.
     delete out["content-security-policy"];
+    // The site's mini-game pages open inside the app (an iframe of this same host); their files must come from the site too.
+    if (out["x-frame-options"]) out["x-frame-options"] = "SAMEORIGIN";
+    delete out["referrer-policy"];
     if (String(out["content-type"] || "").startsWith("text/event-stream")) { out["x-accel-buffering"] = "no"; out["cache-control"] = "no-cache"; }
     res.writeHead(r.statusCode, out);
     if (res.flushHeaders) res.flushHeaders();
@@ -56,7 +60,9 @@ function proxy(req, res) {
 http.createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url, "http://x").pathname);
   if (path === "/healthz") { res.writeHead(200); res.end("ok"); return; }
-  const file = (req.method === "GET" || req.method === "HEAD") && !path.startsWith("/api/") ? await local(path) : null;
+  // A mini-game page (and every file it loads, which names it as the referrer) is the site's, not the app's: its /app.css is not ours.
+  const fromGame = GAME.test(path) || GAME.test(new URL(req.headers.referer || "/", "http://x").pathname);
+  const file = (req.method === "GET" || req.method === "HEAD") && !path.startsWith("/api/") && !fromGame ? await local(path) : null;
   if (!file) return proxy(req, res);
   const body = await readFile(file);
   const type = TYPES[extname(file)] || "application/octet-stream";

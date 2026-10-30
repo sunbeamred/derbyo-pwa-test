@@ -105,23 +105,23 @@ export function HomeView({ nav }) {
   </div></div>`;
 }
 
-// The test build (app-sandbox, or this computer) shows the mini-games from the games sandbox; the main app keeps «скоро».
+// The test build (app-sandbox, or this computer) shows the mini-games, copied from the games lab into the sandbox server;
+// the main app keeps «скоро».
 const TEST_BUILD = /app-sandbox|localhost|127\.0\.0\.1/.test(location.host);
-const GAMES_ORIGIN = "https://site-games.up.railway.app";
 const MINI_GAMES = [
   { id: "daily", path: "/daily", title: "Футболист дня", text: "Угадай одного футболиста за день" },
   { id: "contexto", path: "/contexto", title: "Контекстно", text: "Кто ближе к загаданному — с друзьями" },
   { id: "links", path: "/links", title: "Что их связывает", text: "Пять футболистов, одна связь" },
 ];
 
-/** A mini-game from the games sandbox, full screen under the app's own back bar. */
+/** A mini-game full screen under the app's own back bar. */
 export function MiniGameView({ nav, game }) {
-  const src = `${GAMES_ORIGIN}${game.path}?app=1`;
+  // The site's own game page, on this host (the app's server passes it through), without its header and footer.
+  const src = `${game.path}?app=1`;
   return html`<div class="screen mini-game-screen">
     <div class="lobby-header">
       <button class="back-btn glass press" onClick=${nav.back} aria-label="Назад"><${Icon} name="left" size="16" weight="2.8" /></button>
       <h1>${game.title}</h1>
-      <a class="mg-open press" href=${src.replace("?app=1", "")} target="_blank" rel="noopener" aria-label="Открыть в браузере"><${Icon} name="share" size="16" /></a>
     </div>
     <iframe class="mg-frame" src=${src} title=${game.title} allow="clipboard-write"></iframe>
   </div>`;
