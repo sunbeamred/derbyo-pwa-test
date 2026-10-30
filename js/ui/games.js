@@ -261,6 +261,19 @@ export function ContextoView({ nav, join }) {
 const lkApi = caller("links");
 const lkMem = store("derbyo.links.v1", (m) => { m.daily ||= {}; m.endless = Object.assign({ level: 1, round: null, stats: {} }, m.endless); });
 
+const TROPHY_IMG = { "t:UCL": "trophy-ucl", "t:WC": "trophy-wc", "t:COPA": "trophy-copa", "t:EURO": "trophy" };
+/** A link's picture: the club badge, the flag, the coach's photo or the trophy. */
+function LinkPic({ l, size }) {
+  const box = `width:${size}px;height:${size}px`;
+  if (l.type === "coach") return html`<span class="lk-pic coach" style=${box}><${Face} p=${{ name: l.label, photo: l.photo }} size=${size} /></span>`;
+  if (l.type === "nation") return html`<span class="lk-pic flag" style=${`${box};font-size:${Math.round(size * .62)}px`}>${l.flag ?? "🏳️"}</span>`;
+  const src = l.type === "trophy" ? img(TROPHY_IMG[l.id] ?? "trophy") : l.logo;
+  return html`<span class="lk-pic" style=${box}>${src ? html`<img src=${src} alt="" referrerpolicy="no-referrer" />` : html`<b>${(l.label ?? "?").slice(0, 2)}</b>`}</span>`;
+}
+/** What the five share, in one line. */
+const linkLine = (l) => l.type === "club" ? `Все пятеро играли в ${l.label}` : l.type === "nation" ? `Все пятеро играли за сборную · ${l.label}`
+  : l.type === "coach" ? `Всех пятерых тренировал ${l.label}` : l.type === "trophy" ? `Все пятеро выигрывали ${l.label}` : l.kind ?? "";
+
 export function LinksView({ nav }) {
   const memo = lkMem.get();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -350,10 +363,12 @@ export function LinksView({ nav }) {
       ${!st && !err ? html`<p class="hint-line pad">Загружаем…</p>` : null}
       ${view && !view.guesses.length && !view.over ? html`<${IntroCard} icon="game-links" title="Одна связь на пятерых" sub="Клуб, сборная, тренер или трофей"
         steps=${["Сначала виден один футболист", "Каждая ошибка открывает следующего", "Чем раньше угадаешь, тем больше очков"]} />` : null}
-      ${view?.over ? html`<div class=${cx("dg-result glass", view.won ? "won" : "lost")}>
-          <small>${view.won ? `Угадано · очков ${score(view)} из ${total}` : view.gaveUp ? "Ответ" : "Не угадано. Связь —"}</small>
-          <div class="lk-answer"><b>${view.answer.label}</b><em>${view.answer.kind}</em></div>
-          ${view.also ? html`<small>Твой ответ «${view.also.label}» тоже подходит</small>` : null}
+      ${view?.over ? html`<div class=${cx("dg-final lk-final glass", view.won ? "won" : "lost")}>
+          <small class="dgf-cap">${view.won ? `Угадано · очков ${score(view)} из ${total}` : view.gaveUp ? "Ответ" : "Не угадано · связь"}</small>
+          <${LinkPic} l=${view.answer} size=${88} />
+          <b class="dgf-name">${view.answer.label}</b>
+          <span class="dgf-meta">${linkLine(view.answer)}</span>
+          ${view.also ? html`<small class="lk-also">Твой ответ ${view.also.label} тоже подходит</small>` : null}
         </div>` : null}
       ${view?.guesses.length ? html`<h4 class="section">ТВОИ ОТВЕТЫ</h4><div class="lk-guesses">${view.guesses.map((g) => html`<span class=${cx("lk-guess", g.ok ? "ok" : "no")}>${g.ok ? "✓" : "✕"} ${g.label}<small>${g.kind}</small></span>`)}</div>` : null}
       <div class="dg-list">
@@ -379,7 +394,7 @@ export function LinksView({ nav }) {
     <//>
     ${asking && view && !view.over ? html`<${Panel} onClose=${() => setAsking(false)} class="answer-panel">${(leave) => html`<${PickSheet}
         head=${html`<b>Ответ ${wrong + 1} из ${total}</b><small class="lk-sub">клуб, сборная, тренер или трофей</small>`} placeholder="Клуб, сборная, тренер…" empty="Начни вводить: Реал, Бразилия, Гвардиола, Лига чемпионов…"
-        find=${(q) => lkApi("search", { query: q }).then((r) => r.links ?? [])} row=${(x, u) => html`<span class="lk-kind">${x.kind}</span><span class="hit-name"><b>${x.label}</b><small>${u ? "уже было" : x.kind}</small></span>`}
+        find=${(q) => lkApi("search", { query: q }).then((r) => r.links ?? [])} row=${(x, u) => html`<${LinkPic} l=${x} size=${40} /><span class="hit-name"><b>${x.label}</b><small>${u ? "уже было" : x.kind}</small></span>`}
         used=${used} choose=${choose} dismiss=${leave} />`}<//>` : null}
     ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}><div class="menu">
         <h2>Что их связывает</h2>
