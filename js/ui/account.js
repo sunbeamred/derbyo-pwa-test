@@ -30,8 +30,9 @@ export function RatingTab({ visible }) {
       : !list ? html`<p class="hint-line pad">Загружаем…</p>`
       : data.requiresLogin ? html`<p class="placeholder">Друзья видны после входа в аккаунт — вкладка «Профиль».</p>`
       : !list.length ? html`<p class="placeholder">${period === "week" ? "На этой неделе ещё никто не набрал очков." : "Пока пусто."}</p>`
-      : html`<${TopThree} top=${list.slice(0, 3)} period=${period} open=${setOpen} />
-        ${list.length > 3 ? html`<div class="board-list glass">${list.slice(3).map((e) => html`<${BoardRow} e=${e} period=${period} open=${setOpen} />`)}</div>` : null}
+      // The metal top three only on the main table; the week and friends stay a plain list.
+      : html`${period === "rating" ? html`<${TopThree} top=${list.slice(0, 3)} period=${period} open=${setOpen} />` : null}
+        ${(period === "rating" ? list.slice(3) : list).length ? html`<div class="board-list glass">${(period === "rating" ? list.slice(3) : list).map((e) => html`<${BoardRow} e=${e} period=${period} open=${setOpen} />`)}</div>` : null}
         <p class="hint-line small center">Рейтинг — после 5 игр с двумя разными соперниками</p>`}
   </div>
   ${open ? html`<${Panel} onClose=${() => setOpen(null)}><${PlayerCard} id=${open} /><//>` : null}
