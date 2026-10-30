@@ -30,9 +30,9 @@ export function RatingTab({ visible }) {
       : !list ? html`<p class="hint-line pad">Загружаем…</p>`
       : data.requiresLogin ? html`<p class="placeholder">Друзья видны после входа в аккаунт — вкладка «Профиль».</p>`
       : !list.length ? html`<p class="placeholder">${period === "week" ? "На этой неделе ещё никто не набрал очков." : "Пока пусто."}</p>`
-      : html`<${MySpot} list=${list} period=${period} />
-        <${Podium} top=${list.slice(0, 3)} period=${period} open=${setOpen} />
-        ${list.length > 3 ? html`<div class="board-list glass">${list.slice(3).map((e) => html`<${BoardRow} e=${e} period=${period} open=${setOpen} />`)}</div>` : null}
+      : html`<${Podium} top=${list.slice(0, 3)} period=${period} open=${setOpen} />
+        ${list.length > 3 ? html`<div class="lb-list">${list.slice(3).map((e) => html`<${BoardRow} e=${e} period=${period} open=${setOpen} />`)}</div>` : null}
+        <${MySpot} list=${list} period=${period} open=${setOpen} />
         <p class="hint-line small center">Рейтинг — после 5 игр с двумя разными соперниками</p>`}
   </div>
   ${open ? html`<${Panel} onClose=${() => setOpen(null)}><${PlayerCard} id=${open} /><//>` : null}
@@ -41,49 +41,64 @@ export function RatingTab({ visible }) {
 
 const score = (e, period) => (period === "week" ? e.points : e.rating) ?? 0;
 const scoreText = (e, period) => (period === "week" ? (e.points > 0 ? "+" : "") + e.points : e.rating);
+const initials2 = (n) => (n || "?").slice(0, 2).toUpperCase();
 
-/** One row of the table from fourth place down: place, face, name, the league chip and the score. */
+/** One row from fourth place down: a big place number, the face in its league colour, name with league, score. */
 function BoardRow({ e, period, open }) {
   const t = rankTier(e.rating ?? 0);
-  return html`<button class=${cx("lb-row press", e.self && "self")} onClick=${() => open(e.id)}>
-    <b class=${cx("lb-place num", placeStyle(e.rank) && "grad")} style=${placeStyle(e.rank)}>${e.rank}</b>
-    <${Face} name=${e.nickname} photo=${e.avatar} small=${true} /><span class="lb-name"><b>${flagOrGlobe(e.country) ? html`<i class="flag">${flagView(flagOrGlobe(e.country))}</i> ` : null}${e.nickname}</b>
-      <small><em class="lb-tier" style=${`--a:${t.a};--b:${t.b}`}>${t.name}</em>${e.games} игр · ${e.winRate}%</small></span>
-    <b class="lb-pts grad num" style=${tierStyle(e.rating ?? 0)}>${scoreText(e, period)}</b>
+  return html`<button class=${cx("lb-row2 press", e.self && "self")} onClick=${() => open(e.id)} style=${`--a:${t.a};--b:${t.b}`}>
+    <b class="lb2-place num">${e.rank}</b>
+    <span class="lb2-face">${e.avatar ? html`<img src=${e.avatar} alt="" />` : html`<i>${initials2(e.nickname)}</i>`}</span>
+    <span class="lb2-name"><b>${e.nickname}${flagOrGlobe(e.country) ? html` <i class="flag">${flagView(flagOrGlobe(e.country))}</i>` : null}</b>
+      <small><em>${t.name}</em> · ${e.games} игр · ${e.winRate}%</small></span>
+    <b class="lb2-pts num">${scoreText(e, period)}</b>
   </button>`;
 }
 
-/** The first three on a podium: the winner raised in the middle under a crown, second and third either side. */
+/** Laurel branches around the champion: leaves along two arcs (inline SVG, gold). */
+const Laurel = () => html`<svg class="laurel" viewBox="0 0 200 120" aria-hidden="true">
+  ${[0, 1].map((side) => html`<g transform=${side ? "translate(200 0) scale(-1 1)" : ""}>
+    <path d="M70 112 C 34 100 18 70 24 30" fill="none" stroke="url(#lg)" stroke-width="2.4" stroke-linecap="round" />
+    ${[0, 1, 2, 3, 4, 5].map((i) => { const t = i / 5, x = 70 - 52 * t + 6 * Math.sin(t * 3), y = 110 - 80 * t; return html`
+      <ellipse cx=${x - 7} cy=${y - 2} rx="9" ry="4" fill="url(#lg)" transform=${`rotate(${-35 - 30 * t} ${x - 7} ${y - 2})`} />
+      <ellipse cx=${x + 5} cy=${y - 6} rx="8" ry="3.6" fill="url(#lg)" opacity=".85" transform=${`rotate(${-80 - 20 * t} ${x + 5} ${y - 6})`} />`; })}
+  </g>`)}
+  <defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE9A3" /><stop offset="1" stop-color="#C98A1B" /></linearGradient></defs>
+</svg>`;
+
+/** The first three: the champion raised in the middle inside a laurel under a «1» crest, second and third either side
+ * with their place on the ring; a warm floodlight glow behind them. */
 function Podium({ top, period, open }) {
-  const spot = (e, place) => e ? html`<button class=${cx("pod", `p${place}`, e.self && "self")} onClick=${() => open(e.id)}>
-    ${place === 1 ? html`<span class="pod-crown" aria-hidden="true">👑</span>` : null}
-    <span class="pod-face">${e.avatar ? html`<img src=${e.avatar} alt="" />` : html`<b>${(e.nickname || "?").slice(0, 2).toUpperCase()}</b>`}</span>
-    <span class="pod-name">${e.nickname}</span>
-    <b class="pod-score num">${scoreText(e, period)}</b>
-    <span class="pod-step"><i>${place}</i></span>
-  </button>` : html`<span class=${cx("pod", `p${place}`, "empty")}><span class="pod-step"><i>${place}</i></span></span>`;
-  return html`<div class="podium">${spot(top[1], 2)}${spot(top[0], 1)}${spot(top[2], 3)}</div>`;
+  const spot = (e, place) => e ? html`<button class=${cx("pod2", `p${place}`, e.self && "self")} onClick=${() => open(e.id)}>
+    <span class="pod2-ring">
+      ${place === 1 ? html`<${Laurel} /><span class="pod2-crest">👑</span>` : null}
+      <span class="pod2-face">${e.avatar ? html`<img src=${e.avatar} alt="" />` : html`<i>${initials2(e.nickname)}</i>`}</span>
+      <b class="pod2-badge num">${place}</b>
+    </span>
+    <span class="pod2-name">${e.nickname}</span>
+    <b class="pod2-score num">${scoreText(e, period)}</b>
+  </button>` : html`<span class=${cx("pod2", `p${place}`, "empty")}></span>`;
+  return html`<div class="podium2">${spot(top[1], 2)}${spot(top[0], 1)}${spot(top[2], 3)}</div>`;
 }
 
-/** You: your place and how far the next one up is — the reason to play one more. */
-function MySpot({ list, period }) {
-  const i = list.findIndex((e) => e.self);
+/** Your place, pinned above the tab bar: who you are, where you stand and how far the next place up is. */
+function MySpot({ list, period, open }) {
+  const i = list.findIndex((e) => e.self), p = account.profile;
+  let me = list[i], line = null;
   if (i < 0) {
-    const p = account.profile, last = list[list.length - 1];
+    const last = list[list.length - 1];
     if (period !== "rating" || !p?.registered || p.rating == null || !last) return null;
-    const gap = Math.max(1, (last.rating ?? 0) - p.rating + 1);
-    return html`<div class="my-spot glass"><span class="ms-place">${p.rank ? `#${p.rank}` : "—"}</span>
-      <span class="ms-text"><b>Ты · ${p.rating}</b><small>До топ-${list.length} — ${gap} очк.</small></span></div>`;
-  }
-  const me = list[i], up = list[i - 1];
-  if (!up) return html`<div class="my-spot glass top"><span class="ms-place">#1</span><span class="ms-text"><b>Ты на вершине</b><small>Держи место — за тобой охотятся</small></span></div>`;
-  const gap = Math.max(1, score(up, period) - score(me, period) + 1);
-  // The bar: from the player below you (or 50 points back) to the next place up.
-  const floor = list[i + 1] ? score(list[i + 1], period) : score(me, period) - 50;
-  const fill = Math.min(96, Math.max(6, ((score(me, period) - floor) / Math.max(1, score(up, period) - floor)) * 100));
-  return html`<div class="my-spot glass"><span class="ms-place">#${me.rank}</span>
-    <span class="ms-text"><b>До #${up.rank} — ${gap} очк.</b><small>Обгони ${up.nickname}</small>
-      <span class="ms-bar"><i style=${`width:${fill}%`}></i></span></span></div>`;
+    me = { id: p.id, rank: p.rank, nickname: account.name, avatar: p.avatar, rating: p.rating, points: p.rating };
+    line = `До топ-${list.length} — ${Math.max(1, (last.rating ?? 0) - p.rating + 1)} очк.`;
+  } else if (i === 0) line = "Ты на вершине — держи место";
+  else line = `До #${list[i - 1].rank} — ${Math.max(1, score(list[i - 1], period) - score(me, period) + 1)} очк.`;
+  return html`<div class="my-spot2"><small class="ms2-cap">ТВОЁ МЕСТО</small>
+    <button class="ms2-row press" onClick=${() => me.id && open(me.id)}>
+      <b class="lb2-place num">${me.rank ?? "—"}</b>
+      <span class="lb2-face">${me.avatar ? html`<img src=${me.avatar} alt="" />` : html`<i>${initials2(me.nickname)}</i>`}</span>
+      <span class="lb2-name"><b>${me.nickname}</b><small class="ms2-line">${line}</small></span>
+      <b class="lb2-pts num">${scoreText(me, period)}</b>
+    </button></div>`;
 }
 
 /** A player's face: the profile photo, or the first two letters of the nickname. */
