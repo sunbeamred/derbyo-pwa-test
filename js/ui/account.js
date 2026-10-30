@@ -44,7 +44,7 @@ export function RatingTab({ visible }) {
 /** A player's face: the profile photo, or the first two letters of the nickname. */
 export const Face = ({ name, photo, small }) => html`<span class=${cx("pf-avatar neutral", small && "mini")}>${photo ? html`<img class="photo" src=${photo} alt="" />` : (name || "?").slice(0, 2).toUpperCase()}</span>`;
 
-const PRESENCE = { online: "в сети", in_match: "в матче", offline: "не в сети" };
+const PRESENCE = { online: "в сети", in_match: "в игре", offline: "не в сети" };
 
 /** A registered player's public card from the site, with friendship actions. */
 function PlayerCard({ id, onChange }) {
@@ -109,7 +109,9 @@ function Friends({ open }) {
   /** The friend's call, in the row instead of «Позвать»: invited with a countdown, then «Войти»; or theirs to accept. */
   const callSide = (p) => {
     const i = calls.find((x) => x.friend === p.id);
-    if (!i) return html`<button class="chip-btn press" onClick=${() => call(p.id)}><img src=${img("invite")} alt="" />Позвать</button>`;
+    // A friend in a live game can be watched; while you play yourself, you cannot call anyone.
+    if (!i && p.presence === "in_match") return p.watch ? html`<button class="chip-btn press" onClick=${() => dispatchEvent(new CustomEvent("derbyo-watch", { detail: p.watch }))}><img src=${img("eye")} alt="" />Смотреть</button>` : null;
+    if (!i) return html`<button class="chip-btn press" disabled=${invites.busy} onClick=${() => call(p.id)}><img src=${img("invite")} alt="" />Позвать</button>`;
     if (i.status === "accepted") return html`<button class="chip-btn press go" onClick=${() => invitation(i, "go")}>Войти · ${secondsLeft(i)}</button>`;
     if (i.direction === "incoming") return html`<button class="chip-btn press go" onClick=${() => invitation(i, "go")}>Принять · ${secondsLeft(i)}</button>`;
     return html`<span class="chip-btn invited"><span class="spinner"></span>Приглашён · ${secondsLeft(i)}</span>`;

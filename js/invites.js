@@ -7,6 +7,8 @@ const listeners = new Set();
 const changed = () => listeners.forEach((f) => f(list));
 
 export const invites = {
+  /** True while you play a match yourself (minimised or open): no calls out, the button is grey. */
+  busy: false,
   get list() { return list; },
   on(f) { listeners.add(f); return () => listeners.delete(f); },
   /** A call made or answered just now: look again at once. */
