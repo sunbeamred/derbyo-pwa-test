@@ -361,7 +361,7 @@ function App() {
       <span class="rb-t"><small>Вышло обновление</small><b>${updates.text}</b></span>
       <span class="rb-go up">Обновить</span></button>` : null}
     ${!match ? calls.map((c, n) => html`<${CallBar} c=${c} i=${(minimized ? 1 : 0) + (update ? 1 : 0) + n} key=${c.id} />`) : null}
-    <${TabBar} tab=${tab} pick=${pickTab} items=${[["Рейтинг", "trophy"], ["Играть", "bolt"], ["Профиль", "profile-v1", ONLINE ? (account.ready && !account.registered ? "!" : null) : 1]]} />
+    <${TabBar} tab=${tab} pick=${pickTab} items=${[["Рейтинг", "trophy"], ["Играть", "bolt"], ["Профиль", "profile-v1", ONLINE ? ((account.ready && !account.registered) || !isStandalone() ? "!" : null) : 1]]} />
     ${searching ? html`<${Cover} class="search-cover" leaving=${searchLeaving}>${ONLINE ? html`<${OnlineSearch} done=${(r) => {
       coverClosed();
       closeSearch(r?.session ? () => open(watchClose(new OnlineMatch(r.session))) : r?.bot ? () => app.bot() : null);
