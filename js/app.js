@@ -5,7 +5,7 @@ import { cx, img, Icon, Alert } from "./ui/common.js";
 import { has } from "./data.js";
 import { Match, Opponent, store } from "./model.js";
 import { MatchScreen } from "./ui/match.js";
-import { HomeView, GameLobby, QuickPickView, SearchView, RoomView, JoinCodeView, LockerRoom, MatchSettingsView } from "./ui/lobby.js";
+import { HomeView, GameLobby, QuickPickView, SearchView, RoomView, JoinCodeView, LockerRoom, MatchSettingsView, MiniGameView } from "./ui/lobby.js";
 import { InstallSheet, installState, InstallRow, isStandalone, isIOS, PushAskSheet } from "./install.js";
 import { notifications } from "./push.js";
 import { updates } from "./update.js";
@@ -17,8 +17,8 @@ import { RatingTab, ProfileTab, takeInvite } from "./ui/account.js";
 import "./touch.js";
 
 // Online (this app's own host) the screens play on the site's server; the GitHub copy and demo links stay offline.
-const SCREENS = ONLINE ? { lobby: OnlineLobby, quickPick: QuickPickView, room: OnlineRoom, code: OnlineJoinCode, locker: OnlineLocker, settings: MatchSettingsView }
-  : { lobby: GameLobby, quickPick: QuickPickView, room: RoomView, code: JoinCodeView, locker: LockerRoom, settings: MatchSettingsView };
+const SCREENS = ONLINE ? { lobby: OnlineLobby, quickPick: QuickPickView, room: OnlineRoom, code: OnlineJoinCode, locker: OnlineLocker, settings: MatchSettingsView, minigame: MiniGameView }
+  : { lobby: GameLobby, quickPick: QuickPickView, room: RoomView, code: JoinCodeView, locker: LockerRoom, settings: MatchSettingsView, minigame: MiniGameView };
 const matchDemo = ["demoBoard", "demoWin", "demoWinLater", "demoLoseLater", "demoLongMatch", "demoMix", "demoLastMove", "demoOppReview", "demoMismatch", "demoHuman", "demoFriendAsk", "demoWatch"].some(has);
 const humanDemo = ["demoOppAway", "demoHuman", "demoFriendAsk", "demoWatch", "demoOppIdle", "demoOppLeaves", "demoOppPause"].some(has);
 /** How long a screen takes to slide in or out, and a cover to rise or fall (ms). */
