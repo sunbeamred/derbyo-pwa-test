@@ -337,7 +337,12 @@ export class OnlineMatch {
   }
   /** A player's profile photo (the sandbox stores them); the site has none. */
   avatarOf(owner) { return (owner === 0 ? this.me : this.them)?.card?.avatar ?? (owner === 0 && !this.watching && !this.hotseat ? account.profile?.avatar : null) ?? null; }
-  viewerProfile(v) { return { name: v, flag: null, rating: null, rank: null, level: null, games: null, winRate: null, bestStreak: null }; }
+  viewerProfile(v) {
+    // You in the stands: your own account's numbers.
+    const p = v === account.name ? account.profile : null;
+    if (p && (p.games || p.rating != null)) return { name: v, photo: p.avatar ?? null, flag: null, rating: p.rating, rank: p.rank, level: p.level, games: p.games, winRate: p.games ? Math.round((p.wins / p.games) * 100) : 0, bestStreak: p.bestStreak };
+    return { name: v, flag: null, rating: null, rank: null, level: null, games: null, winRate: null, bestStreak: null };
+  }
   get headToHead() { return null; }
   relationWith() { return "none"; }
   isBlocked() { return false; }

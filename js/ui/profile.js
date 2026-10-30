@@ -45,7 +45,8 @@ export function ProfileSheet({ m, owner, viewer = null, close }) {
   const other = !viewer && (owner === 1 || m.watching);
   const bot = !viewer && (owner === 1 ? m.opponent.isBot : m.watching && !!m.me?.bot);
   const red = m.seat(owner) === 0;
-  const me = viewer === m.myName;
+  // A spectator's own name is the account's, not the seat name the match shows on the left.
+  const me = viewer === m.myName || (m.online && !!viewer && viewer === account.name);
   const social = !m.online && (viewer ? !me : owner === 1 && !bot);
   // Online: friends need your own account; not for yourself, a bot or the other phone's «Игрок 2».
   const onlineSocial = m.online && !m.hotseat && !!account.profile?.registered && (viewer ? !me : other && !bot && (owner === 0 ? m.me : m.them)?.card?.profileId !== account.profile?.id);
