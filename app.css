@@ -1521,3 +1521,36 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .news-perk { display: inline-block; margin-top: 6px; padding: 3px 9px; border-radius: 99px; font-style: normal; font-size: 12px; font-weight: 800;
   color: #FFE7A3; background: rgba(246, 212, 130, .14); border: 1px solid rgba(246, 212, 130, .35); }
 
+/* The rating as something to climb: a podium for the first three, your distance to the next place, league chips. */
+.podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; align-items: end; gap: 8px; margin: 18px 0 14px; }
+.pod { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; color: inherit; }
+.pod-face { width: 62px; height: 62px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #0B1626;
+  box-shadow: 0 0 0 3px var(--m), 0 0 22px var(--g); font-size: 20px; font-weight: 800; }
+.pod-face img { width: 100%; height: 100%; object-fit: cover; }
+.pod.p1 .pod-face { width: 78px; height: 78px; font-size: 24px; }
+.pod-name { max-width: 100%; margin-top: 4px; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pod-score { font-family: var(--rounded); font-size: 17px; font-weight: 800; color: var(--m); text-shadow: 0 0 12px var(--g); }
+.pod-step { width: 100%; margin-top: 6px; border-radius: 14px 14px 6px 6px; display: grid; place-items: center;
+  background: linear-gradient(var(--s1), var(--s2)); box-shadow: inset 0 1px rgba(255, 255, 255, .35), 0 10px 24px rgba(0, 0, 0, .35); }
+.pod-step i { font-style: normal; font-family: var(--rounded); font-size: 26px; font-weight: 900; color: rgba(255, 255, 255, .92); text-shadow: 0 2px 0 rgba(0, 0, 0, .25); }
+.pod.p1 { --m: #FFD25A; --g: rgba(255, 196, 60, .55); --s1: #FFCF55; --s2: #C98712; }
+.pod.p2 { --m: #DCE6F2; --g: rgba(200, 220, 240, .4); --s1: #CBD6E3; --s2: #7D8DA2; }
+.pod.p3 { --m: #F0A46A; --g: rgba(230, 140, 80, .4); --s1: #E9A06A; --s2: #9A5527; }
+.pod.p1 .pod-step { height: 76px; } .pod.p2 .pod-step { height: 54px; } .pod.p3 .pod-step { height: 42px; }
+.pod.empty .pod-step { opacity: .35; }
+.pod.self .pod-name { color: var(--gold); }
+.pod-crown { position: absolute; top: -26px; font-size: 26px; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .5)); animation: crown-bob 2.4s ease-in-out infinite; }
+@keyframes crown-bob { 50% { transform: translateY(-4px) rotate(-6deg); } }
+.pod.p1 .pod-face { animation: champ-glow 2.4s ease-in-out infinite; }
+@keyframes champ-glow { 50% { box-shadow: 0 0 0 3px var(--m), 0 0 36px rgba(255, 196, 60, .8); } }
+.my-spot { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 12px 14px; border-radius: 16px;
+  border: 1px solid rgba(246, 212, 130, .35); background: linear-gradient(90deg, rgba(246, 212, 130, .12), rgba(246, 212, 130, .02)); }
+.ms-place { flex: none; min-width: 52px; font-family: var(--rounded); font-size: 26px; font-weight: 900; color: var(--gold); text-align: center; }
+.ms-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ms-text b { font-size: 15px; font-weight: 800; }
+.ms-text small { font-size: 12px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ms-bar { height: 6px; margin-top: 6px; border-radius: 3px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.ms-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #F6D482, #FFB347); box-shadow: 0 0 10px rgba(255, 190, 80, .6); }
+.lb-tier { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 6px; font-style: normal; font-size: 10.5px; font-weight: 800; line-height: 16px;
+  color: #0B1626; background: linear-gradient(var(--a), var(--b)); }
+
