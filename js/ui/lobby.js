@@ -3,6 +3,7 @@ import { html, useState, useEffect, useRef, cx, img, Icon, PickMark, BottomBar, 
 import { Match, Opponent, MAX_VIEWERS, store } from "../model.js";
 import { has, rand } from "../data.js";
 import { Sound } from "../sound.js";
+import { isStandalone } from "../install.js";
 import { ONLINE, siteStats, account } from "../net.js";
 import { ProfileSheet } from "./profile.js";
 import { ViewerList } from "./sheets.js";
@@ -81,6 +82,8 @@ export function HomeView({ nav }) {
   return html`<div class="screen-scroll"><div class="page">
     <div class="home-head">
       <img class="logo-img" src=${img("derbyo-logo")} alt="DERBYO" /><span class="sp"></span>
+      ${!isStandalone() ? html`<button class="sound-btn glass press" aria-label="Установить приложение" onClick=${() => dispatchEvent(new CustomEvent("derbyo-install"))}>
+        <${Icon} name="download" size="20" weight="2.2" /></button>` : null}
       <button class="sound-btn glass press" aria-label=${sound ? "Выключить звук" : "Включить звук"}
         onClick=${() => { Sound.enabled = !sound; setSound(!sound); Sound.play("turn"); }}>
         <img src=${img("sound")} alt="" class=${sound ? "" : "off"} />${sound ? null : html`<i class="slash"></i>`}</button>

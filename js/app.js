@@ -312,11 +312,13 @@ function App() {
     const onWatch = (e) => { setTab(1); app.joinRoom(e.detail, { role: "spectator" }); };
     const onReturn = () => { const m = live.current.minimized; if (!m) return; setMatch(m); setMinimized(null); setMatchLeaving(false); coverOpened(); };
     addEventListener("derbyo-watch", onWatch);
+    const onInstall = () => setInstall(true);
+    addEventListener("derbyo-install", onInstall);
     addEventListener("derbyo-return", onReturn);
     const onMessage = (e) => { if (e.data?.open) route(new URL(e.data.open).hash); };
     addEventListener("derbyo-session", onSession);
     navigator.serviceWorker?.addEventListener("message", onMessage);
-    return () => { removeEventListener("derbyo-session", onSession); removeEventListener("derbyo-watch", onWatch); removeEventListener("derbyo-return", onReturn); navigator.serviceWorker?.removeEventListener("message", onMessage); };
+    return () => { removeEventListener("derbyo-session", onSession); removeEventListener("derbyo-watch", onWatch); removeEventListener("derbyo-install", onInstall); removeEventListener("derbyo-return", onReturn); navigator.serviceWorker?.removeEventListener("message", onMessage); };
   }, []);
   useEffect(() => {
     if (ONLINE && /^#(invite=|friends$)/.test(location.hash)) { const h = location.hash; history.replaceState(history.state, "", location.pathname + location.search); route(h); }

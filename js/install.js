@@ -38,7 +38,7 @@ export function InstallSheet({ close }) {
       <div class="grip-row"><span class="grip"></span></div>
       <div class="inst">
         <div class="inst-head">
-          <img class="inst-icon" src="icons/icon-192.png" alt="" />
+          <img class="inst-icon" src=${img("app-icon")} alt="" />
           <span><b>DERBYO на экран «Домой»</b><small>Как приложение: на весь экран, без панелей браузера, запуск с иконки.</small></span>
         </div>
         ${steps ? html`<ol class="inst-steps">
@@ -62,7 +62,7 @@ export function InstallSheet({ close }) {
 export function InstallRow({ open }) {
   if (isStandalone()) return html`<p class="hint-line small center">Установлено как приложение ✓</p>`;
   return html`<button class="mode press" onClick=${open}>
-    <span class="mode-ic"><img src="icons/icon-192.png" alt="" style="border-radius:9px" /></span>
+    <span class="mode-ic"><img src=${img("app-icon")} alt="" style="border-radius:9px" /></span>
     <span class="mode-t"><b>Установить на экран «Домой»</b><small>На весь экран, без панелей браузера</small></span>
     <${Icon} name="right" size="13" weight="3" class="chev" /></button>`;
 }
