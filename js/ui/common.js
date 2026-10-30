@@ -184,3 +184,22 @@ export const Prefs = {
   set vibration(v) { try { localStorage.setItem("derbyo-vibration", v ? "1" : "0"); } catch {} },
 };
 export const vibrate = (ms) => { if (!Prefs.vibration) return; try { navigator.vibrate?.(ms); } catch {} };
+
+/** Two taps within a third of a second on the same thing (the site's double click); the first tap still does its own job. */
+export function useDoubleTap(fn) {
+  const last = useRef(0);
+  return () => { const now = Date.now(); if (now - last.current < 330) { last.current = 0; fn(); } else last.current = now; };
+}
+
+/** The site's like echo: two rings spread and the symbol pops over the thing, each time its count grows. */
+export function LikeEcho({ count, symbol }) {
+  const prev = useRef(count);
+  const [shot, setShot] = useState(null);
+  useEffect(() => {
+    if (count > prev.current) { setShot(Date.now()); vibrate(10); }
+    prev.current = count;
+  }, [count]);
+  useEffect(() => { if (!shot) return; const t = setTimeout(() => setShot(null), 1000); return () => clearTimeout(t); }, [shot]);
+  return shot ? html`<span class="like-echo" key=${shot} aria-hidden="true"><i>${symbol}</i><i>${symbol}</i><b>${symbol}</b></span>` : null;
+}
+

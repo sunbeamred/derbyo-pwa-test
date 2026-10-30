@@ -1,5 +1,5 @@
 // The panels over the match (port of AnswerSheet.swift).
-import { html, useState, useEffect, useRef, cx, img, Icon } from "./common.js";
+import { html, useState, useEffect, useRef, cx, img, Icon, useDoubleTap, LikeEcho } from "./common.js";
 import { byId, search, has } from "../data.js";
 import { photoOf } from "../net.js";
 import { initials } from "../online.js";
@@ -151,6 +151,17 @@ function ClueCard({ clue, picked, used, pick }) {
   </div>`;
 }
 
+/** One chat message; online, a double tap on someone else's gives it a heart, as the site's double click. */
+function ChatLine({ m, x, hold, children }) {
+  const twice = useDoubleTap(() => { m.likeMessage(x.id); store.changed(); });
+  const likes = x.likes ?? 0;
+  return html`<div class=${cx("msg", x.who === "Ты" && "me", x.spectator && "spec")} ...${hold} onClick=${m.online && x.who !== "Ты" ? twice : undefined}>
+    ${children}
+    ${likes ? html`<span class=${cx("msg-like", x.liked && "on")}>♥ ${likes}</span>` : null}
+    <${LikeEcho} count=${likes} symbol="♥" />
+  </div>`;
+}
+
 export function ChatSheet({ m, openStands, openViewer }) {
   const [text, setText] = useState("");
   const [menuFor, setMenuFor] = useState(null);
@@ -178,14 +189,14 @@ export function ChatSheet({ m, openStands, openViewer }) {
           <span>${m.relation === "friends" ? "Вы теперь друзья" : `${m.opponent.name} хочет дружить`}</span>
           ${m.relation === "incoming" ? html`<button class="green-pill press" onClick=${() => { m.acceptFriend(); store.changed(); }}>Принять</button>`
             : m.relation === "friends" ? html`<${Icon} name="check" size="15" weight="3" style="color:#32E5A1" />` : null}</div>`
-        : html`<div class=${cx("msg", x.who === "Ты" && "me", x.spectator && "spec")} ...${hold(x)}>
+        : html`<${ChatLine} m=${m} x=${x} hold=${hold(x)}>
           <button class="who" disabled=${!x.spectator || x.who === "Ты"} onClick=${() => openViewer(x.who)}>
             <span class=${x.spectator && x.who !== "Ты" ? "u" : ""}>${x.who}</span>${x.spectator ? html`<i> · зритель</i>` : null}</button>
           <span class="text">${x.text}</span>
           ${menuFor === x.id && x.who !== "Ты" ? html`<span class="msg-menu">
             <button onClick=${() => { setMenuFor(null); m.report(); store.changed(); }}>Пожаловаться</button>
             <button class="red" onClick=${() => { setMenuFor(null); m.block(x.spectator ? x.who : null); store.changed(); }}>Заблокировать</button></span>` : null}
-        </div>`)}
+        <//>`)}
     </div>
     <div class="reactions">${["👏", "🔥", "😅", "😎", "🤝"].map((e) => html`<button class="press" onClick=${() => { m.react(e); store.changed(); }} aria-label=${`Отправить ${e}`}>${e}</button>`)}</div>
     <form class="answer-row" onSubmit=${send} action="#">
