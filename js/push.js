@@ -38,7 +38,7 @@ export const notifications = {
     let sub = await reg.pushManager.getSubscription();
     // Brave has no push service until «Use Google services for push messaging» is on; there subscribe fails or never answers.
     if (!sub) sub = await Promise.race([reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }),
-      new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 15000))]).catch(() => { throw new Error(BLOCKED()); });
+      new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 15000))]).catch((e) => { throw new Error(`${BLOCKED()} (${e?.name && e.name !== "Error" ? e.name + ": " : ""}${e?.message || e})`); });
     await pushApi.subscribe(sub.toJSON(), this.prefs);
     changed();
   },
