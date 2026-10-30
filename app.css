@@ -1418,3 +1418,7 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .lk-final .lk-pic { margin: 6px 0 4px; border-radius: 26px; background: #0B1626; box-shadow: 0 0 0 3px rgba(var(--c), .85), 0 0 28px rgba(var(--c), .45), 0 10px 24px rgba(0, 0, 0, .45); animation: dgf-pop .5s cubic-bezier(.2, 1.4, .4, 1) both; }
 .lk-final .lk-pic.coach { border-radius: 50%; }
 .lk-also { font-size: 12px; color: var(--muted); }
+.dg-reward { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 6px 12px; border-radius: 14px; font-size: 13px; font-weight: 800; color: #1B1300;
+  background: linear-gradient(#FFE7A3, #E8B04A); box-shadow: 0 4px 14px rgba(246, 212, 130, .35); animation: dgf-pop .5s .2s cubic-bezier(.2, 1.4, .4, 1) both; }
+.dg-reward img { width: 18px; height: 18px; }
+.dg-reward.guest { color: var(--soft); background: rgba(255, 255, 255, .06); box-shadow: none; font-weight: 600; }

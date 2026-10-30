@@ -45,6 +45,22 @@ export const IntroCard = ({ icon, title, sub, steps, foot }) => html`<div class=
   ${foot ? html`<p class="dgi-foot">${foot}</p>` : null}
 </div>`;
 
+/** A solved puzzle of the day gives a registered player +2 rating (once per game and day); `body` is null otherwise. */
+export function useDailyReward(body) {
+  const [r, setR] = useState(null);
+  const key = body ? JSON.stringify(body) : null;
+  useEffect(() => {
+    if (!key) { setR(null); return; }
+    let live = true;
+    fetch("/api/minigames/reward", { method: "POST", headers: { "Content-Type": "application/json" }, body: key })
+      .then((x) => x.json()).then((d) => live && d.ok && setR(d)).catch(() => {});
+    return () => { live = false; };
+  }, [key]);
+  return r;
+}
+export const RewardChip = ({ r }) => !r ? null : r.guest ? html`<span class="dg-reward guest">Войди в аккаунт — за загадку дня +2 к рейтингу</span>`
+  : html`<span class="dg-reward"><img src=${img("trophy")} alt="" />+${r.reward} к рейтингу</span>`;
+
 /** The match's trays at the bottom of a solo round: what the round is at on the left, the menu on the right. */
 export const SoloTrays = ({ left, menu }) => html`<div class="tray-row ctx-trays solo">
   ${left}
@@ -205,6 +221,7 @@ export function ContextoView({ nav, join }) {
   }
   const next = () => { memo.endless.round = null; ctxMem.save(); open(); };
 
+  const reward = useDailyReward(mode === "daily" && round?.won ? { game: "contexto", token: round.token, guesses: round.guesses } : null);
   const tabs = [["daily", "Сегодня"], ["endless", "Бесконечный"], ["friends", "С друзьями"]];
   if (mode === "friends") return html`<${ContextoFriends} nav=${nav} st=${st} tabs=${tabs} mode=${mode} setMode=${setMode} join=${join} />`;
   const used = new Set(round?.guesses ?? []);
@@ -225,6 +242,7 @@ export function ContextoView({ nav, join }) {
         steps=${["Назови любого футболиста", "Он встанет на место по близости — №1 и есть загаданный", "Близко — одноклубники, сборная, ровесники"]} />` : null}
       ${playing && last ? html`<div class="ctx-last"><small>Последний вариант</small><${CtxRow} f=${last} total=${st.total} hint=${hints.has(last.id)} /></div>` : null}
       ${result ? html`<div class=${cx("dg-result glass", round?.won ? "won" : "lost")}>
+          <${RewardChip} r=${reward} />
           <small>${round?.won ? `Угадано за ${n} ${plural(n, "попытку", "попытки", "попыток")}${hints.size ? ` · подсказок: ${hints.size}` : ""}` : "Загадан был"}</small>
           <div class="dg-answer"><${Face} p=${{ name: result.answer.name, photo: result.answer.photo }} size=${56} />
             <span><b>${result.answer.name}</b><em>${[result.answer.nat && `${result.answer.nat.flag} ${result.answer.nat.label}`, result.answer.pos, result.answer.born].filter(Boolean).join(" · ")}</em></span></div>
@@ -238,7 +256,7 @@ export function ContextoView({ nav, join }) {
       ${!round ? null : html`<${SoloTrays} menu=${() => setMenuOpen(true)} left=${playing ? html`<div class="tray turn-tray glass solo-count">
           <span class="tray-label"><b>${n ? `${n} ${plural(n, "попытка", "попытки", "попыток")}` : "Первая попытка"}</b><small>${n ? `лучший #${best}${hints.size ? ` · подсказок ${hints.size}` : ""}` : "назови любого футболиста"}</small></span></div>`
         : html`<div class="tray turn-tray glass over">${mode === "daily"
-          ? html`<button class="primary-btn ctx-next" onClick=${() => share(`DERBYO · Контекстно #${st.day} · ${round.won ? `${n} ${plural(n, "попытка", "попытки", "попыток")}` : "не угадал"}${hints.size ? ` · 💡${hints.size}` : ""}\nhttps://derbyo.online/contexto`, setErr)}><img src=${img("share")} alt="" />Поделиться</button>`
+          ? html`<button class="primary-btn ctx-next" onClick=${() => setMode("endless")}><img src=${img("bolt")} alt="" />Играть бесконечный</button>`
           : html`<button class="primary-btn ctx-next" onClick=${next}><img src=${img("bolt")} alt="" />Следующий игрок</button>`}</div>`} />`}
     <//>
     ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}><div class="menu">
@@ -353,6 +371,7 @@ export function LinksView({ nav }) {
   const s = memo.endless.stats[memo.endless.level] || { played: 0, wins: 0, streak: 0, best: 0, points: 0 };
   const line = !st ? null : mode === "daily" ? `Загадка дня · новая через ${clock(st.nextAt - (Date.now() + offset.current))}` : `Серия ${s.streak} · рекорд ${s.best} · очков ${s.points}`;
   const wrong = view ? view.guesses.filter((g) => !g.ok).length : 0;
+  const reward = useDailyReward(mode === "daily" && view?.won && round ? { game: "links", token: round.token, guesses: round.guesses } : null);
   const total = st?.cards ?? 5;
   const careers = Object.fromEntries((view?.careers ?? []).map((c) => [c.id, c.clubs]));
   return html`<div class="screen-with-bar daily-screen">
@@ -369,6 +388,7 @@ export function LinksView({ nav }) {
           <b class="dgf-name">${view.answer.label}</b>
           <span class="dgf-meta">${linkLine(view.answer)}</span>
           ${view.also ? html`<small class="lk-also">Твой ответ ${view.also.label} тоже подходит</small>` : null}
+          <${RewardChip} r=${reward} />
         </div>` : null}
       ${view?.guesses.length ? html`<h4 class="section">ТВОИ ОТВЕТЫ</h4><div class="lk-guesses">${view.guesses.map((g) => html`<span class=${cx("lk-guess", g.ok ? "ok" : "no")}>${g.ok ? "✓" : "✕"} ${g.label}<small>${g.kind}</small></span>`)}</div>` : null}
       <div class="dg-list">
@@ -387,9 +407,7 @@ export function LinksView({ nav }) {
     <${BottomBar}>
       ${!view || !round ? null : html`<${SoloTrays} menu=${() => setMenuOpen(true)} left=${!view.over ? html`<div class="tray turn-tray glass solo-count">
           <span class="tray-label"><b>Ответ ${wrong + 1} из ${total}</b><small>${wrong ? `открыто футболистов: ${view.cards.length}` : "виден один футболист"}</small></span></div>`
-        : html`<div class="tray turn-tray glass over">${mode === "daily" ? html`<button class="primary-btn ctx-next" onClick=${() => {
-            const marks = view.guesses.map((g) => (g.ok ? "🟩" : "🟥")); while (marks.length < total) marks.push("⬜");
-            share(`DERBYO · Что их связывает #${st.day} · ${view.won ? score(view) : "X"}/${total}\n${marks.join("")}\nhttps://derbyo.online/links`, setErr); }}><img src=${img("share")} alt="" />Поделиться</button>`
+        : html`<div class="tray turn-tray glass over">${mode === "daily" ? html`<button class="primary-btn ctx-next" onClick=${() => setMode("endless")}><img src=${img("bolt")} alt="" />Играть бесконечный</button>`
           : html`<button class="primary-btn ctx-next" onClick=${next}><img src=${img("bolt")} alt="" />Следующая загадка</button>`}</div>`} />`}
     <//>
     ${asking && view && !view.over ? html`<${Panel} onClose=${() => setAsking(false)} class="answer-panel">${(leave) => html`<${PickSheet}

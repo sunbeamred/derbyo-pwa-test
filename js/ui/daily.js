@@ -4,7 +4,7 @@
 import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel, vibrate } from "./common.js";
 import { Face } from "./sheets.js";
 import { raiseKeyboard } from "./match.js";
-import { IntroCard, SoloTrays } from "./games.js";
+import { IntroCard, SoloTrays, useDailyReward, RewardChip } from "./games.js";
 
 const STORE = "derbyo.daily.v1";
 const load = () => { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; } };
@@ -187,19 +187,14 @@ export function DailyView({ nav }) {
     memo.endless.level = level; memo.endless.round = null; save();
     open("endless");
   }
-  const share = async () => {
-    const SQ = { hit: "🟩", near: "🟨", miss: "⬛" };
-    const text = [`DERBYO · Футболист дня #${st.day} · ${game.won ? game.guesses.length : "X"}/${st.maxGuesses}${game.hint ? " 💡" : ""}`,
-      ...rows.map((f) => [f.nat, f.pos, f.born, f.clubs].map((x) => SQ[x.result]).join("")), "https://derbyo.online/daily"].join("\n");
-    try { if (navigator.share) { await navigator.share({ text }); return; } } catch (e) { if (e.name === "AbortError") return; }
-    try { await navigator.clipboard.writeText(text); setErr("Результат скопирован"); } catch {}
-  };
+
 
   const used = new Set(game?.guesses ?? []);
   const attempts = game?.guesses.length ?? 0;
   const level = mem().endless.level;
   const lstats = mem().endless.stats[level] || { played: 0, wins: 0, streak: 0, best: 0 };
   const memo = mem();
+  const reward = useDailyReward(mode === "daily" && game?.won && st ? { game: "daily", day: st.day, guesses: game.guesses } : null);
   return html`<div class="screen-with-bar daily-screen"><div class="game-top">
     <${LobbyHeader} title="Футболист дня" back=${nav.back} />
     <div class="segmented talk-tabs dg-tabs" role="tablist">
@@ -222,9 +217,10 @@ export function DailyView({ nav }) {
           <b>${game.answer.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</b>${game.won ? html`<i class="dgf-badge">✓</i>` : null}</div>
         <b class="dgf-name">${game.answer.name}</b>
         <span class="dgf-meta">${[game.answer.nat && `${game.answer.nat.flag ?? ""} ${game.answer.nat.label ?? ""}`.trim(), game.answer.pos, game.answer.born && `${game.answer.born} г. р.`].filter(Boolean).join(" · ")}</span>
+        <${RewardChip} r=${reward} />
         ${game.answer.career?.length ? html`<div class="ctx-career dgf-career">${game.answer.career.slice(-6).map((c) => html`<span>${c.logo ? html`<img src=${c.logo} alt="" referrerpolicy="no-referrer" />` : null}<b>${c.name}</b><small>${String(c.years).split(",")[0]}</small></span>`)}
           ${game.answer.career.length > 6 ? html`<span class="more">ещё ${game.answer.career.length - 6}</span>` : null}</div>` : null}
-        ${mode === "daily" ? html`<div class="pf-stats dgf-stats"><span><b>${memo.played}</b><small>Сыграно</small></span><span><b>${memo.played ? Math.round((memo.wins / memo.played) * 100) : 0}%</b><small>Побед</small></span><span><b>${memo.streak}</b><small>Серия</small></span><span><b>${memo.best}</b><small>Лучшая</small></span></div>` : null}
+        ${mode === "daily" ? html`<div class="pf-stats dgf-stats"><span><b>${memo.played}</b><small>Сыграно</small></span><span><b>${memo.played ? Math.round((memo.wins / memo.played) * 100) : 0}%</b><small>Побед</small></span><span><b>${memo.streak}</b><small>Серия</small></span></div>` : null}
       </div>` : null}
     <div class="dg-list" ref=${list}>${rows.map((f, i) => html`<${GuessCard} f=${f} n=${i + 1} fresh=${f.id === freshId.current} key=${f.id} />`).reverse()}</div>
     ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
@@ -232,7 +228,7 @@ export function DailyView({ nav }) {
   <${BottomBar}>
     ${!game ? null : html`<${SoloTrays} menu=${() => setMenuOpen(true)} left=${!game.over ? html`<div class="tray turn-tray glass solo-count">
         <span class="tray-label"><b>Попытка ${attempts + 1} из ${st.maxGuesses}</b><small>${game.hint ? "подсказка взята" : attempts >= st.hintAfter ? "подсказка доступна в меню" : `подсказка после ${st.hintAfter} попыток`}</small></span></div>`
-      : html`<div class="tray turn-tray glass over">${mode === "daily" ? html`<button class="primary-btn ctx-next" onClick=${share}><img src=${img("share")} alt="" />Поделиться</button>`
+      : html`<div class="tray turn-tray glass over">${mode === "daily" ? html`<button class="primary-btn ctx-next" onClick=${() => setMode("endless")}><img src=${img("bolt")} alt="" />Играть бесконечный</button>`
         : html`<button class="primary-btn ctx-next" onClick=${() => nextRound()}><img src=${img("bolt")} alt="" />Следующий игрок</button>`}</div>`} />`}
   <//>
   ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}><div class="menu">
