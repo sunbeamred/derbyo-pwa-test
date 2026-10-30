@@ -310,11 +310,13 @@ function App() {
   useEffect(() => {
     const onSession = (e) => app.session(e.detail);
     const onWatch = (e) => { setTab(1); app.joinRoom(e.detail, { role: "spectator" }); };
+    const onReturn = () => { const m = live.current.minimized; if (!m) return; setMatch(m); setMinimized(null); setMatchLeaving(false); coverOpened(); };
     addEventListener("derbyo-watch", onWatch);
+    addEventListener("derbyo-return", onReturn);
     const onMessage = (e) => { if (e.data?.open) route(new URL(e.data.open).hash); };
     addEventListener("derbyo-session", onSession);
     navigator.serviceWorker?.addEventListener("message", onMessage);
-    return () => { removeEventListener("derbyo-session", onSession); removeEventListener("derbyo-watch", onWatch); navigator.serviceWorker?.removeEventListener("message", onMessage); };
+    return () => { removeEventListener("derbyo-session", onSession); removeEventListener("derbyo-watch", onWatch); removeEventListener("derbyo-return", onReturn); navigator.serviceWorker?.removeEventListener("message", onMessage); };
   }, []);
   useEffect(() => {
     if (ONLINE && /^#(invite=|friends$)/.test(location.hash)) { const h = location.hash; history.replaceState(history.state, "", location.pathname + location.search); route(h); }
@@ -330,6 +332,8 @@ function App() {
   // Playing a match yourself (on screen or minimised) blocks calling friends.
   const playing = [match, minimized].find((x) => x && x.online && !x.watching && !x.closed && !x.matchOver);
   invites.busy = !!playing;
+  // The minimised match (played or watched): a friend in it gets «Вернуться» in the list instead of «Смотреть».
+  invites.current = minimized && !minimized.closed ? { code: minimized.code.replace(/\s/g, ""), names: [minimized.opponent?.name, minimized.leftName].filter(Boolean) } : null;
   // Bars over the tab bar, bottom up: the minimised match, the update, then one per open call.
   const bars = match ? 0 : (minimized ? 1 : 0) + (update ? 1 : 0) + calls.length;
   return html`<div class="app" style=${bars ? `--tb-space: calc(var(--tb-bottom) + var(--tb-h) + ${12 + bars * 70}px)` : ""}>
