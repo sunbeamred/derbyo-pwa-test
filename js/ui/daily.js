@@ -4,7 +4,7 @@
 import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel, vibrate } from "./common.js";
 import { Face } from "./sheets.js";
 import { raiseKeyboard } from "./match.js";
-import { IntroCard } from "./games.js";
+import { IntroCard, SoloTrays } from "./games.js";
 
 const STORE = "derbyo.daily.v1";
 const load = () => { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; } };
@@ -62,13 +62,16 @@ function DailyAnswer({ game, attempts, hint, used, choose, dismiss }) {
     return () => { live = false; clearTimeout(t); };
   }, [query]);
   const hits = found.slice(0, 6).reverse();
+  // The closest match sits at the bottom, by the keyboard: the list opens scrolled down to it.
+  const scroller = useRef();
+  useEffect(() => { const el = scroller.current; if (el) el.scrollTop = el.scrollHeight; }, [found]);
   return html`<div class="answer">
     <div class="cond-bubble glass dg-ask">
       <span class="dg-dots">${Array.from({ length: game.max }, (_, i) => html`<i class=${cx(i < attempts && "used", i === attempts && "now")}></i>`)}</span>
       <b>Попытка ${attempts + 1} из ${game.max}</b>
       ${hint ? html`<small>Фамилия: ${hintText(hint)}</small>` : null}
     </div>
-    <div class="answer-scroll">
+    <div class="answer-scroll" ref=${scroller}>
       ${query.trim().length < 2 ? html`<p class="hint-line">Начни вводить фамилию — выбери футболиста из списка.</p>`
         : !hits.length ? html`<p class="hint-line">Никого не нашли — проверь написание</p>`
         : html`<div class="hits">${hits.map((p) => html`<button class=${cx("hit", used.has(p.id) && "used")} disabled=${used.has(p.id)} onClick=${() => { choose(p); dismiss(); }}>
@@ -90,6 +93,7 @@ export function DailyView({ nav }) {
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [, tick] = useState(0);
   const freshId = useRef(null);
   const list = useRef();
@@ -99,8 +103,8 @@ export function DailyView({ nav }) {
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(t); }, []);
   useEffect(() => { api("state").then((s) => { offset.current = s.serverNow - Date.now(); setSt(s); }).catch((e) => setErr(e.message)); }, []);
   useEffect(() => { if (st) open(mode); }, [st, mode]);
-  // New guesses land at the bottom, by the field: keep them in view.
-  useEffect(() => { const el = list.current?.closest(".screen-scroll"); if (el) el.scrollTop = el.scrollHeight; }, [rows.length, game?.over]);
+  // New guesses land at the top, by the field: keep them in view.
+  useEffect(() => { const el = list.current?.closest(".screen-scroll"); if (el) el.scrollTop = 0; }, [rows.length, game?.over]);
 
   async function open(m) {
     setErr(null); setRows([]);
@@ -205,11 +209,14 @@ export function DailyView({ nav }) {
         onClick=${() => level !== l.level && nextRound(l.level)}><img src=${img(LEVEL_ICON[l.level])} alt="" /><b>${l.label}</b></button>`)}</div>
       <p class="dg-line">Серия ${lstats.streak} · рекорд ${lstats.best} · угадано ${lstats.wins} из ${lstats.played}</p>`
     : st ? html`<p class="dg-line">Один футболист на всех · новый через ${clock(st.nextAt - (Date.now() + offset.current))}</p>` : null}
+    ${game && !game.over ? html`<button class="dg-ask-btn press" disabled=${busy} onClick=${() => { raiseKeyboard(); setAsking(true); }}>
+        <${Icon} name="search" size="17" /><span>${busy ? "Проверяем…" : `Назови футболиста · ${attempts + 1} из ${st.maxGuesses}`}</span></button>
+      ${game.hint ? html`<p class="dg-hint">Фамилия: <b>${hintText(game.hint)}</b></p>` : null}` : null}
   </div><div class="screen-scroll"><div class="page game-page">
     ${!st && !err ? html`<p class="hint-line pad">Загружаем…</p>` : null}
     ${st && game && !rows.length && !game.over ? html`<${IntroCard} icon="game-daily" title="Кто этот футболист?" sub=${`${st.maxGuesses} попыток`}
         steps=${["Назови любого футболиста", html`Сравни: <i class="k-hit">точно</i> <i class="k-near">близко</i> <i class="k-miss">мимо</i>`, "Сборная, позиция, год и клубы подскажут путь"]} />` : null}
-    <div class="dg-list" ref=${list}>${rows.map((f, i) => html`<${GuessCard} f=${f} n=${i + 1} fresh=${f.id === freshId.current} key=${f.id} />`)}</div>
+    <div class="dg-list" ref=${list}>${rows.map((f, i) => html`<${GuessCard} f=${f} n=${i + 1} fresh=${f.id === freshId.current} key=${f.id} />`).reverse()}</div>
     ${game?.over && game.answer ? html`<div class=${cx("dg-result glass", game.won ? "won" : "lost")}>
         <small>${game.won ? `Угадано за ${attempts} из ${st.maxGuesses}${game.hint ? " · с подсказкой" : ""}` : "Не угадано. Это был"}</small>
         <div class="dg-answer"><${Face} p=${{ name: game.answer.name, photo: game.answer.photo }} size=${56} />
@@ -219,17 +226,18 @@ export function DailyView({ nav }) {
     ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
   </div></div>
   <${BottomBar}>
-    ${!game ? null : !game.over ? html`<div class="dg-bar">
-        <button class="dg-ask-btn press" disabled=${busy} onClick=${() => { raiseKeyboard(); setAsking(true); }}>
-          <${Icon} name="search" size="17" /><span>${busy ? "Проверяем…" : `Назови футболиста · ${attempts + 1} из ${st.maxGuesses}`}</span></button>
-        ${attempts >= st.hintAfter ? html`<button class=${cx("round-tool press", game.hint && "on")} aria-label="Подсказка: первая буква фамилии" disabled=${!!game.hint}
-            onClick=${takeHint}><img src=${img("question")} alt="" /></button>` : null}
-      </div>
-      ${game.hint ? html`<p class="dg-hint">Фамилия: <b>${hintText(game.hint)}</b></p>` : null}`
-    : mode === "daily" ? html`<div class="two"><button class="primary-btn" onClick=${share}><img src=${img("share")} alt="" />Поделиться</button>
-        <button class="navy-btn tall" onClick=${() => setMode("endless")}>Бесконечный</button></div>`
-    : html`<button class="primary-btn" onClick=${() => nextRound()}><img src=${img("bolt")} alt="" />Следующий футболист</button>`}
+    ${!game ? null : html`<${SoloTrays} menu=${() => setMenuOpen(true)} left=${!game.over ? html`<div class="tray turn-tray glass solo-count">
+        <span class="tray-label"><b>Попытка ${attempts + 1} из ${st.maxGuesses}</b><small>${game.hint ? "подсказка взята" : attempts >= st.hintAfter ? "подсказка доступна в меню" : `подсказка после ${st.hintAfter} попыток`}</small></span></div>`
+      : html`<div class="tray turn-tray glass over">${mode === "daily" ? html`<button class="primary-btn ctx-next" onClick=${share}><img src=${img("share")} alt="" />Поделиться</button>`
+        : html`<button class="primary-btn ctx-next" onClick=${() => nextRound()}><img src=${img("bolt")} alt="" />Следующий игрок</button>`}</div>`} />`}
   <//>
+  ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}><div class="menu">
+      <h2>Футболист дня</h2>
+      ${game && !game.over ? html`<button class="navy-btn menu-row" disabled=${!!game.hint || attempts < st.hintAfter} onClick=${() => { setMenuOpen(false); takeHint(); }}>
+          ${game.hint ? `Подсказка: ${hintText(game.hint)}` : attempts < st.hintAfter ? `Подсказка — после ${st.hintAfter} попыток` : "Взять подсказку: первая буква фамилии"}</button>`
+        : mode === "daily" ? html`<button class="navy-btn menu-row" onClick=${() => { setMenuOpen(false); setMode("endless"); }}>Играть бесконечный</button>`
+        : html`<button class="navy-btn menu-row" onClick=${() => { setMenuOpen(false); nextRound(); }}>Следующий игрок</button>`}
+    </div><//>` : null}
   ${asking && game && !game.over ? html`<${Panel} onClose=${() => setAsking(false)} class="answer-panel">${(leave) => html`<${DailyAnswer} game=${game} attempts=${attempts} hint=${game.hint}
       used=${used} choose=${choose} dismiss=${leave} />`}<//>` : null}
   </div>`;

@@ -46,7 +46,7 @@ export const IntroCard = ({ icon, title, sub, steps, foot }) => html`<div class=
 </div>`;
 
 /** The match's trays at the bottom of a solo round: what the round is at on the left, the menu on the right. */
-const SoloTrays = ({ left, menu }) => html`<div class="tray-row ctx-trays solo">
+export const SoloTrays = ({ left, menu }) => html`<div class="tray-row ctx-trays solo">
   ${left}
   <div class="tray tools-tray glass"><button class="tool press" onClick=${menu} aria-label="Меню"><img src=${img("menu")} alt="" /></button></div>
 </div>`;
@@ -263,6 +263,7 @@ const lkMem = store("derbyo.links.v1", (m) => { m.daily ||= {}; m.endless = Obje
 
 export function LinksView({ nav }) {
   const memo = lkMem.get();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [mode, setMode] = useState(() => (memo.appMode === "endless" ? "endless" : "daily"));
   const [st, setSt] = useState(null);
   const [view, setView] = useState(null);
@@ -343,7 +344,8 @@ export function LinksView({ nav }) {
   const careers = Object.fromEntries((view?.careers ?? []).map((c) => [c.id, c.clubs]));
   return html`<div class="screen-with-bar daily-screen">
     <${GameTop} title="Что их связывает" back=${nav.back} mode=${mode} setMode=${setMode} tabs=${[["daily", "Сегодня"], ["endless", "Бесконечный"]]}
-      levels=${st?.levels} level=${memo.endless.level} setLevel=${setLevel} line=${line} />
+      levels=${st?.levels} level=${memo.endless.level} setLevel=${setLevel} line=${line}
+      field=${view && round && !view.over ? html`<${AskButton} busy=${busy} text=${`Назови связь · ${wrong + 1} из ${total}`} open=${() => setAsking(true)} />` : null} />
     <div class="screen-scroll"><div class="page game-page">
       ${!st && !err ? html`<p class="hint-line pad">Загружаем…</p>` : null}
       ${view && !view.guesses.length && !view.over ? html`<${IntroCard} icon="game-links" title="Одна связь на пятерых" sub="Клуб, сборная, тренер или трофей"
@@ -368,19 +370,23 @@ export function LinksView({ nav }) {
       ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
     </div></div>
     <${BottomBar}>
-      ${!view || !round ? null : !view.over ? html`<div class="dg-bar">
-          <${AskButton} busy=${busy} text=${`Назови связь · ${wrong + 1} из ${total}`} open=${() => setAsking(true)} />
-          <button class="round-tool press" aria-label="Сдаться" disabled=${busy} onClick=${() => setGiveUp(true)}><img src=${img("finish")} alt="" /></button></div>`
-      : mode === "daily" ? html`<div class="two"><button class="primary-btn" onClick=${() => {
-          const marks = view.guesses.map((g) => (g.ok ? "🟩" : "🟥")); while (marks.length < total) marks.push("⬜");
-          share(`DERBYO · Что их связывает #${st.day} · ${view.won ? score(view) : "X"}/${total}\n${marks.join("")}\nhttps://derbyo.online/links`, setErr); }}><img src=${img("share")} alt="" />Поделиться</button>
-          <button class="navy-btn tall" onClick=${() => setMode("endless")}>Бесконечный</button></div>`
-      : html`<button class="primary-btn" onClick=${next}><img src=${img("bolt")} alt="" />Следующая загадка</button>`}
+      ${!view || !round ? null : html`<${SoloTrays} menu=${() => setMenuOpen(true)} left=${!view.over ? html`<div class="tray turn-tray glass solo-count">
+          <span class="tray-label"><b>Ответ ${wrong + 1} из ${total}</b><small>${wrong ? `открыто футболистов: ${view.cards.length}` : "виден один футболист"}</small></span></div>`
+        : html`<div class="tray turn-tray glass over">${mode === "daily" ? html`<button class="primary-btn ctx-next" onClick=${() => {
+            const marks = view.guesses.map((g) => (g.ok ? "🟩" : "🟥")); while (marks.length < total) marks.push("⬜");
+            share(`DERBYO · Что их связывает #${st.day} · ${view.won ? score(view) : "X"}/${total}\n${marks.join("")}\nhttps://derbyo.online/links`, setErr); }}><img src=${img("share")} alt="" />Поделиться</button>`
+          : html`<button class="primary-btn ctx-next" onClick=${next}><img src=${img("bolt")} alt="" />Следующая загадка</button>`}</div>`} />`}
     <//>
     ${asking && view && !view.over ? html`<${Panel} onClose=${() => setAsking(false)} class="answer-panel">${(leave) => html`<${PickSheet}
         head=${html`<b>Ответ ${wrong + 1} из ${total}</b><small class="lk-sub">клуб, сборная, тренер или трофей</small>`} placeholder="Клуб, сборная, тренер…" empty="Начни вводить: Реал, Бразилия, Гвардиола, Лига чемпионов…"
         find=${(q) => lkApi("search", { query: q }).then((r) => r.links ?? [])} row=${(x, u) => html`<span class="lk-kind">${x.kind}</span><span class="hit-name"><b>${x.label}</b><small>${u ? "уже было" : x.kind}</small></span>`}
         used=${used} choose=${choose} dismiss=${leave} />`}<//>` : null}
+    ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}><div class="menu">
+        <h2>Что их связывает</h2>
+        ${view && !view.over ? html`<button class="navy-btn menu-row destructive" disabled=${busy} onClick=${() => { setMenuOpen(false); setGiveUp(true); }}>Сдаться</button>`
+          : mode === "daily" ? html`<button class="navy-btn menu-row" onClick=${() => { setMenuOpen(false); setMode("endless"); }}>Играть бесконечный</button>`
+          : html`<button class="navy-btn menu-row" onClick=${() => { setMenuOpen(false); next(); }}>Следующая загадка</button>`}
+      </div><//>` : null}
     ${giveUp ? html`<${Alert} title="Сдаться?" message="Откроем всех футболистов и связь." onClose=${() => setGiveUp(false)}
       actions=${[{ title: "Играть дальше", run: () => setGiveUp(false) }, { title: "Сдаться", kind: "destructive", run: surrender }]} />` : null}
   </div>`;
