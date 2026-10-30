@@ -17,6 +17,39 @@ export const installState = {
   remember(choice) { try { localStorage.setItem("install-choice", choice); } catch {} },
 };
 
+/** «Что нового»: once, after the app is installed or the player chooses to stay in the browser. */
+const NEWS = "whats-new-1";
+export const whatsNew = {
+  due() {
+    try { return !localStorage.getItem(NEWS) && (isStandalone() || ["browser", "steps", "installed"].includes(localStorage.getItem("install-choice"))); }
+    catch { return false; }
+  },
+  seen() { try { localStorage.setItem(NEWS, "1"); } catch {} },
+};
+
+const NEWS_ITEMS = [
+  ["vibrate", "Создано для телефона", "Интерфейс собран заново под смартфон.", null],
+  ["game-daily", "Новые мини-игры", "Футболист дня, «Контекстно» и «Что их связывает».", "+2 к рейтингу за футболиста дня"],
+  ["bolt", "Надёжные матчи", "Честный таймер, понятные статусы и возврат в игру после обрыва связи.", null],
+];
+
+export function WhatsNewSheet({ close }) {
+  const [out, setOut] = useState(false);
+  const leave = () => { whatsNew.seen(); setOut(true); setTimeout(close, 250); };
+  return html`<div class=${cx("overlay install", out && "out")}>
+    <div class="dim" onClick=${leave}></div>
+    <div class="panel install-panel" role="dialog" aria-label="Что нового в DERBYO">
+      <div class="grip-row"><span class="grip"></span></div>
+      <div class="inst">
+        <div class="news-head"><small>ОБНОВЛЕНИЕ</small><b>Что нового в DERBYO</b></div>
+        <ul class="news-list">${NEWS_ITEMS.map(([icon, title, text, perk]) => html`<li>
+          <img src=${img(icon)} alt="" /><span><b>${title}</b><small>${text}</small>${perk ? html`<em class="news-perk">${perk}</em>` : null}</span></li>`)}</ul>
+        <button class="primary-btn" onClick=${leave}><img src=${img("bolt")} alt="" />Играть</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 export function InstallSheet({ close }) {
   const [steps, setSteps] = useState(false);
   const [out, setOut] = useState(false);
