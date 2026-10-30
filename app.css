@@ -1387,3 +1387,24 @@ button.turn-tray { color: inherit; text-align: left; }
   background: rgba(14, 24, 38, .95); border: 1px solid rgba(111, 168, 255, .35); box-shadow: 0 10px 30px rgba(0, 0, 0, .45); animation: ctx-note-in .25s ease-out both; }
 @keyframes ctx-note-in { from { opacity: 0; transform: translateY(8px); } }
 body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
+
+/* Футболист дня: the answer card at the top, the player in full. */
+.dg-final { position: relative; overflow: hidden; border-radius: 24px; padding: 18px 16px 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; --c: 50, 229, 161; }
+.dg-final.lost { --c: 255, 83, 100; }
+.dg-final::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 70% at 50% 0, rgba(var(--c), .22), transparent 65%); }
+.dg-final > * { position: relative; }
+.dgf-cap { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: rgb(var(--c)); }
+.dgf-face { width: 96px; height: 96px; margin: 6px 0 4px; border-radius: 28px; display: grid; place-items: center; overflow: visible; background: #0B1626;
+  box-shadow: 0 0 0 3px rgba(var(--c), .85), 0 0 28px rgba(var(--c), .45), 0 10px 24px rgba(0, 0, 0, .45); animation: dgf-pop .5s cubic-bezier(.2, 1.4, .4, 1) both; }
+.dgf-face { position: relative; flex: none; }
+.dgf-face img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 28px; object-fit: cover; object-position: center 20%; z-index: 1; }
+.dgf-face > b { grid-area: 1 / 1; font-size: 30px; font-weight: 900; color: var(--soft); }
+.dgf-badge { position: absolute; right: -8px; bottom: -8px; z-index: 2; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 900; font-size: 16px; color: #062016; background: var(--mint); box-shadow: 0 4px 10px rgba(0, 0, 0, .4); }
+.dgf-name { font-size: 24px; font-weight: 900; line-height: 1.1; }
+.dgf-meta { font-size: 14px; color: var(--soft); }
+.dgf-career { justify-content: center; margin-top: 6px; }
+.dgf-career span { max-width: 100%; white-space: nowrap; }
+.dgf-career b { overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+.dgf-career .more { color: var(--muted); }
+.dgf-stats { width: 100%; margin-top: 8px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .07); }
+@keyframes dgf-pop { from { transform: scale(.6); opacity: 0; } }
