@@ -171,13 +171,13 @@ function Scoreboard({ m, openProfile, openStands }) {
     </div>
     <div class="score-row">
       <${PlayerSide} name=${m.leftName} photo=${m.avatarOf?.(0)} mark=${m.mark(0)} red=${m.mySeat === 0} tokens=${m.tokens} active=${live(0)} mine=${true}
-        reaction=${m.myReaction} left=${!!m.meLeft} onClick=${() => openProfile(0)} />
+        reaction=${m.myReaction} away=${m.leftAwayFor ?? null} awayKind=${m.leftAwayKind} left=${!!m.meLeft} onClick=${() => openProfile(0)} />
       <div class="scorebug" aria-label=${`Счёт ${m.score[0]}:${m.score[1]}, раунд ${m.round}`}>
         <div class="digits"><b class="digit">${m.score[0]}</b><span class="colon">:</span><b class="digit">${m.score[1]}</b></div>
         <${RoundSteps} results=${m.roundResults.map((r) => (r === null ? null : m.seat(r)))} current=${m.round} live=${!m.roundOver} />
       </div>
       <${PlayerSide} name=${m.opponent.name} photo=${m.avatarOf?.(1)} mark=${m.mark(1)} red=${m.mySeat === 1} tokens=${m.oppTokens} active=${live(1)} mine=${false}
-        isBot=${m.opponent.isBot} reaction=${m.oppReaction} away=${m.oppAwayFor} left=${m.oppLeft} missed=${m.oppMissed} onClick=${() => openProfile(1)} />
+        isBot=${m.opponent.isBot} reaction=${m.oppReaction} away=${m.oppAwayFor} awayKind=${m.oppAwayKind} left=${m.oppLeft} missed=${m.oppMissed} onClick=${() => openProfile(1)} />
     </div>
     <${LevelRow} m=${m} live=${live} />
     ${m.viewers.length ? html`<button class="eye-badge press" onClick=${openStands} aria-label=${`Трибуна: ${m.viewers.length}`}>
@@ -214,7 +214,7 @@ function SideTag({ m, owner }) {
 }
 
 /** A player as on the site's player card, folded into half the header width. */
-function PlayerSide({ name, photo, mark, red, tokens, active, mine, isBot, reaction, away = null, left = false, missed = 0, onClick }) {
+function PlayerSide({ name, photo, mark, red, tokens, active, mine, isBot, reaction, away = null, awayKind = "hidden", left = false, missed = 0, onClick }) {
   const [echo, setEcho] = useState(null);
   useEffect(() => {
     if (!reaction) return;
@@ -224,7 +224,7 @@ function PlayerSide({ name, photo, mark, red, tokens, active, mine, isBot, react
   }, [reaction?.n]);
   const status = left ? html`<span class="st left">○ покинул матч</span>`
     : missed > 0 && away === null ? html`<span class=${cx("st", missed >= 2 ? "idle" : "missed")}>${missed >= 2 ? "⏱ не отвечает" : "⏱ пропустил ход"}</span>`
-    : away !== null ? html`<span class="st away">◒ свернул ${away} с</span>`
+    : away !== null ? html`<span class="st away">◒ ${awayKind === "offline" ? "нет связи" : awayKind === "blurred" ? "в другом окне" : "свернул"} ${away} с</span>`
     : html`<span class="st in">● в игре</span>`;
   // The coins sit on the photo's corner, so the status line has the side's whole width for bigger words.
   const tokenCount = html`<span class="tokens ptokens"><img src=${img("coin")} alt="" /><b>${tokens}</b></span>`;
