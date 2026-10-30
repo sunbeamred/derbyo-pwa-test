@@ -202,3 +202,6 @@ export const pushApi = {
   prefs: (endpoint, prefs) => api("/api/push/prefs", { endpoint, prefs }),
   unsubscribe: (endpoint) => api("/api/push/unsubscribe", { endpoint }),
 };
+
+/** A message to the team (the site's own feedback box). */
+export const sendFeedback = (message, context = {}) => api("/api/feedback", { message, context });

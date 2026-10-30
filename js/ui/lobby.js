@@ -4,6 +4,7 @@ import { Match, Opponent, MAX_VIEWERS, store } from "../model.js";
 import { has, rand } from "../data.js";
 import { Sound } from "../sound.js";
 import { isStandalone } from "../install.js";
+import { BUILD } from "../update.js";
 import { ONLINE, siteStats, account } from "../net.js";
 import { ProfileSheet } from "./profile.js";
 import { ViewerList } from "./sheets.js";
@@ -82,6 +83,8 @@ export function HomeView({ nav }) {
   return html`<div class="screen-scroll"><div class="page">
     <div class="home-head">
       <img class="logo-img" src=${img("derbyo-logo")} alt="DERBYO" /><span class="sp"></span>
+      <button class="sound-btn glass press" aria-label="Обратная связь" onClick=${() => dispatchEvent(new CustomEvent("derbyo-feedback", { detail: {} }))}>
+        <img src=${img("feedback")} alt="" /></button>
       ${!isStandalone() ? html`<button class="sound-btn glass press" aria-label="Установить приложение" onClick=${() => dispatchEvent(new CustomEvent("derbyo-install"))}>
         <${Icon} name="download" size="20" weight="2.2" /></button>` : null}
       <button class="sound-btn glass press" aria-label=${sound ? "Выключить звук" : "Включить звук"}
@@ -91,14 +94,14 @@ export function HomeView({ nav }) {
     </div>
     <${Section} t="ИГРЫ" />
     <div class="game-card">
-      <img class="hero" src="img/hero.jpg" alt="" />
+      <img class="hero" src=${`img/hero.jpg?v=${BUILD}`} alt="" />
       <div class="gc-in">
         <h2>Футбольные<br />крестики-нолики</h2>
         <p><i></i>${ONLINE ? "Дуэли онлайн · база derbyo.online" : "Дуэли онлайн · 26 играют сейчас"}</p>
         <button class="primary-btn" onClick=${() => nav.push("lobby")}><img src=${img("bolt")} alt="" />Играть</button>
       </div>
     </div>
-    ${TEST_BUILD ? html`<div class="mini-games">${MINI_GAMES.map((g) => html`<button class="mini-game glass press" onClick=${() => nav.push(g.id)}>
+    ${ONLINE ? html`<div class="mini-games">${MINI_GAMES.map((g) => html`<button class="mini-game glass press" onClick=${() => nav.push(g.id)}>
         <img src=${img("game-" + g.id)} alt="" /><span><b>${g.title}</b><small>${g.text}</small></span><${Icon} name="right" size="14" class="chev" /></button>`)}</div>`
     : html`<div class="soon">
       <span class="soon-ic"><${Icon} name="sparkles" size="18" weight="1.8" /></span>
@@ -107,9 +110,7 @@ export function HomeView({ nav }) {
   </div></div>`;
 }
 
-// The test build (app-sandbox, or this computer) shows the mini-games, copied from the games lab into the sandbox server;
-// the main app keeps «скоро».
-const TEST_BUILD = /app-sandbox|localhost|127\.0\.0\.1/.test(location.host);
+// The mini-games: every online app has them (the server's /api/daily, /api/contexto, /api/links); the offline demo does not.
 const MINI_GAMES = [
   { id: "daily", path: "/daily", title: "Футболист дня", text: "Угадай одного футболиста за день" },
   { id: "contexto", path: "/contexto", title: "Контекстно", text: "Кто ближе к загаданному — с друзьями" },

@@ -38,6 +38,15 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     return () => clearTimeout(t);
   }, [m.toast?.id]);
   useEffect(() => { const t = setTimeout(() => setEntering(false), reduceMotion() ? 200 : 1050); return () => clearTimeout(t); }, []);
+  // A new match (its first round) opens with the two players face to face behind closing doors, then a 5-second count.
+  const [intro, setIntro] = useState(null);
+  const firstGame = m.online && !m.watching && !m.hotseat && m.round === 1 && m.g?.stage === "play" ? m.g.id : null;
+  useEffect(() => {
+    if (!firstGame) return;
+    const key = "intro-" + firstGame;
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch {}
+    setIntro(firstGame);
+  }, [firstGame]);
   useEffect(() => {
     if (!m.reward) return;
     if (m.reward.coins) setCoins(m.reward.id);
@@ -93,9 +102,11 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${m.watching ? html`
       ${menuRow(Sound.enabled ? "Выключить звук" : "Включить звук", () => (Sound.enabled = !Sound.enabled))}
       ${menuRow("Свернуть", minimize)}
+      ${menuRow("Обратная связь", () => dispatchEvent(new CustomEvent("derbyo-feedback", { detail: { room: m.code?.replace(/\s/g, ""), role: "spectator" } })))}
       ${menuRow("Уйти с трибуны", close)}` : html`
       ${!m.matchOver ? menuRow("Свернуть матч", minimize) : null}
       ${menuRow(`Пригласить · код ${m.code}`, invite)}
+      ${menuRow("Обратная связь", () => dispatchEvent(new CustomEvent("derbyo-feedback", { detail: { room: m.code?.replace(/\s/g, ""), role: "player" } })))}
       ${m.roundOver ? menuRow(m.canLeaveFree ? "Выйти без штрафа" : m.matchOver ? "На главную" : "Выйти из матча", close) : html`
         ${menuRow(Sound.enabled ? "Выключить звук" : "Включить звук", () => (Sound.enabled = !Sound.enabled))}
         ${m.paused ? menuRow(m.resumeWait === null ? "Продолжить" : `Ждём ${m.opponent.name}…`, () => m.requestResume())
@@ -155,7 +166,8 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${confirmSurrender ? html`<${Alert} title=${`Сдаться в раунде ${m.round}?`} message=${`Раунд выиграет ${m.opponent.name}. Счёт станет ${m.score[0]}:${m.score[1] + 1}.`}
       onClose=${() => setConfirmSurrender(false)}
       actions=${[{ title: "Играть дальше", run: () => setConfirmSurrender(false) }, { title: "Сдаться", kind: "destructive", run: () => { setConfirmSurrender(false); m.surrender(); store.changed(); } }]} />` : null}
-    ${entering ? html`<${Entrance} />` : null}
+    ${entering && !intro ? html`<${Entrance} />` : null}
+    ${intro ? html`<${MatchIntro} m=${m} key=${intro} done=${() => setIntro(null)} />` : null}
   </div>`;
 }
 
@@ -480,6 +492,56 @@ function CoinAtmosphere({ done }) {
 }
 
 /** .stadium-entrance: the site's «Выходим на поле» moment when a match starts (1.05 s). */
+/** The match intro: two doors slide shut from the sides, each carrying a player (photo, name, flag, rating, place),
+ * the VS seal lands on the seam, a 5…1 count runs, and the doors part to show the board. A tap skips it. */
+function MatchIntro({ m, done }) {
+  const [n, setN] = useState(5);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let left = 5;
+    // The doors slam shut at about half a second: a hard buzz with the flash.
+    const hit = setTimeout(() => { vibrate([30, 30, 20]); Sound.play?.("good"); }, 480);
+    const tick = setInterval(() => {
+      left -= 1;
+      if (left > 0) { setN(left); vibrate(left === 1 ? 25 : 8); Sound.play?.("turn"); }
+      else { clearInterval(tick); setOpen(true); setTimeout(done, 700); }
+    }, 1000);
+    return () => { clearInterval(tick); clearTimeout(hit); };
+  }, []);
+  const skip = () => { if (!open) { setOpen(true); setTimeout(done, 700); } };
+  const side = (owner) => {
+    const mine = owner === 0;
+    const name = mine ? m.leftName : m.opponent.name;
+    const flag = mine ? m.myFlag : m.opponent.flag;
+    const rating = mine ? m.myRating : m.opponent.rating;
+    const rank = mine ? m.myRank : m.opponent.rank;
+    const bot = !mine && m.opponent.isBot;
+    const photo = m.avatarOf?.(owner);
+    const red = m.seat(owner) === 0;
+    return html`<div class=${cx("intro-door", mine ? "l" : "r", red ? "red" : "green")}>
+      <div class="intro-player">
+        <span class="intro-face">${bot ? html`<img class="bot" src=${img("bot")} alt="" />` : photo ? html`<img class="photo" src=${photo} alt="" />` : html`<b>${name.slice(0, 2).toUpperCase()}</b>`}
+          ${flag ? html`<i class="intro-flag">${flagView(flag)}</i>` : null}</span>
+        <b class=${cx("intro-name", name.length > 13 ? "s" : name.length > 9 && "m")}>${name}</b>
+        ${rating != null ? html`<span class="intro-rating"><b>${rating}</b>${rank ? html`<small><em>#${rank}</em> место</small>` : null}</span>`
+          : html`<span class="intro-rating"><small>${bot ? "учебный бот" : "без рейтинга"}</small></span>`}
+      </div>
+    </div>`;
+  };
+  const level = m.levelChain?.cur ?? m.levelPath?.find((x) => x.current)?.name ?? "";
+  return html`<div class=${cx("match-intro", open && "open")} onClick=${skip} role="dialog" aria-label=${`${m.leftName} против ${m.opponent.name}, старт через ${n}`}>
+    <div class="intro-bg"></div>
+    ${side(0)}${side(1)}
+    <svg class="intro-seam" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="58" y1="0" x2="42" y2="100" /></svg>
+    <div class="intro-flash"></div>
+    <div class="intro-center">
+      ${level ? html`<small class="intro-level">${level}</small>` : null}
+      <span class="intro-vs"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="track" cx="50" cy="50" r="46" /><circle class="drain" cx="50" cy="50" r="46" pathLength="100" /></svg><i>VS</i></span>
+      <b class="intro-count" key=${n}>${n}</b>
+    </div>
+  </div>`;
+}
+
 const Entrance = () => html`<div class="entrance" aria-hidden="true">
   <div class="ent-blur"></div><img class="ent-stadium" src="img/stadium.jpg" alt="" /><div class="ent-shade"></div><div class="ent-beams"></div>
   <div class="ent-copy"><small>DERBYO · МАТЧ СКОРО НАЧНЁТСЯ</small><b>Выходим на поле</b></div>

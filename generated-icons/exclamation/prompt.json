@@ -1,0 +1,6 @@
+{
+  "generator": "built-in image_gen",
+  "date": "2026-10-30",
+  "prompt": "Create ONE exclamation mark icon matching the supplied DERBYO question mark icon EXACTLY in style. Replace the question-mark glyph with a single bold EXCLAMATION MARK: one thick straight upright vertical stem with softly rounded ends, and one separate round dot below. Match reference's matte muted slate-blue polymer, gentle upper-left highlight, small softly rounded bevel, very shallow almost-flat 2.5D relief, subtle darker blue lower edges. Front-facing, no rotation, centered on a square canvas. Match reference question mark's visual height, stroke weight and optical size, occupying about 80 percent of square height with balanced transparent padding. The dot has the same diameter and material as reference's dot. Transparent PNG background, no floor or cast shadow outside glyph, no enclosing circle, no triangle, no badge, no additional objects, no written text, no logo, no watermark. Clean readable at 24px, intended final icon 192x192.",
+  "reference": "../../img/question.png"
+}

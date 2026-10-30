@@ -4,6 +4,7 @@
 import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel, vibrate } from "./common.js";
 import { Face } from "./sheets.js";
 import { raiseKeyboard } from "./match.js";
+import { IntroCard, SoloTrays, useDailyReward, RewardChip } from "./games.js";
 
 const STORE = "derbyo.daily.v1";
 const load = () => { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; } };
@@ -61,13 +62,16 @@ function DailyAnswer({ game, attempts, hint, used, choose, dismiss }) {
     return () => { live = false; clearTimeout(t); };
   }, [query]);
   const hits = found.slice(0, 6).reverse();
+  // The closest match sits at the bottom, by the keyboard: the list opens scrolled down to it.
+  const scroller = useRef();
+  useEffect(() => { const el = scroller.current; if (el) el.scrollTop = el.scrollHeight; }, [found]);
   return html`<div class="answer">
     <div class="cond-bubble glass dg-ask">
       <span class="dg-dots">${Array.from({ length: game.max }, (_, i) => html`<i class=${cx(i < attempts && "used", i === attempts && "now")}></i>`)}</span>
       <b>Попытка ${attempts + 1} из ${game.max}</b>
       ${hint ? html`<small>Фамилия: ${hintText(hint)}</small>` : null}
     </div>
-    <div class="answer-scroll">
+    <div class="answer-scroll" ref=${scroller}>
       ${query.trim().length < 2 ? html`<p class="hint-line">Начни вводить фамилию — выбери футболиста из списка.</p>`
         : !hits.length ? html`<p class="hint-line">Никого не нашли — проверь написание</p>`
         : html`<div class="hits">${hits.map((p) => html`<button class=${cx("hit", used.has(p.id) && "used")} disabled=${used.has(p.id)} onClick=${() => { choose(p); dismiss(); }}>
@@ -89,6 +93,7 @@ export function DailyView({ nav }) {
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [, tick] = useState(0);
   const freshId = useRef(null);
   const list = useRef();
@@ -98,8 +103,8 @@ export function DailyView({ nav }) {
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(t); }, []);
   useEffect(() => { api("state").then((s) => { offset.current = s.serverNow - Date.now(); setSt(s); }).catch((e) => setErr(e.message)); }, []);
   useEffect(() => { if (st) open(mode); }, [st, mode]);
-  // New guesses land at the bottom, by the field: keep them in view.
-  useEffect(() => { const el = list.current?.closest(".screen-scroll"); if (el) el.scrollTop = el.scrollHeight; }, [rows.length, game?.over]);
+  // New guesses land at the top, by the field: keep them in view.
+  useEffect(() => { const el = list.current?.closest(".screen-scroll"); if (el) el.scrollTop = 0; }, [rows.length, game?.over]);
 
   async function open(m) {
     setErr(null); setRows([]);
@@ -182,54 +187,57 @@ export function DailyView({ nav }) {
     memo.endless.level = level; memo.endless.round = null; save();
     open("endless");
   }
-  const share = async () => {
-    const SQ = { hit: "🟩", near: "🟨", miss: "⬛" };
-    const text = [`DERBYO · Футболист дня #${st.day} · ${game.won ? game.guesses.length : "X"}/${st.maxGuesses}${game.hint ? " 💡" : ""}`,
-      ...rows.map((f) => [f.nat, f.pos, f.born, f.clubs].map((x) => SQ[x.result]).join("")), "https://derbyo.online/daily"].join("\n");
-    try { if (navigator.share) { await navigator.share({ text }); return; } } catch (e) { if (e.name === "AbortError") return; }
-    try { await navigator.clipboard.writeText(text); setErr("Результат скопирован"); } catch {}
-  };
+
 
   const used = new Set(game?.guesses ?? []);
   const attempts = game?.guesses.length ?? 0;
   const level = mem().endless.level;
   const lstats = mem().endless.stats[level] || { played: 0, wins: 0, streak: 0, best: 0 };
   const memo = mem();
+  const reward = useDailyReward(mode === "daily" && game?.won && st ? { game: "daily", day: st.day, guesses: game.guesses } : null);
   return html`<div class="screen-with-bar daily-screen"><div class="game-top">
     <${LobbyHeader} title="Футболист дня" back=${nav.back} />
     <div class="segmented talk-tabs dg-tabs" role="tablist">
-      ${[["daily", st ? `Дня · №${st.day}` : "Футболист дня"], ["endless", "Бесконечный"]].map(([m, t]) => html`<button role="tab" aria-selected=${mode === m} class=${cx("press", mode === m && "on")} onClick=${() => mode !== m && setMode(m)}>${t}</button>`)}
+      ${[["daily", "Сегодня"], ["endless", "Бесконечный"]].map(([m, t]) => html`<button role="tab" aria-selected=${mode === m} class=${cx("press", mode === m && "on")} onClick=${() => mode !== m && setMode(m)}>${t}</button>`)}
     </div>
     ${mode === "endless" && st ? html`<div class="dg-levels">${st.levels.map((l) => html`<button class=${cx("dg-level press", level === l.level && "on")} style=${`--t:${LEVEL_TINT[l.level]}`}
         onClick=${() => level !== l.level && nextRound(l.level)}><img src=${img(LEVEL_ICON[l.level])} alt="" /><b>${l.label}</b></button>`)}</div>
       <p class="dg-line">Серия ${lstats.streak} · рекорд ${lstats.best} · угадано ${lstats.wins} из ${lstats.played}</p>`
     : st ? html`<p class="dg-line">Один футболист на всех · новый через ${clock(st.nextAt - (Date.now() + offset.current))}</p>` : null}
+    ${game && !game.over ? html`<button class="dg-ask-btn press" disabled=${busy} onClick=${() => { raiseKeyboard(); setAsking(true); }}>
+        <${Icon} name="search" size="17" /><span>${busy ? "Проверяем…" : `Назови футболиста · ${attempts + 1} из ${st.maxGuesses}`}</span></button>
+      ${game.hint ? html`<p class="dg-hint">Фамилия: <b>${hintText(game.hint)}</b></p>` : null}` : null}
   </div><div class="screen-scroll"><div class="page game-page">
     ${!st && !err ? html`<p class="hint-line pad">Загружаем…</p>` : null}
-    ${st && game && !rows.length && !game.over ? html`<div class="dg-empty glass">
-        <img src=${img("game-daily")} alt="" /><b>Угадай футболиста за ${st.maxGuesses} попыток</b>
-        <p>После каждой попытки видно, что совпало: <i class="k-hit">сборная</i>, <i class="k-near">позиция</i>, <i class="k-miss">год</i>, клубы. Зелёное — точно, жёлтое — близко.</p></div>` : null}
-    <div class="dg-list" ref=${list}>${rows.map((f, i) => html`<${GuessCard} f=${f} n=${i + 1} fresh=${f.id === freshId.current} key=${f.id} />`)}</div>
-    ${game?.over && game.answer ? html`<div class=${cx("dg-result glass", game.won ? "won" : "lost")}>
-        <small>${game.won ? `Угадано за ${attempts} из ${st.maxGuesses}${game.hint ? " · с подсказкой" : ""}` : "Не угадано. Это был"}</small>
-        <div class="dg-answer"><${Face} p=${{ name: game.answer.name, photo: game.answer.photo }} size=${56} />
-          <span><b>${game.answer.name}</b><em>${game.answer.nat?.flag ?? ""} ${game.answer.pos ?? ""}${game.answer.born ? ` · ${game.answer.born}` : ""}</em></span></div>
-        ${mode === "daily" ? html`<div class="pf-stats"><span><b>${memo.played}</b><small>Сыграно</small></span><span><b>${memo.played ? Math.round((memo.wins / memo.played) * 100) : 0}%</b><small>Побед</small></span><span><b>${memo.streak}</b><small>Серия</small></span><span><b>${memo.best}</b><small>Лучшая</small></span></div>` : null}
+    ${st && game && !rows.length && !game.over ? html`<${IntroCard} icon="game-daily" title="Кто этот футболист?" sub=${`${st.maxGuesses} попыток`}
+        steps=${["Назови любого футболиста", html`Сравни: <i class="k-hit">точно</i> <i class="k-near">близко</i> <i class="k-miss">мимо</i>`, "Сборная, позиция, год и клубы подскажут путь"]} />` : null}
+    ${game?.over && game.answer ? html`<div class=${cx("dg-final glass", game.won ? "won" : "lost")}>
+        <small class="dgf-cap">${game.won ? `Угадано за ${attempts} из ${st.maxGuesses}${game.hint ? " · с подсказкой" : ""}` : "Не угадано · это был"}</small>
+        <div class="dgf-face">${game.answer.photo ? html`<img src=${game.answer.photo} alt="" referrerpolicy="no-referrer" onError=${(e) => (e.target.style.display = "none")} />` : null}
+          <b>${game.answer.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</b>${game.won ? html`<i class="dgf-badge">✓</i>` : null}</div>
+        <b class="dgf-name">${game.answer.name}</b>
+        <span class="dgf-meta">${[game.answer.nat && `${game.answer.nat.flag ?? ""} ${game.answer.nat.label ?? ""}`.trim(), game.answer.pos, game.answer.born && `${game.answer.born} г. р.`].filter(Boolean).join(" · ")}</span>
+        <${RewardChip} r=${reward} />
+        ${game.answer.career?.length ? html`<div class="ctx-career dgf-career">${game.answer.career.slice(-6).map((c) => html`<span>${c.logo ? html`<img src=${c.logo} alt="" referrerpolicy="no-referrer" />` : null}<b>${c.name}</b><small>${String(c.years).split(",")[0]}</small></span>`)}
+          ${game.answer.career.length > 6 ? html`<span class="more">ещё ${game.answer.career.length - 6}</span>` : null}</div>` : null}
+        ${mode === "daily" ? html`<div class="pf-stats dgf-stats"><span><b>${memo.played}</b><small>Сыграно</small></span><span><b>${memo.played ? Math.round((memo.wins / memo.played) * 100) : 0}%</b><small>Побед</small></span><span><b>${memo.streak}</b><small>Серия</small></span></div>` : null}
       </div>` : null}
+    <div class="dg-list" ref=${list}>${rows.map((f, i) => html`<${GuessCard} f=${f} n=${i + 1} fresh=${f.id === freshId.current} key=${f.id} />`).reverse()}</div>
     ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
   </div></div>
   <${BottomBar}>
-    ${!game ? null : !game.over ? html`<div class="dg-bar">
-        <button class="dg-ask-btn press" disabled=${busy} onClick=${() => { raiseKeyboard(); setAsking(true); }}>
-          <${Icon} name="search" size="17" /><span>${busy ? "Проверяем…" : `Назови футболиста · ${attempts + 1} из ${st.maxGuesses}`}</span></button>
-        ${attempts >= st.hintAfter ? html`<button class=${cx("round-tool press", game.hint && "on")} aria-label="Подсказка: первая буква фамилии" disabled=${!!game.hint}
-            onClick=${takeHint}><img src=${img("question")} alt="" /></button>` : null}
-      </div>
-      ${game.hint ? html`<p class="dg-hint">Фамилия: <b>${hintText(game.hint)}</b></p>` : null}`
-    : mode === "daily" ? html`<div class="two"><button class="primary-btn" onClick=${share}><img src=${img("share")} alt="" />Поделиться</button>
-        <button class="navy-btn tall" onClick=${() => setMode("endless")}>Бесконечный</button></div>`
-    : html`<button class="primary-btn" onClick=${() => nextRound()}><img src=${img("bolt")} alt="" />Следующий футболист</button>`}
+    ${!game ? null : html`<${SoloTrays} menu=${() => setMenuOpen(true)} left=${!game.over ? html`<div class="tray turn-tray glass solo-count">
+        <span class="tray-label"><b>Попытка ${attempts + 1} из ${st.maxGuesses}</b><small>${game.hint ? "подсказка взята" : attempts >= st.hintAfter ? "подсказка доступна в меню" : `подсказка после ${st.hintAfter} попыток`}</small></span></div>`
+      : html`<div class="tray turn-tray glass over">${mode === "daily" ? html`<button class="primary-btn ctx-next" onClick=${() => setMode("endless")}><img src=${img("bolt")} alt="" />Играть бесконечный</button>`
+        : html`<button class="primary-btn ctx-next" onClick=${() => nextRound()}><img src=${img("bolt")} alt="" />Следующий игрок</button>`}</div>`} />`}
   <//>
+  ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}><div class="menu">
+      <h2>Футболист дня</h2>
+      ${game && !game.over ? html`<button class="navy-btn menu-row" disabled=${!!game.hint || attempts < st.hintAfter} onClick=${() => { setMenuOpen(false); takeHint(); }}>
+          ${game.hint ? `Подсказка: ${hintText(game.hint)}` : attempts < st.hintAfter ? `Подсказка — после ${st.hintAfter} попыток` : "Взять подсказку: первая буква фамилии"}</button>`
+        : mode === "daily" ? html`<button class="navy-btn menu-row" onClick=${() => { setMenuOpen(false); setMode("endless"); }}>Играть бесконечный</button>`
+        : html`<button class="navy-btn menu-row" onClick=${() => { setMenuOpen(false); nextRound(); }}>Следующий игрок</button>`}
+    </div><//>` : null}
   ${asking && game && !game.over ? html`<${Panel} onClose=${() => setAsking(false)} class="answer-panel">${(leave) => html`<${DailyAnswer} game=${game} attempts=${attempts} hint=${game.hint}
       used=${used} choose=${choose} dismiss=${leave} />`}<//>` : null}
   </div>`;
