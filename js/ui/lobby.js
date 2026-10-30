@@ -101,7 +101,7 @@ export function HomeView({ nav }) {
         <button class="primary-btn" onClick=${() => nav.push("lobby")}><img src=${img("bolt")} alt="" />Играть</button>
       </div>
     </div>
-    ${TEST_BUILD ? html`<div class="mini-games">${MINI_GAMES.map((g) => html`<button class="mini-game glass press" onClick=${() => nav.push(g.id)}>
+    ${ONLINE ? html`<div class="mini-games">${MINI_GAMES.map((g) => html`<button class="mini-game glass press" onClick=${() => nav.push(g.id)}>
         <img src=${img("game-" + g.id)} alt="" /><span><b>${g.title}</b><small>${g.text}</small></span><${Icon} name="right" size="14" class="chev" /></button>`)}</div>`
     : html`<div class="soon">
       <span class="soon-ic"><${Icon} name="sparkles" size="18" weight="1.8" /></span>
@@ -110,9 +110,7 @@ export function HomeView({ nav }) {
   </div></div>`;
 }
 
-// The test build (app-sandbox, or this computer) shows the mini-games, copied from the games lab into the sandbox server;
-// the main app keeps «скоро».
-const TEST_BUILD = /app-sandbox|localhost|127\.0\.0\.1/.test(location.host);
+// The mini-games: every online app has them (the server's /api/daily, /api/contexto, /api/links); the offline demo does not.
 const MINI_GAMES = [
   { id: "daily", path: "/daily", title: "Футболист дня", text: "Угадай одного футболиста за день" },
   { id: "contexto", path: "/contexto", title: "Контекстно", text: "Кто ближе к загаданному — с друзьями" },
