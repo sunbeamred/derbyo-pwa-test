@@ -30,6 +30,8 @@ export async function api(path, body, { token, method, tries } = {}) {
   const left = tries ?? (safe ? 3 : 1);
   try { return await once(path, body, { token, post }); }
   catch (e) {
+    // A 429 from a busy gateway (too many bodies at once from one carrier address) gets one more try a moment later.
+    if (e.status === 429 && safe && left > 1) { await wait(1500 + Math.random() * 1000); return api(path, body, { token, method, tries: 1 }); }
     if (left <= 1 || !RETRY.has(e.status)) throw e;
     await wait(e.status === 0 ? 700 : 1200);
     return api(path, body, { token, method, tries: left - 1 });
