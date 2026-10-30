@@ -217,8 +217,10 @@ input { font-family: inherit; }
 .online-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; padding: 6px 10px; border-radius: 99px; background: var(--raised); border: 1px solid #2F4760; }
 .online-pill i, .game-card p i { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); }
 .game-card { position: relative; border-radius: 20px; overflow: hidden; border: 1px solid #20344A; }
-.game-card .hero { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.game-card::before { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(6, 13, 22, .6), var(--bg)); z-index: 1; }
+.game-card .hero { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% 50%; }
+/* Darker on the left under the title, lighter on the right where the picture has its pieces. */
+.game-card::before { content: ""; position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(90deg, rgba(6, 13, 22, .78), rgba(6, 13, 22, .4) 55%, rgba(6, 13, 22, .12)), linear-gradient(transparent 55%, rgba(7, 17, 29, .7)); }
 .gc-in { position: relative; z-index: 2; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .gc-in h2 { font-size: 28px; font-weight: 700; letter-spacing: -.5px; line-height: 1.05; }
 .gc-in p { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--soft); }
