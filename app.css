@@ -1527,7 +1527,7 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .tt-gold-wrap { position: relative; isolation: isolate; }
 .tt-card { position: relative; overflow: hidden; isolation: isolate; color: #2A1A05; text-align: left; border-radius: 24px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), inset 0 -2px 0 rgba(0, 0, 0, .25), 0 12px 28px rgba(0, 0, 0, .45); }
-.tt-card.gold { z-index: 2; display: flex; align-items: center; gap: 14px; width: 100%; padding: 18px 18px 18px 16px;
+.tt-card.gold { z-index: 2; display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 16px 16px 14px;
   background: linear-gradient(125deg, #7A5410 0%, #D9A93F 14%, #FFF1B8 26%, #E8B94A 38%, #9C6C17 52%, #E2B04A 66%, #FFE89A 78%, #B0801F 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), inset 0 -3px 0 rgba(90, 55, 0, .45), 0 14px 32px rgba(0, 0, 0, .5); }
 /* The neon ring: a conic gradient turning round the card, a sharp copy for the line and a blurred one for the glow. */
@@ -1549,18 +1549,19 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
   box-shadow: 0 0 0 2.5px rgba(255, 255, 255, .9), 0 4px 10px rgba(0, 0, 0, .35); }
 .tt-face img { width: 100%; height: 100%; border-radius: 16px; object-fit: cover; }
 .tt-face i { font-style: normal; font-size: 17px; font-weight: 800; color: #fff; }
-.gold .tt-face { width: 68px; height: 68px; border-radius: 20px; box-shadow: 0 0 0 3px #FFF6D2, 0 0 0 5px rgba(122, 84, 16, .55), 0 6px 14px rgba(0, 0, 0, .4); }
-.gold .tt-face img { border-radius: 20px; }
-.gold .tt-face i { font-size: 24px; }
+.gold .tt-face { width: 58px; height: 58px; border-radius: 18px; box-shadow: 0 0 0 3px #FFF6D2, 0 0 0 5px rgba(122, 84, 16, .55), 0 6px 14px rgba(0, 0, 0, .4); }
+.gold .tt-face img { border-radius: 18px; }
+.gold .tt-face i { font-size: 21px; }
 .tt-flag { position: absolute; right: -8px; bottom: -8px; font-style: normal; font-size: 20px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); }
 .tt-flag img.globe { width: 20px; height: 20px; margin: 0; }
 .tt-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .tt-text small { font-size: 11px; font-weight: 800; letter-spacing: .08em; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tt-text small + .tt-name + small { letter-spacing: 0; font-weight: 700; }
 .tt-name { font-size: 15px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.gold .tt-name { font-size: 22px; letter-spacing: -.01em; }
+.gold .tt-name { font-size: 20px; letter-spacing: -.01em; }
+.gold .tt-name.long { font-size: 16px; }
 .tt-score { font-family: var(--rounded); font-size: 22px; font-weight: 900; text-shadow: 0 1px 0 rgba(255, 255, 255, .5); }
-.gold .tt-score { flex: none; font-size: 34px; }
+.gold .tt-score { flex: none; font-size: 28px; }
 .tt-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .tt-row .tt-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 10px 12px; text-align: center; min-width: 0; }
 .tt-place { position: absolute; left: 12px; top: 8px; font-family: var(--rounded); font-size: 22px; font-weight: 900; opacity: .55; }

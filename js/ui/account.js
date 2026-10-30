@@ -70,7 +70,7 @@ function TopThree({ top, period, open }) {
       <button class=${cx("tt-card gold", first.self && "self")} onClick=${() => open(first.id)}>
         <span class="tt-shine"></span>
         ${face(first)}
-        <span class="tt-text"><small>ЧЕМПИОН · #1</small><b class="tt-name">${first.nickname}</b><small>${first.games} игр · ${first.winRate}% побед</small></span>
+        <span class="tt-text"><small>ЧЕМПИОН · #1</small><b class=${cx("tt-name", first.nickname.length > 11 && "long")}>${first.nickname}</b><small>${first.games} игр · ${first.winRate}% побед</small></span>
         <b class="tt-score num">${scoreText(first, period)}</b>
       </button></div>` : null}
     ${second || third ? html`<div class="tt-row">${small(second, 2)}${small(third, 3)}</div>` : null}
