@@ -4,6 +4,7 @@
 import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel, vibrate, Alert } from "./common.js";
 import { Face } from "./sheets.js";
 import { raiseKeyboard } from "./match.js";
+import { account } from "../net.js";
 
 const LEVEL_ICON = { 1: "level-rookie", 2: "level-amateur", 3: "level-knower", 4: "level-legend" };
 const LEVEL_TINT = { 1: "#C9D5E3", 2: "#6FA8FF", 3: "#FFE45C", 4: "#FF7A3D" };
@@ -92,9 +93,9 @@ function CtxRow({ f, total, hint, why, fresh }) {
   </div>`;
 }
 
-export function ContextoView({ nav, app }) {
+export function ContextoView({ nav, join }) {
   const memo = ctxMem.get();
-  const [mode, setMode] = useState(() => (memo.appMode === "endless" ? "endless" : "daily"));
+  const [mode, setMode] = useState(() => (join || memo.room ? "friends" : memo.appMode === "endless" ? "endless" : "daily"));
   const [st, setSt] = useState(null);
   const [rows, setRows] = useState([]);
   const [round, setRound] = useState(null);
@@ -108,13 +109,9 @@ export function ContextoView({ nav, app }) {
   const offset = useRef(0);
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(t); }, []);
   useEffect(() => { ctxApi("state").then((s) => { offset.current = s.serverNow - Date.now(); setSt(s); }).catch((e) => setErr(e.message)); }, []);
-  useEffect(() => { if (st) open(); }, [st, mode]);
+  useEffect(() => { if (st && mode !== "friends") open(); }, [st, mode]);
 
-  const pickMode = (m) => {
-    // «С друзьями» is a shared live room: for now it opens the site's own page inside the app.
-    if (m === "friends") { nav.push("minigame", { game: { id: "contexto", path: "/contexto", hash: "#friends", title: "Контекстно · с друзьями" } }); return; }
-    setMode(m);
-  };
+  const pickMode = setMode;
   async function open() {
     setErr(null); setRows([]); setResult(null); setLast(null);
     memo.appMode = mode; ctxMem.save();
@@ -190,6 +187,8 @@ export function ContextoView({ nav, app }) {
   }
   const next = () => { memo.endless.round = null; ctxMem.save(); open(); };
 
+  const tabs = [["daily", st ? `Дня · №${st.day}` : "Дня"], ["endless", "Бесконечный"], ["friends", "С друзьями"]];
+  if (mode === "friends") return html`<${ContextoFriends} nav=${nav} st=${st} tabs=${tabs} mode=${mode} setMode=${setMode} join=${join} />`;
   const used = new Set(round?.guesses ?? []);
   const hints = new Set(round?.hints ?? []);
   const sorted = rows.slice().sort((a, b) => a.rank - b.rank);
@@ -361,5 +360,153 @@ export function LinksView({ nav }) {
         used=${used} choose=${choose} dismiss=${leave} />`}<//>` : null}
     ${giveUp ? html`<${Alert} title="Сдаться?" message="Откроем всех футболистов и связь." onClose=${() => setGiveUp(false)}
       actions=${[{ title: "Играть дальше", run: () => setGiveUp(false) }, { title: "Сдаться", kind: "destructive", run: surrender }]} />` : null}
+  </div>`;
+}
+
+// ———————————————————————————— Контекстно · с друзьями ————————————————————————————
+// One hidden player per round and one shared list: everyone sees every guess and its author; whoever names №1 first wins.
+// The room lives on the server (contexto-rooms.mjs); this phone keeps its seat (code + secret) in the site's own memory.
+
+const roomCall = (route, body = {}, secret) => fetch(`/api/contexto/room/${route}`, { method: "POST",
+  headers: { "Content-Type": "application/json", ...(secret ? { Authorization: "Bearer " + secret } : {}) }, body: JSON.stringify(body) })
+  .then((r) => r.json().catch(() => ({ ok: false, error: "Сервер недоступен." })))
+  .then((d) => { if (!d.ok) throw Object.assign(new Error(d.error || "Ошибка."), { code: d.code }); return d; });
+
+function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
+  const memo = ctxMem.get();
+  const [seat, setSeat] = useState(memo.room ?? null);
+  const [view, setView] = useState(null);
+  const [name, setName] = useState(() => memo.name || (account.profile?.registered ? account.name : "") || "");
+  const [code, setCode] = useState(join ?? "");
+  const [level, setLevel] = useState(memo.endless.level || 1);
+  const [err, setErr] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [, tick] = useState(0);
+  const clockOff = useRef(0);
+  const lastSeen = useRef(0);
+  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(t); }, []);
+  // The room's live state: one stream per seat, reconnecting with a growing pause.
+  useEffect(() => {
+    if (!seat) { setView(null); return; }
+    const ctl = new AbortController();
+    let delay = 1000;
+    (async () => {
+      while (!ctl.signal.aborted) {
+        try {
+          const r = await fetch(`/api/contexto/room/events?code=${seat.code}`, { headers: { Authorization: "Bearer " + seat.secret }, signal: ctl.signal });
+          if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            if (["ROOM", "AUTH"].includes(d.code)) { drop(d.error); return; }
+            throw new Error(d.error);
+          }
+          delay = 1000;
+          const rd = r.body.getReader(), dec = new TextDecoder();
+          let buf = "";
+          for (;;) {
+            const { value, done } = await rd.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let at;
+            while ((at = buf.indexOf("\n\n")) >= 0) {
+              const chunk = buf.slice(0, at); buf = buf.slice(at + 2);
+              if (chunk.startsWith("data: ")) { const v = JSON.parse(chunk.slice(6)); clockOff.current = v.serverNow - Date.now(); setView(v); }
+            }
+          }
+        } catch { if (ctl.signal.aborted) return; }
+        await new Promise((r) => setTimeout(r, delay));
+        delay = Math.min(delay * 2, 15000);
+      }
+    })();
+    return () => ctl.abort();
+  }, [seat?.secret]);
+  function drop(text) { memo.room = null; ctxMem.save(); setSeat(null); setView(null); if (text) setErr(text); }
+  const call = async (route, body = {}) => {
+    setErr(null);
+    try { return await roomCall(route, { code: seat.code, ...body }, seat.secret); }
+    catch (e) { if (["ROOM", "AUTH"].includes(e.code)) drop(e.message); else setErr(e.message); }
+  };
+  async function enter(route) {
+    const n = name.trim();
+    if (!n) { setErr("Введи имя."); return; }
+    if (route === "join" && !/^\d{6}$/.test(code.trim())) { setErr("Код — шесть цифр."); return; }
+    setBusy(true); setErr(null);
+    try {
+      const d = await roomCall(route, route === "join" ? { name: n, code: code.trim() } : { name: n, level });
+      memo.name = n; memo.room = { code: d.code, secret: d.secret, playerId: d.playerId }; ctxMem.save(); setSeat(memo.room);
+    } catch (e) { setErr(e.message); }
+    setBusy(false);
+  }
+  const invite = async () => {
+    const url = `${location.origin}/#ctx=${seat.code}`;
+    const text = `Сыграем в «Контекстно» в DERBYO? Комната ${seat.code}\n${url}`;
+    try { if (navigator.share) { await navigator.share({ text }); return; } } catch (e) { if (e.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(text); setErr("Ссылка скопирована"); } catch {}
+  };
+  const leave = async () => { setLeaving(false); await call("leave"); drop(); };
+
+  const v = view, you = v?.you, host = v && v.host === you;
+  const names = new Map((v?.players ?? []).map((p) => [p.id, p.name]));
+  const sorted = (v?.guesses ?? []).slice().sort((a, b) => a.rank - b.rank);
+  const used = new Set((v?.guesses ?? []).map((g) => g.id));
+  const last = v?.guesses?.at(-1);
+  const fresh = v && v.guesses.length > lastSeen.current ? last?.id : null;
+  if (v) lastSeen.current = v.guesses.length;
+  const hintLeft = v?.nextHintAt ? Math.max(0, Math.ceil((v.nextHintAt - (Date.now() + clockOff.current)) / 1000)) : null;
+  const line = !seat ? "Один загаданный на всех, общий список вариантов. Кто первым назовёт №1 — выиграл раунд."
+    : !v ? "Подключаемся…"
+    : v.status === "playing" ? `Вариантов ${v.guesses.length}${hintLeft !== null ? ` · подсказка для всех через ${Math.floor(hintLeft / 60)}:${String(hintLeft % 60).padStart(2, "0")}` : v.hintsGiven ? " · подсказок больше не будет" : ""}`
+    : `Комната ${seat.code.slice(0, 3)} ${seat.code.slice(3)} · игроков ${v.players.length} из 8`;
+  return html`<div class="screen-with-bar daily-screen">
+    <${GameTop} title="Контекстно" back=${nav.back} mode=${mode} setMode=${setMode} tabs=${tabs} line=${line} />
+    <div class="screen-scroll"><div class="page game-page">
+      ${!seat ? html`<div class="dg-empty glass ctx-lobby">
+          <img src=${img("game-contexto")} alt="" /><b>Сыграйте вместе</b>
+          <p>До 8 игроков. Подсказки открываются для всех сами: первая через 2 минуты, потом каждые полторы.</p>
+          <label class="pw-field"><${Icon} name="profile" size="16" /><input value=${name} maxlength="16" onInput=${(e) => setName(e.target.value)} placeholder="Твоё имя" autocapitalize="words" /></label>
+          <div class="dg-levels">${(st?.levels ?? []).map((l) => html`<button class=${cx("dg-level press", level === l.level && "on")} style=${`--t:${LEVEL_TINT[l.level]}`} onClick=${() => setLevel(l.level)}>
+            <img src=${img(LEVEL_ICON[l.level])} alt="" /><b>${l.label}</b></button>`)}</div>
+          <button class="primary-btn" disabled=${busy} onClick=${() => enter("create")}><img src=${img("invite")} alt="" />Создать комнату</button>
+          <div class="ctx-join"><label class="pw-field"><input value=${code} inputmode="numeric" maxlength="6" onInput=${(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="Код из 6 цифр" /></label>
+            <button class="navy-btn" disabled=${busy || code.length !== 6} onClick=${() => enter("join")}>Войти</button></div>
+        </div>`
+      : v ? html`
+        <div class="ctx-players">${v.players.map((p) => html`<span class=${cx("ctx-player", p.id === you && "me", p.id === v.winner && "won")}>
+            ${p.id === v.host ? html`<img src=${img("key")} alt="создатель" />` : null}<b>${p.id === you ? "ты" : p.name}</b>${p.best ? html`<small>#${p.best}</small>` : null}</span>`)}</div>
+        ${v.status === "lobby" ? html`<div class="dg-empty glass"><img src=${img("invite")} alt="" /><b>${host ? "Позови друзей и начинай" : "Ждём, когда создатель начнёт"}</b>
+            <p>Код комнаты <b class="ctx-code">${seat.code.slice(0, 3)} ${seat.code.slice(3)}</b> — друзья вводят его во вкладке «С друзьями» или открывают ссылку.</p></div>` : null}
+        ${v.result ? html`<div class=${cx("dg-result glass", v.winner === you ? "won" : "lost")}>
+            <small>${v.gaveUp ? "Раунд остановлен · загадан был" : v.winner === you ? "Ты угадал первым!" : `Первым угадал ${names.get(v.winner) ?? "кто-то"}`}</small>
+            <div class="dg-answer"><${Face} p=${{ name: v.result.answer.name, photo: v.result.answer.photo }} size=${56} />
+              <span><b>${v.result.answer.name}</b><em>${[v.result.answer.nat && `${v.result.answer.nat.flag} ${v.result.answer.nat.label}`, v.result.answer.pos, v.result.answer.born].filter(Boolean).join(" · ")}</em></span></div>
+          </div>` : null}
+        <div class="dg-list">${sorted.map((f) => html`<div class="ctx-by-wrap" key=${f.id}>
+            <${CtxRow} f=${f} total=${v.total} hint=${f.hint} why=${v.result?.why?.[f.id]} fresh=${f.id === fresh} />
+            ${f.by ? html`<span class=${cx("ctx-by", f.by === you && "me")}>${f.by === you ? "ты" : names.get(f.by) ?? "игрок"}</span>` : null}</div>`)}</div>`
+      : null}
+      ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
+    </div></div>
+    <${BottomBar}>
+      ${!seat || !v ? null : v.status === "playing" ? html`
+        ${last ? html`<div class="ctx-last"><small>Последний вариант · ${last.by === you ? "твой" : last.by ? names.get(last.by) : "подсказка"}</small><${CtxRow} f=${last} total=${v.total} hint=${last.hint} /></div>` : null}
+        <div class="dg-bar">
+          <${AskButton} busy=${busy} text=${`Назови футболиста${sorted[0] ? ` · лучший #${sorted[0].rank}` : ""}`} open=${() => setAsking(true)} />
+          ${host ? html`<button class="round-tool press" aria-label="Остановить раунд" onClick=${() => call("giveup")}><img src=${img("finish")} alt="" /></button>` : null}
+          <button class="round-tool press" aria-label="Позвать в комнату" onClick=${invite}><img src=${img("share")} alt="" /></button>
+        </div>`
+      : html`<div class="dg-bar">
+          ${host ? html`<button class="primary-btn" onClick=${() => call("start", { level: v.level })}><img src=${img("bolt")} alt="" />${v.round ? "Следующий раунд" : "Начать раунд"}</button>`
+            : html`<span class="dg-wait">${v.round ? "Следующий раунд начнёт создатель" : "Ждём начала"}</span>`}
+          <button class="round-tool press" aria-label="Позвать в комнату" onClick=${invite}><img src=${img("share")} alt="" /></button>
+          <button class="round-tool press" aria-label="Выйти из комнаты" onClick=${() => setLeaving(true)}><img src=${img("logout")} alt="" /></button>
+        </div>`}
+    <//>
+    ${asking && v?.status === "playing" ? html`<${Panel} onClose=${() => setAsking(false)} class="answer-panel">${(leaveSheet) => html`<${PickSheet}
+        head=${html`<b>${sorted[0] ? `Лучший в комнате #${sorted[0].rank}` : "Первый вариант в комнате"}</b>`} placeholder="Фамилия футболиста…" empty="Начни вводить фамилию — выбери футболиста из списка."
+        find=${(q) => ctxApi("search", { query: q }).then((r) => r.players ?? [])} row=${playerRow} used=${used}
+        choose=${async (p) => { setBusy(true); await call("guess", { id: p.id }); vibrate(10); setBusy(false); }} dismiss=${leaveSheet} />`}<//>` : null}
+    ${leaving ? html`<${Alert} title="Выйти из комнаты?" message="Вернуться можно по коду, если комната ещё открыта." onClose=${() => setLeaving(false)}
+      actions=${[{ title: "Остаться", run: () => setLeaving(false) }, { title: "Выйти", kind: "destructive", run: leave }]} />` : null}
   </div>`;
 }

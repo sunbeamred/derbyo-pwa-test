@@ -1178,3 +1178,24 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 .lk-answer em { font-style: normal; font-size: 13px; color: var(--soft); }
 .lk-kind { flex: none; min-width: 64px; padding: 4px 8px; border-radius: 9px; background: rgba(111, 168, 255, .16); color: #A9C9FF; font-size: 11px; font-weight: 700; text-align: center; }
 .lk-sub { display: block; font-size: 11px; color: var(--muted); }
+
+/* Контекстно с друзьями: the lobby form, the players' row, each guess's author under its card. */
+.ctx-lobby { gap: 10px; }
+.ctx-lobby .pw-field, .ctx-lobby .dg-levels, .ctx-lobby .primary-btn, .ctx-join { width: 100%; }
+.ctx-join { display: flex; gap: 8px; }
+.ctx-join .pw-field { flex: 1; }
+.ctx-join .navy-btn { width: auto; padding: 0 18px; }
+.ctx-players { display: flex; flex-wrap: wrap; gap: 6px; }
+.ctx-player { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 14px; background: var(--navy); border: 1px solid var(--navy-line); font-size: 13px; }
+.ctx-player img { width: 14px; height: 14px; }
+.ctx-player small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.ctx-player.me { border-color: rgba(111, 168, 255, .6); }
+.ctx-player.won { background: linear-gradient(#2BC88C, #169466); color: #04170F; border: 0; }
+.ctx-player.won small { color: #04170F; }
+.ctx-by-wrap { position: relative; }
+.ctx-by { position: absolute; right: 64px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 8px; background: rgba(255, 255, 255, .08); color: var(--soft); max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctx-by.me { background: rgba(111, 168, 255, .2); color: #A9C9FF; }
+.ctx-code { letter-spacing: .08em; color: var(--ink); }
+.dg-wait { flex: 1; text-align: center; font-size: 14px; color: var(--soft); }
+.dg-empty .dg-level img { width: 28px; height: 28px; }
+.dg-empty .primary-btn img { width: 26px; height: 26px; }

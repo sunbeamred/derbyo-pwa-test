@@ -328,6 +328,9 @@ function App() {
 
   // The site's room link (derbyo.online/#join=123456, #watch=, #room=) reaches a phone here: join once, then forget it.
   useEffect(() => {
+    // A friend's link to a Контекстно room (#ctx=123456): the game's friends tab with the code filled in.
+    const ctx = ONLINE && location.hash.match(/^#ctx=(\d{6})$/);
+    if (ctx) { history.replaceState(history.state, "", location.pathname + location.search); setTab(1); nav.push("contexto", { join: ctx[1] }); return; }
     const m = ONLINE && location.hash.match(/^#(join|watch|room)=(\d{6})$/);
     if (!m) return;
     history.replaceState(history.state, "", location.pathname + location.search);
