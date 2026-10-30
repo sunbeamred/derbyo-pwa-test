@@ -30,60 +30,51 @@ export function RatingTab({ visible }) {
       : !list ? html`<p class="hint-line pad">Загружаем…</p>`
       : data.requiresLogin ? html`<p class="placeholder">Друзья видны после входа в аккаунт — вкладка «Профиль».</p>`
       : !list.length ? html`<p class="placeholder">${period === "week" ? "На этой неделе ещё никто не набрал очков." : "Пока пусто."}</p>`
-      : html`<${MySpot} list=${list} period=${period} />
-        <${Podium} top=${list.slice(0, 3)} period=${period} open=${setOpen} />
-        ${list.length > 3 ? html`<div class="board-list glass">${list.slice(3).map((e) => html`<${BoardRow} e=${e} period=${period} open=${setOpen} />`)}</div>` : null}
+      // The metal top three only on the main table; the week and friends stay a plain list.
+      : html`${period === "rating" ? html`<${TopThree} top=${list.slice(0, 3)} period=${period} open=${setOpen} />` : null}
+        ${(period === "rating" ? list.slice(3) : list).length ? html`<div class="board-list glass">${(period === "rating" ? list.slice(3) : list).map((e) => html`<${BoardRow} e=${e} period=${period} open=${setOpen} />`)}</div>` : null}
         <p class="hint-line small center">Рейтинг — после 5 игр с двумя разными соперниками</p>`}
   </div>
   ${open ? html`<${Panel} onClose=${() => setOpen(null)}><${PlayerCard} id=${open} /><//>` : null}
   </div>`;
 }
 
-const score = (e, period) => (period === "week" ? e.points : e.rating) ?? 0;
 const scoreText = (e, period) => (period === "week" ? (e.points > 0 ? "+" : "") + e.points : e.rating);
+const initials2 = (n) => (n || "?").slice(0, 2).toUpperCase();
 
-/** One row of the table from fourth place down: place, face, name, the league chip and the score. */
+/** One row of the table from fourth place down. */
 function BoardRow({ e, period, open }) {
-  const t = rankTier(e.rating ?? 0);
   return html`<button class=${cx("lb-row press", e.self && "self")} onClick=${() => open(e.id)}>
-    <b class=${cx("lb-place num", placeStyle(e.rank) && "grad")} style=${placeStyle(e.rank)}>${e.rank}</b>
-    <${Face} name=${e.nickname} photo=${e.avatar} small=${true} /><span class="lb-name"><b>${flagOrGlobe(e.country) ? html`<i class="flag">${flagView(flagOrGlobe(e.country))}</i> ` : null}${e.nickname}</b>
-      <small><em class="lb-tier" style=${`--a:${t.a};--b:${t.b}`}>${t.name}</em>${e.games} игр · ${e.winRate}%</small></span>
+    <b class=${cx("lb-place num", placeStyle(e.rank) && "grad")} style=${placeStyle(e.rank)}>#${e.rank}</b>
+    <${Face} name=${e.nickname} photo=${e.avatar} small=${true} /><span class="lb-name"><b>${flagOrGlobe(e.country) ? html`<i class="flag">${flagView(flagOrGlobe(e.country))}</i> ` : null}${e.nickname}</b><small>${e.games} игр · ${e.winRate}% побед</small></span>
     <b class="lb-pts grad num" style=${tierStyle(e.rating ?? 0)}>${scoreText(e, period)}</b>
   </button>`;
 }
 
-/** The first three on a podium: the winner raised in the middle under a crown, second and third either side. */
-function Podium({ top, period, open }) {
-  const spot = (e, place) => e ? html`<button class=${cx("pod", `p${place}`, e.self && "self")} onClick=${() => open(e.id)}>
-    ${place === 1 ? html`<span class="pod-crown" aria-hidden="true">👑</span>` : null}
-    <span class="pod-face">${e.avatar ? html`<img src=${e.avatar} alt="" />` : html`<b>${(e.nickname || "?").slice(0, 2).toUpperCase()}</b>`}</span>
-    <span class="pod-name">${e.nickname}</span>
-    <b class="pod-score num">${scoreText(e, period)}</b>
-    <span class="pod-step"><i>${place}</i></span>
-  </button>` : html`<span class=${cx("pod", `p${place}`, "empty")}><span class="pod-step"><i>${place}</i></span></span>`;
-  return html`<div class="podium">${spot(top[1], 2)}${spot(top[0], 1)}${spot(top[2], 3)}</div>`;
-}
-
-/** You: your place and how far the next one up is — the reason to play one more. */
-function MySpot({ list, period }) {
-  const i = list.findIndex((e) => e.self);
-  if (i < 0) {
-    const p = account.profile, last = list[list.length - 1];
-    if (period !== "rating" || !p?.registered || p.rating == null || !last) return null;
-    const gap = Math.max(1, (last.rating ?? 0) - p.rating + 1);
-    return html`<div class="my-spot glass"><span class="ms-place">${p.rank ? `#${p.rank}` : "—"}</span>
-      <span class="ms-text"><b>Ты · ${p.rating}</b><small>До топ-${list.length} — ${gap} очк.</small></span></div>`;
-  }
-  const me = list[i], up = list[i - 1];
-  if (!up) return html`<div class="my-spot glass top"><span class="ms-place">#1</span><span class="ms-text"><b>Ты на вершине</b><small>Держи место — за тобой охотятся</small></span></div>`;
-  const gap = Math.max(1, score(up, period) - score(me, period) + 1);
-  // The bar: from the player below you (or 50 points back) to the next place up.
-  const floor = list[i + 1] ? score(list[i + 1], period) : score(me, period) - 50;
-  const fill = Math.min(96, Math.max(6, ((score(me, period) - floor) / Math.max(1, score(up, period) - floor)) * 100));
-  return html`<div class="my-spot glass"><span class="ms-place">#${me.rank}</span>
-    <span class="ms-text"><b>До #${up.rank} — ${gap} очк.</b><small>Обгони ${up.nickname}</small>
-      <span class="ms-bar"><i style=${`width:${fill}%`}></i></span></span></div>`;
+/** The first place as a full-width gold bubble: a neon ring runs round it and sparks rise from it;
+ * second and third as silver and bronze below. Faces are rounded squares with the flag on the corner, as in the match. */
+function TopThree({ top, period, open }) {
+  const face = (e) => {
+    const flag = flagOrGlobe(e.country);
+    return html`<span class="tt-face">${e.avatar ? html`<img src=${e.avatar} alt="" />` : html`<i>${initials2(e.nickname)}</i>`}
+      ${flag ? html`<em class="tt-flag">${flagView(flag)}</em>` : null}</span>`;
+  };
+  const [first, second, third] = top;
+  const small = (e, place) => e ? html`<button class=${cx("tt-card", place === 2 ? "silver" : "bronze", e.self && "self")} onClick=${() => open(e.id)}>
+    <span class="tt-shine"></span><b class="tt-place">${place}</b>${face(e)}
+    <span class="tt-name">${e.nickname}</span><b class="tt-score num">${scoreText(e, period)}</b>
+  </button>` : html`<span></span>`;
+  return html`<div class="top3">
+    ${first ? html`<div class="tt-gold-wrap">
+      <span class="tt-sparks" aria-hidden="true">${[...Array(10).keys()].map((i) => html`<i style=${`--x:${6 + i * 9.5}%;--d:${(i * 0.37) % 2.2}s;--t:${1.8 + (i % 4) * 0.35}s`}></i>`)}</span>
+      <button class=${cx("tt-card gold", first.self && "self")} onClick=${() => open(first.id)}>
+        <span class="tt-shine"></span>
+        ${face(first)}
+        <span class="tt-text"><small>ЧЕМПИОН · #1</small><b class="tt-name">${first.nickname}</b><small>${first.games} игр · ${first.winRate}% побед</small></span>
+        <b class="tt-score num">${scoreText(first, period)}</b>
+      </button></div>` : null}
+    ${second || third ? html`<div class="tt-row">${small(second, 2)}${small(third, 3)}</div>` : null}
+  </div>`;
 }
 
 /** A player's face: the profile photo, or the first two letters of the nickname. */
