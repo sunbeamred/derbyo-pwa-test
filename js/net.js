@@ -68,7 +68,8 @@ export const social = {
   state: () => api("/api/social/state"),
   search: (q) => api(`/api/social/search?q=${encodeURIComponent(q)}`).then((r) => r.players),
   friend: (target, action) => api("/api/social/friend", { target, action }),
-  invite: (target) => api("/api/social/invite", { target }),
+  // `contexto`: a Контекстно room code to call the friend into, instead of a new tic-tac-toe match.
+  invite: (target, contexto) => api("/api/social/invite", contexto ? { target, contexto } : { target }),
   invitation: (id, action) => api("/api/social/invitation", { id, action }),
 };
 export const openRooms = () => api("/api/rooms").then((r) => r.rooms);

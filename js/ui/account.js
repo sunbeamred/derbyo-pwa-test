@@ -44,7 +44,7 @@ export function RatingTab({ visible }) {
 /** A player's face: the profile photo, or the first two letters of the nickname. */
 export const Face = ({ name, photo, small }) => html`<span class=${cx("pf-avatar neutral", small && "mini")}>${photo ? html`<img class="photo" src=${photo} alt="" />` : (name || "?").slice(0, 2).toUpperCase()}</span>`;
 
-const PRESENCE = { online: "в сети", in_match: "в игре", offline: "не в сети" };
+const PRESENCE = { online: "в сети", in_match: "в игре", in_minigame: "в мини-игре", offline: "не в сети" };
 
 /** A registered player's public card from the site, with friendship actions. */
 function PlayerCard({ id, onChange }) {
@@ -113,6 +113,9 @@ function Friends({ open }) {
     const cur = invites.current;
     if (!i && cur && ((p.watch && p.watch === cur.code) || cur.names.includes(p.nickname)))
       return html`<button class="chip-btn press go" onClick=${() => dispatchEvent(new CustomEvent("derbyo-return"))}>Вернуться</button>`;
+    // A friend in a Контекстно room: «Войти» while it has a free seat, «Смотреть» from the stands when full.
+    if (!i && p.presence === "in_minigame" && p.contexto) return html`<button class=${cx("chip-btn press", p.contexto.free && "go")} onClick=${() => dispatchEvent(new CustomEvent("derbyo-contexto", { detail: { code: p.contexto.code } }))}>
+      ${p.contexto.free ? "Войти" : html`<img src=${img("eye")} alt="" />Смотреть`}</button>`;
     // A friend in a live game can be watched; while you play yourself, you cannot call anyone.
     if (!i && p.presence === "in_match") return p.watch ? html`<button class="chip-btn press" onClick=${() => dispatchEvent(new CustomEvent("derbyo-watch", { detail: p.watch }))}><img src=${img("eye")} alt="" />Смотреть</button>` : null;
     if (!i) return html`<button class="chip-btn press" disabled=${invites.busy} onClick=${() => call(p.id)}><img src=${img("invite")} alt="" />Позвать</button>`;
@@ -364,4 +367,5 @@ export async function takeInvite(i, action = "go") {
   if (action !== "go") { await social.invitation(i.id, action); return; }
   const r = await social.invitation(i.id, i.direction === "incoming" && i.status !== "accepted" ? "accept" : "claim");
   if (r.session) dispatchEvent(new CustomEvent("derbyo-session", { detail: r.session }));
+  if (r.contexto) dispatchEvent(new CustomEvent("derbyo-contexto", { detail: { code: r.contexto } }));
 }

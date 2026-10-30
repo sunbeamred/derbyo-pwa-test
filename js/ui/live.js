@@ -144,7 +144,7 @@ export function OnlineSearch({ done }) {
   return html`<div class=${cx("search", found && "found", err && "failed")}>
     <div class="search-head"><button class="text-btn red" onClick=${() => cancel(false)}>Отмена</button><b>Быстрая игра</b><span style="width:60px"></span></div>
     <div class="search-mid">
-      <${Derby} />
+      <${UprightDerby} />
       <div class="search-copy">
         <h2>${err ? "Не получилось" : found ? "Соперник найден" : "Ищем соперника"}</h2>
         <p>${err ?? (found ? `Комната ${found.code ?? ""} · ${lvl}` : html`${QuickChoice.summary} · <b class="search-time">${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}</b>`)}</p>
@@ -154,15 +154,17 @@ export function OnlineSearch({ done }) {
   </div>`;
 }
 
-/** The site's search scene: a twenty-second derby on a little pitch while the real matchmaking runs. */
-const Derby = () => html`<div class="queue-football" aria-hidden="true">
-  <div class="queue-pitch"><i class="queue-box left"></i><i class="queue-box right"></i></div>
-  <div class="queue-goal left"></div><div class="queue-goal right"></div>
-  <div class="queue-runner queue-red-one"><span class="queue-piece"><img src=${img("mark-x")} alt="" /></span></div>
-  <div class="queue-runner queue-red-two"><span class="queue-piece"><img src=${img("mark-x")} alt="" /></span></div>
-  <div class="queue-runner queue-green"><span class="queue-piece"><img src=${img("mark-o")} alt="" /></span></div>
-  <div class="queue-ball-runner"><span class="queue-ball"></span></div>
-  <span class="queue-celebrate">ГОЛ!</span><span class="queue-celebrate right">ГОЛ!</span>
+/** The search scene: the site's little derby turned upright for the phone. Two crosses attack, the mint keeper
+ * saves the first shot and is beaten by the rebound, then everyone walks back (app.css .vderby). */
+const UprightDerby = () => html`<div class="vderby" aria-hidden="true">
+  <div class="vd-pitch"><i class="vd-box top"></i><i class="vd-box bottom"></i></div>
+  <div class="vd-goal top"></div><div class="vd-goal bottom"></div>
+  <span class="vd-save-text">СЕЙВ!</span><span class="vd-goal-text">ГОЛ!</span>
+  <div class="vd-run vd-keeper"><span class="vd-piece"><img src=${img("mark-o")} alt="" /></span></div>
+  <div class="vd-run vd-back"><span class="vd-piece"><img src=${img("mark-o")} alt="" /></span></div>
+  <div class="vd-run vd-x2"><span class="vd-piece"><img src=${img("mark-x")} alt="" /></span></div>
+  <div class="vd-run vd-x1"><span class="vd-piece"><img src=${img("mark-x")} alt="" /></span></div>
+  <div class="vd-ballrun"><span class="vd-ball"></span></div>
 </div>`;
 
 /** One player in the duel bubble: photo, name, flag with rating and place, readiness. */
