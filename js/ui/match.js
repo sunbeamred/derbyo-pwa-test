@@ -510,7 +510,7 @@ function MatchIntro({ m, done }) {
     const hit = setTimeout(() => { vibrate([30, 30, 20]); Sound.play?.("good"); }, 480);
     const tick = setInterval(() => {
       left -= 1;
-      if (left > 0) { setN(left); vibrate(left === 1 ? 25 : 8); Sound.play?.("turn"); }
+      if (left > 0) { setN(left); vibrate(left === 1 ? 25 : 8); }
       else { clearInterval(tick); setOpen(true); setTimeout(done, 700); }
     }, 1000);
     return () => { clearInterval(tick); clearTimeout(hit); };
