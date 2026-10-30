@@ -14,6 +14,8 @@ export class ApiError extends Error {
 export async function api(path, body, { token, method } = {}) {
   const headers = {};
   if (generation) headers["X-Derbyo-Generation"] = generation;
+  // The server tells the app from the site (visit statistics, the match intro wait).
+  headers["X-Derbyo-Client"] = "app";
   if (token) headers.Authorization = `Bearer ${token}`;
   const post = body !== undefined || method === "POST";
   if (post) headers["Content-Type"] = "application/json";
@@ -205,4 +207,13 @@ export const pushApi = {
 };
 
 /** A message to the team (the site's own feedback box). */
+/** Counts the app in the site's visit statistics as the site's pages do: a ping every 30 s while it is on screen. */
+export function startVisitPing() {
+  if (!ONLINE) return;
+  const tab = uuid().replace(/-/g, "");
+  const ping = () => api("/api/site-presence", { tab, active: !document.hidden }).catch(() => {});
+  ping();
+  setInterval(() => { if (!document.hidden) ping(); }, 30000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) ping(); });
+}
 export const sendFeedback = (message, context = {}) => api("/api/feedback", { message, context });

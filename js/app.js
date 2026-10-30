@@ -11,7 +11,7 @@ import { notifications } from "./push.js";
 import { invites, secondsLeft } from "./invites.js";
 import { updates } from "./update.js";
 import { TabBar } from "./ui/tabbar.js";
-import { ONLINE, account, createRoom, joinRoom, savedSession, social, sendFeedback } from "./net.js";
+import { ONLINE, account, createRoom, joinRoom, savedSession, social, sendFeedback, startVisitPing } from "./net.js";
 import { OnlineMatch } from "./online.js";
 import { OnlineLobby, OnlineSearch, OnlineRoom, OnlineJoinCode, OnlineLocker } from "./ui/live.js";
 import { RatingTab, ProfileTab, takeInvite } from "./ui/account.js";
@@ -502,3 +502,4 @@ const Placeholder = ({ title, text, children }) => html`<div class="screen-scrol
 </div></div>`;
 
 render(html`<${App} />`, document.getElementById("root"));
+startVisitPing();
