@@ -741,8 +741,8 @@ input { font-family: inherit; }
 .stands-chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 9px; border-radius: 12px; background: #122237; border: 1px solid rgba(255, 255, 255, .14); font-size: 12px; color: rgba(244, 247, 252, .85); }
 .chat-list { max-height: 260px; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; overscroll-behavior: contain; }
 .chat-list.inline { max-height: none; }
-.msg { position: relative; align-self: flex-start; max-width: 85%; padding: 7px 11px; border-radius: 14px; background: #122237; display: flex; flex-direction: column; gap: 1px; }
-.msg.me { align-self: flex-end; background: #3A2131; }
+.msg { position: relative; align-self: flex-start; max-width: 85%; padding: 7px 11px; border-radius: 14px; background: #1E3550; border: 1px solid rgba(111, 168, 255, .22); display: flex; flex-direction: column; gap: 1px; }
+.msg.me { align-self: flex-end; background: #4A2638; border-color: rgba(255, 83, 100, .28); }
 .msg.spec { background: #0E1A29; border: 1px solid rgba(255, 255, 255, .08); }
 .msg .who { font-size: 11px; color: var(--muted); text-align: left; }
 .msg .who .u { text-decoration: underline; text-decoration-color: rgba(168, 184, 202, .4); }
@@ -1033,3 +1033,7 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 .chip-btn.go { background: linear-gradient(#3FE0A0, #22B57C); border: 0; color: #062016; }
 .chip-btn.invited { color: var(--soft); font-variant-numeric: tabular-nums; }
 .chip-btn.invited .spinner { width: 14px; height: 14px; border-width: 2px; border-color: rgba(255, 255, 255, .2); border-top-color: #6FA8FF; }
+/* The return bar: the bar itself returns, the × leaves (the stands at once, a live round after asking). */
+.return-bar .rb-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; text-align: left; color: inherit; }
+.return-bar > .round-no { width: 34px; height: 34px; flex: none; }
+.chip-btn:disabled { opacity: .4; }

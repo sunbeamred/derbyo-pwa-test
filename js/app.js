@@ -232,6 +232,10 @@ function App() {
     },
   };
   const ret = () => { setMatch(minimized); setMinimized(null); setMatchLeaving(false); coverOpened(); };
+  /** The × on the return bar: the stands or a finished match go at once; a round in play asks first (it counts as lost). */
+  const [leaveAsk, setLeaveAsk] = useState(false);
+  const dropNow = () => { const m = live.current.minimized; setLeaveAsk(false); if (!m) return; m.stop(); setMinimized(null); };
+  const dropMinimized = () => { const m = live.current.minimized; if (m && !m.watching && !m.closed && !m.matchOver && m.g?.stage === "play" && !m.canLeaveFree) setLeaveAsk(true); else dropNow(); };
 
   // Tapping the open «Играть» tab again goes back to its first screen, as in iOS.
   const pickTab = (i) => {
@@ -305,10 +309,12 @@ function App() {
   };
   useEffect(() => {
     const onSession = (e) => app.session(e.detail);
+    const onWatch = (e) => { setTab(1); app.joinRoom(e.detail, { role: "spectator" }); };
+    addEventListener("derbyo-watch", onWatch);
     const onMessage = (e) => { if (e.data?.open) route(new URL(e.data.open).hash); };
     addEventListener("derbyo-session", onSession);
     navigator.serviceWorker?.addEventListener("message", onMessage);
-    return () => { removeEventListener("derbyo-session", onSession); navigator.serviceWorker?.removeEventListener("message", onMessage); };
+    return () => { removeEventListener("derbyo-session", onSession); removeEventListener("derbyo-watch", onWatch); navigator.serviceWorker?.removeEventListener("message", onMessage); };
   }, []);
   useEffect(() => {
     if (ONLINE && /^#(invite=|friends$)/.test(location.hash)) { const h = location.hash; history.replaceState(history.state, "", location.pathname + location.search); route(h); }
@@ -321,6 +327,9 @@ function App() {
     history.replaceState(history.state, "", location.pathname + location.search);
     app.joinRoom(m[2], { role: m[1] === "watch" ? "spectator" : "player" });
   }, []);
+  // Playing a match yourself (on screen or minimised) blocks calling friends.
+  const playing = [match, minimized].find((x) => x && x.online && !x.watching && !x.closed && !x.matchOver);
+  invites.busy = !!playing;
   // Bars over the tab bar, bottom up: the minimised match, the update, then one per open call.
   const bars = match ? 0 : (minimized ? 1 : 0) + (update ? 1 : 0) + calls.length;
   return html`<div class="app" style=${bars ? `--tb-space: calc(var(--tb-bottom) + var(--tb-h) + ${12 + bars * 70}px)` : ""}>
@@ -331,7 +340,7 @@ function App() {
         <${InstallRow} open=${() => setInstall(true)} /><//>`}</section>
     </main>
     <div class="edge-fade" aria-hidden="true"></div>
-    ${minimized && !match && (!minimized.online || minimized.state) ? html`<${ReturnBar} m=${minimized} go=${ret} />` : null}
+    ${minimized && !match && (!minimized.online || minimized.state) ? html`<${ReturnBar} m=${minimized} go=${ret} drop=${dropMinimized} />` : null}
     ${update && !match ? html`<button class="return-bar update-bar glass-bar press" style=${`--i:${minimized ? 1 : 0}`} onClick=${() => updates.apply()}>
       <span class="rb-dot up"><img src=${img("sparkles")} alt="" /></span>
       <span class="rb-t"><small>Вышло обновление</small><b>${updates.text}</b></span>
@@ -347,6 +356,8 @@ function App() {
     }} />`}<//>` : null}
     ${match ? html`<${Cover} leaving=${matchLeaving}><${MatchScreen} m=${match} key=${match.code} close=${close} minimize=${() => { coverClosed(); minimize(); }}
       findNew=${() => { close(); setTimeout(openSearch, COVER_MS); }} /><//>` : null}
+    ${leaveAsk ? html`<${Alert} title="Выйти из матча?" message=${`Раунд засчитается ${minimized?.opponent.name ?? "сопернику"}.`} onClose=${() => setLeaveAsk(false)}
+      actions=${[{ title: "Остаться", run: () => setLeaveAsk(false) }, { title: "Выйти", kind: "destructive", run: dropNow }]} />` : null}
     ${busy ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setBusy(false)}
       message=${`Ты ещё играешь с ${minimized?.opponent.name ?? "соперником"}. Доиграй или выйди из матча — потом можно в другую комнату.`}
       actions=${[{ title: "Вернуться в матч", kind: "bold", run: () => { setBusy(false); ret(); } }, { title: "Отмена", run: () => setBusy(false) }]} />` : null}
@@ -431,18 +442,21 @@ function CallBar({ c, i }) {
   return html`<div class=${cx("return-bar call-bar glass-bar", accepted && "accepted")} style=${`--i:${i}`}>
     <span class="rb-dot call"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" pathLength="60" style=${`stroke-dashoffset:${60 - left}`} /></svg><b>${left}</b></span>
     <span class="rb-t"><small>${accepted ? "Принял приглашение · заходи" : "Приглашение · ждём ответа"}</small><b>${c.nickname}</b></span>
-    ${accepted ? html`<button class="rb-go up press" onClick=${go}>Войти</button>`
-      : html`<button class="round-no press" aria-label="Отменить приглашение" onClick=${cancel}><${Icon} name="x" size="14" weight="2.5" /></button>`}
+    ${accepted ? html`<button class="rb-go up press" onClick=${go}>Войти</button>` : null}
+    <button class="round-no press" aria-label="Отменить приглашение" onClick=${cancel}><${Icon} name="x" size="14" weight="2.5" /></button>
   </div>`;
 }
 
 /** «Вернуться в матч»: who, the score and the round, over the tab bar on every tab. */
-const ReturnBar = ({ m, go }) => html`<button class="return-bar glass-bar press" onClick=${go}>
-  <span class="rb-dot"><i></i></span>
-  <span class="rb-t"><small>${m.watching ? "Ты на трибуне" : "Матч идёт"}</small>
-    <b>${m.watching ? m.leftName + " — " : ""}${m.opponent.name} · ${m.score[0]}:${m.score[1]} · раунд ${m.round}</b></span>
-  <span class="rb-go">Вернуться</span>
-</button>`;
+const ReturnBar = ({ m, go, drop }) => html`<div class="return-bar glass-bar">
+  <button class="rb-main press" onClick=${go}>
+    <span class="rb-dot"><i></i></span>
+    <span class="rb-t"><small>${m.watching ? "Ты на трибуне" : "Матч идёт"}</small>
+      <b>${m.watching ? m.leftName + " — " : ""}${m.opponent.name} · ${m.score[0]}:${m.score[1]} · раунд ${m.round}</b></span>
+    <span class="rb-go">Вернуться</span>
+  </button>
+  <button class="round-no press" aria-label=${m.watching ? "Уйти с трибуны" : "Выйти из матча"} onClick=${drop}><${Icon} name="x" size="14" weight="2.5" /></button>
+</div>`;
 
 const Placeholder = ({ title, text, children }) => html`<div class="screen-scroll"><div class="page">
   <h1 class="big-title">${title}</h1>
