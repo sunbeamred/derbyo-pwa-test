@@ -452,7 +452,7 @@ function Seats({ v, sit }) {
         <span class="ctx-av free"><img src=${img("plus")} alt="" /></span><small>сесть</small></button>`;
       const me = p.id === v.you;
       return html`<span class=${cx("ctx-seat", me && "me", p.id === v.winner && "won")} style=${`--t:${SEAT_TINT[i]}`}>
-        <span class="ctx-av"><b>${p.name.slice(0, 2).toUpperCase()}</b></span>
+        <span class="ctx-av"><b>${p.name.slice(0, 2).toUpperCase()}</b>${p.photo ? html`<img class="ctx-photo" src=${p.photo} alt="" referrerpolicy="no-referrer" onError=${(e) => e.target.remove()} />` : null}</span>
         <b class="ctx-seat-name">${me ? "Ты" : p.name}</b>
         <small>${p.id === v.winner ? "угадал!" : p.best ? `лучший #${p.best}` : p.id === v.host ? "создатель" : "на месте"}</small></span>`;
     })}</div>
