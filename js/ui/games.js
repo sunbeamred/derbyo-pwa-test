@@ -190,7 +190,7 @@ export function ContextoView({ nav, join }) {
   }
   const next = () => { memo.endless.round = null; ctxMem.save(); open(); };
 
-  const tabs = [["daily", st ? `Дня · №${st.day}` : "Дня"], ["endless", "Бесконечный"], ["friends", "С друзьями"]];
+  const tabs = [["daily", "Сегодня"], ["endless", "Бесконечный"], ["friends", "С друзьями"]];
   if (mode === "friends") return html`<${ContextoFriends} nav=${nav} st=${st} tabs=${tabs} mode=${mode} setMode=${setMode} join=${join} />`;
   const used = new Set(round?.guesses ?? []);
   const hints = new Set(round?.hints ?? []);
@@ -200,7 +200,7 @@ export function ContextoView({ nav, join }) {
   const line = !st ? null : mode === "daily" ? `Загадка дня · новая через ${clock(st.nextAt - (Date.now() + offset.current))}` : `Серия ${s.streak} · рекорд ${s.best} · угадано ${s.wins} из ${s.played}`;
   const n = round?.guesses.length ?? 0;
   return html`<div class="screen-with-bar daily-screen">
-    <${GameTop} title="Контекстно" back=${nav.back} mode=${mode} setMode=${pickMode} tabs=${[["daily", st ? `Дня · №${st.day}` : "Дня"], ["endless", "Бесконечный"], ["friends", "С друзьями"]]}
+    <${GameTop} title="Контекстно" back=${nav.back} mode=${mode} setMode=${pickMode} tabs=${[["daily", "Сегодня"], ["endless", "Бесконечный"], ["friends", "С друзьями"]]}
       levels=${st?.levels} level=${memo.endless.level} setLevel=${setLevel} line=${line} />
     <div class="screen-scroll"><div class="page game-page">
       ${!st && !err ? html`<p class="hint-line pad">Загружаем…</p>` : null}
@@ -322,7 +322,7 @@ export function LinksView({ nav }) {
   const total = st?.cards ?? 5;
   const careers = Object.fromEntries((view?.careers ?? []).map((c) => [c.id, c.clubs]));
   return html`<div class="screen-with-bar daily-screen">
-    <${GameTop} title="Что их связывает" back=${nav.back} mode=${mode} setMode=${setMode} tabs=${[["daily", st ? `Дня · №${st.day}` : "Дня"], ["endless", "Бесконечный"]]}
+    <${GameTop} title="Что их связывает" back=${nav.back} mode=${mode} setMode=${setMode} tabs=${[["daily", "Сегодня"], ["endless", "Бесконечный"]]}
       levels=${st?.levels} level=${memo.endless.level} setLevel=${setLevel} line=${line} />
     <div class="screen-scroll"><div class="page game-page">
       ${!st && !err ? html`<p class="hint-line pad">Загружаем…</p>` : null}

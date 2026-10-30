@@ -198,7 +198,7 @@ export function DailyView({ nav }) {
   return html`<div class="screen-with-bar daily-screen"><div class="game-top">
     <${LobbyHeader} title="Футболист дня" back=${nav.back} />
     <div class="segmented talk-tabs dg-tabs" role="tablist">
-      ${[["daily", st ? `Дня · №${st.day}` : "Футболист дня"], ["endless", "Бесконечный"]].map(([m, t]) => html`<button role="tab" aria-selected=${mode === m} class=${cx("press", mode === m && "on")} onClick=${() => mode !== m && setMode(m)}>${t}</button>`)}
+      ${[["daily", "Сегодня"], ["endless", "Бесконечный"]].map(([m, t]) => html`<button role="tab" aria-selected=${mode === m} class=${cx("press", mode === m && "on")} onClick=${() => mode !== m && setMode(m)}>${t}</button>`)}
     </div>
     ${mode === "endless" && st ? html`<div class="dg-levels">${st.levels.map((l) => html`<button class=${cx("dg-level press", level === l.level && "on")} style=${`--t:${LEVEL_TINT[l.level]}`}
         onClick=${() => level !== l.level && nextRound(l.level)}><img src=${img(LEVEL_ICON[l.level])} alt="" /><b>${l.label}</b></button>`)}</div>
