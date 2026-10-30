@@ -93,9 +93,11 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${m.watching ? html`
       ${menuRow(Sound.enabled ? "Выключить звук" : "Включить звук", () => (Sound.enabled = !Sound.enabled))}
       ${menuRow("Свернуть", minimize)}
+      ${menuRow("Обратная связь", () => dispatchEvent(new CustomEvent("derbyo-feedback", { detail: { room: m.code?.replace(/\s/g, ""), role: "spectator" } })))}
       ${menuRow("Уйти с трибуны", close)}` : html`
       ${!m.matchOver ? menuRow("Свернуть матч", minimize) : null}
       ${menuRow(`Пригласить · код ${m.code}`, invite)}
+      ${menuRow("Обратная связь", () => dispatchEvent(new CustomEvent("derbyo-feedback", { detail: { room: m.code?.replace(/\s/g, ""), role: "player" } })))}
       ${m.roundOver ? menuRow(m.canLeaveFree ? "Выйти без штрафа" : m.matchOver ? "На главную" : "Выйти из матча", close) : html`
         ${menuRow(Sound.enabled ? "Выключить звук" : "Включить звук", () => (Sound.enabled = !Sound.enabled))}
         ${m.paused ? menuRow(m.resumeWait === null ? "Продолжить" : `Ждём ${m.opponent.name}…`, () => m.requestResume())

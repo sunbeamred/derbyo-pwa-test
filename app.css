@@ -7,7 +7,7 @@
   --red: #FF5364; --on-red: #07131E; --mint: #32E5A1; --gold: #F6D482; --soft: #C9D5E3;
   --navy: linear-gradient(#1F3248, #132235); --navy-line: #34506C;
   --glass: linear-gradient(135deg, #16273A, #0C1726); --glass-line: #2A3F56;
-  --cta: linear-gradient(#FF7A87, #E8475A);
+  --cta: linear-gradient(#F5434D, #BE1724);
   --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
   /* The floating tab bar: its lift off the bottom edge, and the room content leaves for it. */
   --tb-h: 62px; --tb-bottom: max(12px, calc(var(--safe-b) - 10px)); --tb-space: calc(var(--tb-bottom) + var(--tb-h) + 12px);
@@ -115,7 +115,8 @@ input { font-family: inherit; }
 
 /* Buttons */
 .primary-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 54px; border-radius: 15px;
-  background: var(--cta); color: var(--on-red); font-size: 17px; font-weight: 700; transition: transform .15s ease-out; }
+  background: var(--cta); color: #fff; font-size: 17px; font-weight: 700; transition: transform .15s ease-out;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 6px 18px rgba(214, 30, 44, .35); text-shadow: 0 1px 1px rgba(90, 0, 10, .35); }
 .primary-btn img { width: 24px; height: 24px; }
 .primary-btn:active:not(:disabled) { transform: scale(.96); }
 .primary-btn:disabled { background: #24364A; color: #7F93A8; }
@@ -127,7 +128,8 @@ input { font-family: inherit; }
 .navy-btn.small { min-height: 38px; font-size: 14px; }
 .navy-btn img { width: 26px; height: 26px; }
 .mint-btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; border-radius: 14px; color: #062418; font-size: 15px; font-weight: 700;
-  background: linear-gradient(#6FE3B4, #2FB57F); }
+  background: linear-gradient(#16C47E, #057A47); color: #fff; text-shadow: 0 1px 1px rgba(0, 50, 25, .35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 6px 18px rgba(10, 160, 95, .3); }
 .mint-btn img { width: 26px; height: 26px; }
 .gold-btn, .green-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; border-radius: 14px; font-size: 15px; font-weight: 700; color: var(--on-red); }
 .gold-btn { background: linear-gradient(#FFE7A3, #E9BD55); }
@@ -1199,3 +1201,6 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 .dg-wait { flex: 1; text-align: center; font-size: 14px; color: var(--soft); }
 .dg-empty .dg-level img { width: 28px; height: 28px; }
 .dg-empty .primary-btn img { width: 26px; height: 26px; }
+.feedback-sheet { display: flex; flex-direction: column; gap: 10px; }
+.fb-text { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 14px; background: var(--navy); border: 1px solid var(--navy-line); color: var(--ink); font: inherit; font-size: 15px; resize: none; }
+.home-head { gap: 8px; }

@@ -82,6 +82,8 @@ export function HomeView({ nav }) {
   return html`<div class="screen-scroll"><div class="page">
     <div class="home-head">
       <img class="logo-img" src=${img("derbyo-logo")} alt="DERBYO" /><span class="sp"></span>
+      <button class="sound-btn glass press" aria-label="Обратная связь" onClick=${() => dispatchEvent(new CustomEvent("derbyo-feedback", { detail: {} }))}>
+        <img src=${img("feedback")} alt="" /></button>
       ${!isStandalone() ? html`<button class="sound-btn glass press" aria-label="Установить приложение" onClick=${() => dispatchEvent(new CustomEvent("derbyo-install"))}>
         <${Icon} name="download" size="20" weight="2.2" /></button>` : null}
       <button class="sound-btn glass press" aria-label=${sound ? "Выключить звук" : "Включить звук"}

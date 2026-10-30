@@ -1,7 +1,7 @@
 // The app shell (port of DerbyoApp.swift): tabs, the play tab's screen stack, the match and search covers,
 // the bar that returns to a minimised match, and the offer to install on the home screen.
 import { html, render, useState, useEffect, useReducer, useRef } from "../vendor/preact-htm.js";
-import { cx, img, Icon, Alert } from "./ui/common.js";
+import { cx, img, Icon, Alert, Panel } from "./ui/common.js";
 import { has } from "./data.js";
 import { Match, Opponent, store } from "./model.js";
 import { MatchScreen } from "./ui/match.js";
@@ -11,7 +11,7 @@ import { notifications } from "./push.js";
 import { invites, secondsLeft } from "./invites.js";
 import { updates } from "./update.js";
 import { TabBar } from "./ui/tabbar.js";
-import { ONLINE, account, createRoom, joinRoom, savedSession, social } from "./net.js";
+import { ONLINE, account, createRoom, joinRoom, savedSession, social, sendFeedback } from "./net.js";
 import { OnlineMatch } from "./online.js";
 import { OnlineLobby, OnlineSearch, OnlineRoom, OnlineJoinCode, OnlineLocker } from "./ui/live.js";
 import { RatingTab, ProfileTab, takeInvite } from "./ui/account.js";
@@ -58,6 +58,8 @@ function App() {
   const [invite, setInvite] = useState(null);
   /** My calls to friends that are still open: a bubble each over the menu, with a minute's countdown. */
   const [calls, setCalls] = useState([]);
+  /** The feedback sheet, from the home screen or the match menu (with the room for context). */
+  const [feedback, setFeedback] = useState(null);
   const [update, setUpdate] = useState(false);
   const live = useRef({});
   const stackRef = useRef();
@@ -316,11 +318,13 @@ function App() {
     addEventListener("derbyo-watch", onWatch);
     const onInstall = () => setInstall(true);
     addEventListener("derbyo-install", onInstall);
+    const onFeedback = (e) => setFeedback(e.detail || {});
+    addEventListener("derbyo-feedback", onFeedback);
     addEventListener("derbyo-return", onReturn);
     const onMessage = (e) => { if (e.data?.open) route(new URL(e.data.open).hash); };
     addEventListener("derbyo-session", onSession);
     navigator.serviceWorker?.addEventListener("message", onMessage);
-    return () => { removeEventListener("derbyo-session", onSession); removeEventListener("derbyo-watch", onWatch); removeEventListener("derbyo-install", onInstall); removeEventListener("derbyo-return", onReturn); navigator.serviceWorker?.removeEventListener("message", onMessage); };
+    return () => { removeEventListener("derbyo-session", onSession); removeEventListener("derbyo-watch", onWatch); removeEventListener("derbyo-install", onInstall); removeEventListener("derbyo-feedback", onFeedback); removeEventListener("derbyo-return", onReturn); navigator.serviceWorker?.removeEventListener("message", onMessage); };
   }, []);
   useEffect(() => {
     if (ONLINE && /^#(invite=|friends$)/.test(location.hash)) { const h = location.hash; history.replaceState(history.state, "", location.pathname + location.search); route(h); }
@@ -378,6 +382,7 @@ function App() {
       <img src=${img("invite")} alt="" /><span><b>${invite.nickname}</b><small>зовёт сыграть</small></span>
       <button class="chip-btn press accept" onClick=${() => { const i = invite; setInvite(null); takeInvite(i).catch((e) => alert(e.message)); }}>Играть</button>
       <button class="round-no press" aria-label="Скрыть" onClick=${() => setInvite(null)}><${Icon} name="x" size="14" weight="2.5" /></button></div>` : null}
+    ${feedback ? html`<${FeedbackSheet} context=${feedback} close=${() => setFeedback(null)} />` : null}
     <input id="kbd-proxy" aria-hidden="true" tabindex="-1" />
   </div>`;
 }
@@ -443,6 +448,27 @@ function paint(g, f) {
   g.top.style.transform = `translate3d(${f * 100}%,0,0)`;
   g.under.style.transform = `translate3d(${(f - 1) * 30}%,0,0)`;
   g.under.style.filter = `brightness(${0.7 + 0.3 * f})`;
+}
+
+/** «Обратная связь»: a few words to the team; the room code rides along when it is sent from a match. */
+function FeedbackSheet({ context, close }) {
+  const [text, setText] = useState("");
+  const [state, setState] = useState(null);
+  const [shut, setShut] = useState(false);
+  const send = async () => {
+    setState("busy");
+    try { const r = await sendFeedback(text.trim(), { ...context, app: "phone" }); setState({ id: r.id }); }
+    catch (e) { setState({ error: e.message }); }
+  };
+  return html`<${Panel} shut=${shut} onClose=${close}><div class="profile feedback-sheet">
+    <h3 class="sheet-title">Обратная связь</h3>
+    ${state?.id ? html`<p class="hint-line pad">Спасибо! Сообщение отправлено, номер ${state.id}.</p>
+      <button class="primary-btn" onClick=${() => setShut(true)}>Готово</button>`
+    : html`<p class="hint-line small pad">Расскажи, что случилось или что улучшить.${context.room ? " Номер комнаты добавим сами." : ""}</p>
+      <textarea class="fb-text" rows="5" maxlength="2000" placeholder="Например: не засчитало Месси за Барселону" value=${text} onInput=${(e) => setText(e.target.value)}></textarea>
+      ${state?.error ? html`<p class="hint-line small pad" style="color:#FF9AA8">${state.error}</p>` : null}
+      <button class="primary-btn" disabled=${state === "busy" || text.trim().length < 8} onClick=${send}>${state === "busy" ? html`<span class="spinner"></span>` : "Отправить"}</button>`}
+  </div><//>`;
 }
 
 /** A call to a friend: waiting for the answer, then «Войти» once accepted; each has a minute. */
