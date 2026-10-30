@@ -4,6 +4,7 @@
 import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel, vibrate } from "./common.js";
 import { Face } from "./sheets.js";
 import { raiseKeyboard } from "./match.js";
+import { IntroCard } from "./games.js";
 
 const STORE = "derbyo.daily.v1";
 const load = () => { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; } };
@@ -206,9 +207,8 @@ export function DailyView({ nav }) {
     : st ? html`<p class="dg-line">Один футболист на всех · новый через ${clock(st.nextAt - (Date.now() + offset.current))}</p>` : null}
   </div><div class="screen-scroll"><div class="page game-page">
     ${!st && !err ? html`<p class="hint-line pad">Загружаем…</p>` : null}
-    ${st && game && !rows.length && !game.over ? html`<div class="dg-empty glass">
-        <img src=${img("game-daily")} alt="" /><b>Угадай футболиста за ${st.maxGuesses} попыток</b>
-        <p>После каждой попытки видно, что совпало: <i class="k-hit">сборная</i>, <i class="k-near">позиция</i>, <i class="k-miss">год</i>, клубы. Зелёное — точно, жёлтое — близко.</p></div>` : null}
+    ${st && game && !rows.length && !game.over ? html`<${IntroCard} icon="game-daily" title="Кто этот футболист?" sub=${`${st.maxGuesses} попыток`}
+        steps=${["Назови любого футболиста", html`Сравни: <i class="k-hit">точно</i> <i class="k-near">близко</i> <i class="k-miss">мимо</i>`, "Сборная, позиция, год и клубы подскажут путь"]} />` : null}
     <div class="dg-list" ref=${list}>${rows.map((f, i) => html`<${GuessCard} f=${f} n=${i + 1} fresh=${f.id === freshId.current} key=${f.id} />`)}</div>
     ${game?.over && game.answer ? html`<div class=${cx("dg-result glass", game.won ? "won" : "lost")}>
         <small>${game.won ? `Угадано за ${attempts} из ${st.maxGuesses}${game.hint ? " · с подсказкой" : ""}` : "Не угадано. Это был"}</small>

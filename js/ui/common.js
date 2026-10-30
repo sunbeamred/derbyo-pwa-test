@@ -1,10 +1,12 @@
 // Shared pieces (Theme.swift and the small views the screens share).
 import { html, useState, useEffect, useRef } from "../../vendor/preact-htm.js";
+import { BUILD } from "../update.js";
 
 export { html, useState, useEffect, useRef };
 
 export const cx = (...a) => a.filter(Boolean).join(" ");
-export const img = (n) => `img/${n}.png`;
+// Pictures are cached for a day: the build number makes a replaced picture load at once.
+export const img = (n) => `img/${n}.png?v=${BUILD}`;
 /** A flag emoji as text; the hidden flag («🌐») as our globe picture. */
 export const flagView = (f) => (f === "🌐" ? html`<img class="globe" src=${img("globe-flag")} alt="флаг скрыт" />` : f);
 

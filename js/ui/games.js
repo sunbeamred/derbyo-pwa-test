@@ -27,15 +27,29 @@ const caller = (base) => async (route, body = {}) => {
 };
 
 /** The fixed top: header, mode tabs, the endless levels and one line under them. */
-function GameTop({ title, back, tabs, mode, setMode, levels, level, setLevel, line }) {
+function GameTop({ title, back, tabs, mode, setMode, levels, level, setLevel, line, field }) {
   return html`<div class="game-top">
     <${LobbyHeader} title=${title} back=${back} />
     <div class="segmented talk-tabs dg-tabs" role="tablist">${tabs.map(([m, t]) => html`<button role="tab" aria-selected=${mode === m} class=${cx("press", mode === m && "on")} onClick=${() => mode !== m && setMode(m)}>${t}</button>`)}</div>
     ${mode === "endless" && levels ? html`<div class="dg-levels">${levels.map((l) => html`<button class=${cx("dg-level press", level === l.level && "on")} style=${`--t:${LEVEL_TINT[l.level]}`}
       onClick=${() => level !== l.level && setLevel(l.level)}><img src=${img(LEVEL_ICON[l.level])} alt="" /><b>${l.label}</b></button>`)}</div>` : null}
     ${line ? html`<p class="dg-line">${line}</p>` : null}
+    ${field ?? null}
   </div>`;
 }
+
+/** How a game is played, in one short card: the picture, a title and three lines. */
+export const IntroCard = ({ icon, title, sub, steps, foot }) => html`<div class="dg-intro glass">
+  <div class="dgi-head"><span class="dgi-ic"><img src=${img(icon)} alt="" /></span><span><b>${title}</b>${sub ? html`<small>${sub}</small>` : null}</span></div>
+  <ol class="dgi-steps">${steps.map((t, i) => html`<li><i>${i + 1}</i><span>${t}</span></li>`)}</ol>
+  ${foot ? html`<p class="dgi-foot">${foot}</p>` : null}
+</div>`;
+
+/** The match's trays at the bottom of a solo round: what the round is at on the left, the menu on the right. */
+const SoloTrays = ({ left, menu }) => html`<div class="tray-row ctx-trays solo">
+  ${left}
+  <div class="tray tools-tray glass"><button class="tool press" onClick=${menu} aria-label="Меню"><img src=${img("menu")} alt="" /></button></div>
+</div>`;
 
 /** The answer sheet, as in the match: what you type finds options; the closest sits at the bottom by the field. */
 function PickSheet({ head, placeholder, find, row, used, choose, dismiss, empty }) {
@@ -98,6 +112,7 @@ function CtxRow({ f, total, hint, why, fresh }) {
 
 export function ContextoView({ nav, join }) {
   const memo = ctxMem.get();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [mode, setMode] = useState(() => (join || memo.room ? "friends" : memo.appMode === "endless" ? "endless" : "daily"));
   const [st, setSt] = useState(null);
   const [rows, setRows] = useState([]);
@@ -199,13 +214,16 @@ export function ContextoView({ nav, join }) {
   const s = memo.endless.stats[memo.endless.level] || { played: 0, wins: 0, streak: 0, best: 0, guesses: 0 };
   const line = !st ? null : mode === "daily" ? `Загадка дня · новая через ${clock(st.nextAt - (Date.now() + offset.current))}` : `Серия ${s.streak} · рекорд ${s.best} · угадано ${s.wins} из ${s.played}`;
   const n = round?.guesses.length ?? 0;
+  const playing = round && !round.over;
   return html`<div class="screen-with-bar daily-screen">
-    <${GameTop} title="Контекстно" back=${nav.back} mode=${mode} setMode=${pickMode} tabs=${[["daily", "Сегодня"], ["endless", "Бесконечный"], ["friends", "С друзьями"]]}
-      levels=${st?.levels} level=${memo.endless.level} setLevel=${setLevel} line=${line} />
+    <${GameTop} title="Контекстно" back=${nav.back} mode=${mode} setMode=${pickMode} tabs=${tabs}
+      levels=${st?.levels} level=${memo.endless.level} setLevel=${setLevel} line=${line}
+      field=${playing ? html`<${AskButton} busy=${busy} text=${`Назови футболиста${n ? ` · лучший #${best}` : ""}`} open=${() => setAsking(true)} />` : null} />
     <div class="screen-scroll"><div class="page game-page">
       ${!st && !err ? html`<p class="hint-line pad">Загружаем…</p>` : null}
-      ${st && round && !rows.length && !round.over ? html`<div class="dg-empty glass"><img src=${img("game-contexto")} alt="" /><b>Кто загадан?</b>
-        <p>Называй футболистов: каждый получает место по близости к загаданному. №1 — он сам. Близость — одноклубники в одни годы, тот же клуб, сборная, поколение, позиция.</p></div>` : null}
+      ${st && playing && !rows.length ? html`<${IntroCard} icon="game-contexto" title="Кто загадан?" sub="Угадай по близости"
+        steps=${["Назови любого футболиста", "Он встанет на место по близости — №1 и есть загаданный", "Близко — одноклубники, сборная, ровесники"]} />` : null}
+      ${playing && last ? html`<div class="ctx-last"><small>Последний вариант</small><${CtxRow} f=${last} total=${st.total} hint=${hints.has(last.id)} /></div>` : null}
       ${result ? html`<div class=${cx("dg-result glass", round?.won ? "won" : "lost")}>
           <small>${round?.won ? `Угадано за ${n} ${plural(n, "попытку", "попытки", "попыток")}${hints.size ? ` · подсказок: ${hints.size}` : ""}` : "Загадан был"}</small>
           <div class="dg-answer"><${Face} p=${{ name: result.answer.name, photo: result.answer.photo }} size=${56} />
@@ -217,17 +235,19 @@ export function ContextoView({ nav, join }) {
       ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
     </div></div>
     <${BottomBar}>
-      ${!round ? null : !round.over ? html`
-        ${last ? html`<div class="ctx-last"><small>Последняя</small><${CtxRow} f=${last} total=${st.total} hint=${hints.has(last.id)} /></div>` : null}
-        <div class="dg-bar">
-          <${AskButton} busy=${busy} text=${`Назови футболиста${n ? ` · лучший #${best}` : ""}`} open=${() => setAsking(true)} />
-          <button class="round-tool press" aria-label="Подсказка" disabled=${busy || best <= st.hintFloor} onClick=${hint}><img src=${img("question")} alt="" /></button>
-          <button class="round-tool press" aria-label="Сдаться" disabled=${busy} onClick=${() => setGiveUp(true)}><img src=${img("finish")} alt="" /></button>
-        </div>`
-      : mode === "daily" ? html`<div class="two"><button class="primary-btn" onClick=${() => share(`DERBYO · Контекстно #${st.day} · ${round.won ? `${n} ${plural(n, "попытка", "попытки", "попыток")}` : "не угадал"}${hints.size ? ` · 💡${hints.size}` : ""}\nhttps://derbyo.online/contexto`, setErr)}><img src=${img("share")} alt="" />Поделиться</button>
-          <button class="navy-btn tall" onClick=${() => setMode("endless")}>Бесконечный</button></div>`
-      : html`<button class="primary-btn" onClick=${next}><img src=${img("bolt")} alt="" />Следующий футболист</button>`}
+      ${!round ? null : html`<${SoloTrays} menu=${() => setMenuOpen(true)} left=${playing ? html`<div class="tray turn-tray glass solo-count">
+          <span class="tray-label"><b>${n ? `${n} ${plural(n, "попытка", "попытки", "попыток")}` : "Первая попытка"}</b><small>${n ? `лучший #${best}${hints.size ? ` · подсказок ${hints.size}` : ""}` : "назови любого футболиста"}</small></span></div>`
+        : html`<div class="tray turn-tray glass over">${mode === "daily"
+          ? html`<button class="primary-btn ctx-next" onClick=${() => share(`DERBYO · Контекстно #${st.day} · ${round.won ? `${n} ${plural(n, "попытка", "попытки", "попыток")}` : "не угадал"}${hints.size ? ` · 💡${hints.size}` : ""}\nhttps://derbyo.online/contexto`, setErr)}><img src=${img("share")} alt="" />Поделиться</button>`
+          : html`<button class="primary-btn ctx-next" onClick=${next}><img src=${img("bolt")} alt="" />Следующий игрок</button>`}</div>`} />`}
     <//>
+    ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}><div class="menu">
+        <h2>Контекстно</h2>
+        ${playing ? html`<button class="navy-btn menu-row" disabled=${busy || best <= st.hintFloor} onClick=${() => { setMenuOpen(false); hint(); }}>${best <= st.hintFloor ? "Подсказок больше нет — ты уже близко" : "Взять подсказку"}</button>
+          <button class="navy-btn menu-row destructive" disabled=${busy} onClick=${() => { setMenuOpen(false); setGiveUp(true); }}>Сдаться</button>`
+        : mode === "daily" ? html`<button class="navy-btn menu-row" onClick=${() => { setMenuOpen(false); setMode("endless"); }}>Играть бесконечный</button>`
+        : html`<button class="navy-btn menu-row" onClick=${() => { setMenuOpen(false); next(); }}>Следующий игрок</button>`}
+      </div><//>` : null}
     ${asking && round && !round.over ? html`<${Panel} onClose=${() => setAsking(false)} class="answer-panel">${(leave) => html`<${PickSheet}
         head=${html`<b>Попытка ${n + 1}${best ? ` · лучший #${best}` : ""}</b>`} placeholder="Фамилия футболиста…" empty="Начни вводить фамилию — выбери футболиста из списка."
         find=${(q) => ctxApi("search", { query: q }).then((r) => r.players ?? [])} row=${playerRow} used=${used} choose=${choose} dismiss=${leave} />`}<//>` : null}
@@ -326,8 +346,8 @@ export function LinksView({ nav }) {
       levels=${st?.levels} level=${memo.endless.level} setLevel=${setLevel} line=${line} />
     <div class="screen-scroll"><div class="page game-page">
       ${!st && !err ? html`<p class="hint-line pad">Загружаем…</p>` : null}
-      ${view && !view.guesses.length && !view.over ? html`<div class="dg-empty glass"><img src=${img("game-links")} alt="" /><b>Пять футболистов, одна связь</b>
-        <p>Клуб, сборная, тренер или трофей. Сначала виден один футболист; каждый неверный ответ открывает следующего. Чем раньше угадаешь, тем больше очков.</p></div>` : null}
+      ${view && !view.guesses.length && !view.over ? html`<${IntroCard} icon="game-links" title="Одна связь на пятерых" sub="Клуб, сборная, тренер или трофей"
+        steps=${["Сначала виден один футболист", "Каждая ошибка открывает следующего", "Чем раньше угадаешь, тем больше очков"]} />` : null}
       ${view?.over ? html`<div class=${cx("dg-result glass", view.won ? "won" : "lost")}>
           <small>${view.won ? `Угадано · очков ${score(view)} из ${total}` : view.gaveUp ? "Ответ" : "Не угадано. Связь —"}</small>
           <div class="lk-answer"><b>${view.answer.label}</b><em>${view.answer.kind}</em></div>
@@ -387,15 +407,15 @@ function Seats({ v, sit }) {
     <div class="ctx-seats-head"><small class="cap">ЗА СТОЛОМ</small><b>${v.players.length}<i> / ${v.seats ?? 8}</i></b></div>
     <div class="ctx-seat-grid">${Array.from({ length: v.seats ?? 8 }, (_, i) => {
       const p = bySeat.get(i);
-      if (!p) return html`<button class=${cx("ctx-seat free press", !meSeated && "call")} onClick=${() => sit(i)} aria-label=${`Сесть на место ${i + 1}`}>
-        <span class="ctx-av free"><img src=${img("plus")} alt="" /></span><small>${meSeated ? "пересесть" : "сесть"}</small></button>`;
+      // Seats fill in the order players come in; only someone on the stands can take a free one.
+      if (!p) return meSeated ? html`<span class="ctx-seat free"><span class="ctx-av free"><img src=${img("plus")} alt="" /></span><small>свободно</small></span>`
+        : html`<button class="ctx-seat free call press" onClick=${() => sit(i)} aria-label=${`Сесть на место ${i + 1}`}>
+        <span class="ctx-av free"><img src=${img("plus")} alt="" /></span><small>сесть</small></button>`;
       const me = p.id === v.you;
-      return html`<button class=${cx("ctx-seat press", me && "me", p.id === v.winner && "won")} style=${`--t:${SEAT_TINT[i]}`}
-          onClick=${me && v.status !== "playing" ? () => sit(null) : null} aria-label=${me ? "Встать на трибуну" : p.name}>
-        <span class="ctx-av"><b>${p.name.slice(0, 2).toUpperCase()}</b>
-          ${p.id === v.host ? html`<img class="ctx-key" src=${img("key")} alt="создатель" />` : null}</span>
+      return html`<span class=${cx("ctx-seat", me && "me", p.id === v.winner && "won")} style=${`--t:${SEAT_TINT[i]}`}>
+        <span class="ctx-av"><b>${p.name.slice(0, 2).toUpperCase()}</b></span>
         <b class="ctx-seat-name">${me ? "Ты" : p.name}</b>
-        <small>${p.id === v.winner ? "угадал!" : p.best ? `лучший #${p.best}` : me ? "встать" : "на месте"}</small></button>`;
+        <small>${p.id === v.winner ? "угадал!" : p.best ? `лучший #${p.best}` : p.id === v.host ? "создатель" : "на месте"}</small></span>`;
     })}</div>
     ${meSeated ? null : html`<p class="ctx-seat-hint">Ты на трибуне — нажми на свободное место, чтобы играть</p>`}
   </div>`;
@@ -418,40 +438,12 @@ function HintDial({ left, total, size = 48 }) {
   </span>`;
 }
 
-/** The round opens behind closing doors, as a tic-tac-toe match does: the table on one side, the level on the other, a 5-second count. */
-function CtxIntro({ v, level, done }) {
-  const [n, setN] = useState(5);
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    let left = 5;
-    const hit = setTimeout(() => vibrate([30, 30, 20]), 480);
-    const tick = setInterval(() => {
-      left -= 1;
-      if (left > 0) { setN(left); vibrate(left === 1 ? 25 : 8); }
-      else { clearInterval(tick); setOpen(true); setTimeout(done, 700); }
-    }, 1000);
-    return () => { clearInterval(tick); clearTimeout(hit); };
-  }, []);
-  const skip = () => { if (!open) { setOpen(true); setTimeout(done, 700); } };
-  const players = v.players.slice().sort((a, b) => a.seat - b.seat);
-  return html`<div class=${cx("match-intro ctx-intro", open && "open")} onClick=${skip} role="dialog" aria-label=${`Раунд ${v.round}, старт через ${n}`}>
-    <div class="intro-bg"></div>
-    <div class="intro-door l red"><div class="intro-player">
-      <span class="intro-face"><img class="bot" src=${img("game-contexto")} alt="" /></span>
-      <b class="intro-name">Раунд ${v.round}</b>
-      <span class="intro-rating"><small>Кто загадан?</small></span>
-    </div></div>
-    <div class="intro-door r green"><div class="intro-player">
-      <div class="ctx-intro-faces">${players.map((p) => html`<span class=${cx("ctx-intro-face", p.id === v.you && "me")} style=${`--t:${SEAT_TINT[p.seat]}`}>
-        <b>${p.name.slice(0, 2).toUpperCase()}</b><small>${p.id === v.you ? "Ты" : p.name}</small></span>`)}</div>
-    </div></div>
-    <svg class="intro-seam" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="58" y1="-2" x2="42" y2="102" /></svg>
-    <div class="intro-flash"></div>
-    <div class="intro-center">
-      ${level ? html`<small class="intro-level">${level}</small>` : null}
-      <span class="intro-vs"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="track" cx="50" cy="50" r="46" /><circle class="drain" cx="50" cy="50" r="46" pathLength="100" /></svg><i>№1</i></span>
-      <b class="intro-count" key=${n}>${n}</b>
-    </div>
+/** The round opens with the match's entrance: the stadium and «Выходим на поле», a second long. */
+function CtxIntro({ v, done }) {
+  useEffect(() => { vibrate(12); const t = setTimeout(done, matchMedia("(prefers-reduced-motion: reduce)").matches ? 200 : 1050); return () => clearTimeout(t); }, []);
+  return html`<div class="entrance" aria-hidden="true">
+    <div class="ent-blur"></div><img class="ent-stadium" src="img/stadium.jpg" alt="" /><div class="ent-shade"></div><div class="ent-beams"></div>
+    <div class="ent-copy"><small>КОНТЕКСТНО · РАУНД ${v.round}</small><b>Выходим на поле</b></div>
   </div>`;
 }
 
@@ -517,6 +509,8 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [intro, setIntro] = useState(null);
   const [showRoom, setShowRoom] = useState(false);
+  const [note, setNote] = useState(null);
+  const tell = (text) => { const id = Date.now(); setNote({ id, text }); setTimeout(() => setNote((x) => (x?.id === id ? null : x)), 2400); };
   const chatSeen = useRef(0);
   const [, tick] = useState(0);
   const clockOff = useRef(0);
@@ -568,7 +562,7 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
   async function enter(route) {
     setBusy(true); setErr(null);
     try {
-      const d = await roomCall(route, route === "join" ? { name: account.name, code: digits, watch: true } : { name: account.name, level: memo.endless.level || 1 });
+      const d = await roomCall(route, route === "join" ? { name: account.name, code: digits } : { name: account.name, level: memo.endless.level || 1 });
       memo.room = { code: d.code, secret: d.secret, playerId: d.playerId }; ctxMem.save(); setSeat(memo.room); setStep(null);
     } catch (e) { setErr(e.message); }
     setBusy(false);
@@ -652,8 +646,8 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
     </div>
     <div class="screen-scroll"><div class="page game-page">
       ${playing && last ? html`<div class="ctx-last"><small>Последний вариант · ${last.by === you ? "твой" : last.by ? names.get(last.by) : "подсказка для всех"}</small><${CtxRow} f=${last} total=${v.total} hint=${last.hint} /></div>` : null}
-      ${list ?? html`<div class="dg-empty glass"><img src=${img("game-contexto")} alt="" /><b>Кто загадан?</b>
-        <p>Называйте футболистов — каждый получит место по близости к загаданному. Кто первым назовёт №1, выиграл раунд.</p></div>`}
+      ${list ?? html`<${IntroCard} icon="game-contexto" title="Кто загадан?" sub="Один на всех"
+        steps=${["Называйте футболистов по очереди или вместе", "Все варианты — в общем списке с авторами", "Кто первым назовёт №1, выиграл раунд"]} />`}
       ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
     </div></div>
     <div class="tray-row ctx-trays">
@@ -661,11 +655,11 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
         ${host ? html`<button class="primary-btn ctx-next" onClick=${next}><img src=${img("bolt")} alt="" />Следующий раунд</button>`
           : html`<${HintDial} left=${null} total=${1} /><span class="tray-label"><b>Раунд окончен</b><small>следующий начнёт создатель</small></span>`}
       </div>`
-      : html`<div class="tray turn-tray glass">
+      : html`<button class="tray turn-tray glass press" onClick=${() => tell(hintLeft === null ? "Подсказок в этом раунде больше не будет"
+          : hintLeft <= 0 ? "Подсказка открывается…" : `Подсказка для всех появится через ${Math.floor(hintLeft / 60)}:${String(hintLeft % 60).padStart(2, "0")}`)}>
         <${HintDial} left=${hintLeft} total=${v.hintsGiven ? 90 : 120} />
-        <span class="tray-label"><b style=${hintLeft !== null && hintLeft <= 10 ? "color:#F6D482" : ""}>${hintLeft === null ? "Подсказок больше не будет" : hintLeft <= 0 ? "Открываем подсказку…" : "Подсказка для всех"}</b>
-          <small>${v.guesses.length} ${plural(v.guesses.length, "вариант", "варианта", "вариантов")}${sorted[0] ? ` · лучший #${sorted[0].rank}` : ""}</small></span>
-      </div>`}
+        <span class="tray-label"><b style=${hintLeft !== null && hintLeft <= 10 ? "color:#F6D482" : ""}>Подсказка для всех</b></span>
+      </button>`}
       <div class="tray tools-tray glass">
         <button class="tool press" onClick=${() => setChatOpen(true)} aria-label=${unread ? `Чат, новых сообщений: ${unread}` : "Чат"}>
           <img src=${img("chat")} alt="" />${unread ? html`<b class="badge">${unread}</b>` : null}</button>
@@ -673,8 +667,9 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
         <button class="tool press" onClick=${() => setMenuOpen(true)} aria-label="Меню комнаты"><img src=${img("menu")} alt="" /></button>
       </div>
     </div>
+    ${note ? html`<div class="ctx-note" key=${note.id}>${note.text}</div>` : null}
     ${sheets}
-    ${intro ? html`<${CtxIntro} v=${v} level=${level?.label} key=${intro} done=${() => setIntro(null)} />` : null}
+    ${intro ? html`<${CtxIntro} v=${v} key=${intro} done=${() => setIntro(null)} />` : null}
   </div>`;
 
   return html`<div class="screen-with-bar daily-screen">
@@ -687,11 +682,9 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
           ${[0, 1, 2, 3, 4, 5].map((i) => html`${i === 3 ? html`<i class="dash">–</i>` : null}<span class=${cx("box", i === digits.length && focused && "cur")}>${digits[i] ?? ""}</span>`)}
         </label>
         <button class="text-btn muted" onClick=${paste}><${Icon} name="paste" size="15" />Вставить из буфера</button>`
-      : !seat ? html`<div class="dg-empty glass">
-          <img src=${img("game-contexto")} alt="" /><b>Сыграйте вместе</b>
-          <p>До 8 игроков за одним загаданным, остальные смотрят с трибуны. Подсказки открываются для всех сами: первая через 2 минуты, потом каждые полторы.</p>
-          <p class="ctx-as">Ты играешь как <b>${account.name}</b></p>
-        </div>`
+      : !seat ? html`<${IntroCard} icon="game-contexto" title="Сыграйте вместе" sub="До 8 игроков за одним столом"
+          steps=${["Создай комнату и отправь код друзьям", "Один загаданный на всех, общий список", "Подсказки для всех: через 2 минуты, потом каждые полторы"]}
+          foot=${html`Ты играешь как <b>${account.name}</b>`} />`
       : !v ? null
       : html`
         <div class="code-bar glass">

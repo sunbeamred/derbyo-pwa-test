@@ -4,6 +4,7 @@ import { Match, Opponent, MAX_VIEWERS, store } from "../model.js";
 import { has, rand } from "../data.js";
 import { Sound } from "../sound.js";
 import { isStandalone } from "../install.js";
+import { BUILD } from "../update.js";
 import { ONLINE, siteStats, account } from "../net.js";
 import { ProfileSheet } from "./profile.js";
 import { ViewerList } from "./sheets.js";
@@ -93,7 +94,7 @@ export function HomeView({ nav }) {
     </div>
     <${Section} t="ИГРЫ" />
     <div class="game-card">
-      <img class="hero" src="img/hero.jpg" alt="" />
+      <img class="hero" src=${`img/hero.jpg?v=${BUILD}`} alt="" />
       <div class="gc-in">
         <h2>Футбольные<br />крестики-нолики</h2>
         <p><i></i>${ONLINE ? "Дуэли онлайн · база derbyo.online" : "Дуэли онлайн · 26 играют сейчас"}</p>
