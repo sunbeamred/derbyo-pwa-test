@@ -98,7 +98,7 @@ export function HomeView({ nav }) {
         <button class="primary-btn" onClick=${() => nav.push("lobby")}><img src=${img("bolt")} alt="" />Играть</button>
       </div>
     </div>
-    ${TEST_BUILD ? html`<div class="mini-games">${MINI_GAMES.map((g) => html`<button class="mini-game glass press" onClick=${() => (g.id === "daily" ? nav.push("daily") : nav.push("minigame", { game: g }))}>
+    ${TEST_BUILD ? html`<div class="mini-games">${MINI_GAMES.map((g) => html`<button class="mini-game glass press" onClick=${() => nav.push(g.id)}>
         <img src=${img("game-" + g.id)} alt="" /><span><b>${g.title}</b><small>${g.text}</small></span><${Icon} name="right" size="14" class="chev" /></button>`)}</div>`
     : html`<div class="soon">
       <span class="soon-ic"><${Icon} name="sparkles" size="18" weight="1.8" /></span>
@@ -119,7 +119,7 @@ const MINI_GAMES = [
 /** A mini-game full screen under the app's own back bar. */
 export function MiniGameView({ nav, game }) {
   // The site's own game page, on this host (the app's server passes it through), without its header and footer.
-  const src = `${game.path}?app=1`;
+  const src = `${game.path}?app=1${game.hash ?? ""}`;
   return html`<div class="screen mini-game-screen">
     <div class="lobby-header">
       <button class="back-btn glass press" onClick=${nav.back} aria-label="Назад"><${Icon} name="left" size="16" weight="2.8" /></button>

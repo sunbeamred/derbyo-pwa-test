@@ -8,8 +8,10 @@ import { TurnDial, ConditionIcon } from "./match.js";
 
 export function Face({ p, size }) {
   const src = p.wp !== undefined ? photoOf(p) : p.photo;
+  // The initials sit under the photo, so a photo that fails to load leaves them, not an empty circle.
   return html`<span class="face-circle" style=${`--s:${size}px`}>
-    ${src ? html`<img src=${src} alt="" />` : html`<span style=${`font-size:${size * 0.32}px`}>${p.initials ?? initials(p.name)}</span>`}</span>`;
+    <span style=${`font-size:${size * 0.32}px`}>${p.initials ?? initials(p.name)}</span>
+    ${src ? html`<img src=${src} alt="" key=${src} referrerpolicy="no-referrer" onError=${(e) => { e.currentTarget.style.display = "none"; }} />` : null}</span>`;
 }
 
 /** The answer panel, built for one thumb: field at the bottom, what it needs right above it, the cell on top.
