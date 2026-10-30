@@ -199,7 +199,7 @@ function Settings() {
   return html`<div class="settings-list">
     ${row(html`<img src=${img("sound")} alt="" />`, "Звук", "Ходы, таймер, победа", Sound.enabled, (v) => { Sound.enabled = v; if (v) Sound.play("turn"); })}
     ${row(html`<img src=${img("vibrate")} alt="" />`, "Вибрация", "Отклик на нажатия и ходы", Prefs.vibration, (v) => { Prefs.vibration = v; vibrate(15); })}
-    ${account.profile?.registered && "showFlag" in account.profile ? html`<${NotifyRow} />` : null}
+    ${account.profile && "showFlag" in account.profile ? html`<${NotifyRow} />` : null}
     ${location.pathname.startsWith("/app/") ? html`<a class="toggle-card press full-site" href="/full">
       <span class="tc-ic"><${Icon} name="home" size="18" weight="2" /></span>
       <span class="tc-t"><b>Полная версия сайта</b><small>derbyo.online как на компьютере</small></span>
@@ -215,9 +215,11 @@ function NotifyRow() {
   const [shut, setShut] = useState(false);
   const check = () => notifications.enabled().then(setOn).catch(() => setOn(false));
   useEffect(() => { check(); }, []);
-  const supported = notifications.supported(), denied = notifications.permission() === "denied", prefs = notifications.prefs;
+  // Pushes belong to an account: a guest sees the row and how to get them.
+  const guest = !account.profile?.registered;
+  const supported = !guest && notifications.supported(), denied = notifications.permission() === "denied", prefs = notifications.prefs;
   const kinds = PUSH_KINDS.filter(([k]) => prefs[k]).map(([, t]) => t);
-  const detail = !supported ? "Работают в приложении с экрана «Домой»" : denied ? "Запрещены в настройках телефона"
+  const detail = guest ? "После входа в аккаунт: приглашения от друзей" : !supported ? "Работают в приложении с экрана «Домой»" : denied ? "Запрещены: включи в Настройках iPhone → DERBYO"
     : on ? (kinds.length ? kinds.join(" · ") : "Все виды выключены") : "Приглашения в игру и заявки в друзья";
   const flip = async (v) => {
     setErr(null); setOn(v);

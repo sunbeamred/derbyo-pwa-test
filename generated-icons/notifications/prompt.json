@@ -1,0 +1,9 @@
+{
+  "generator": "built-in image_gen",
+  "date": "2026-10-30",
+  "prompt": "Generate ONE notification bell icon for the existing DERBYO game UI, matching the supplied sound and vibration icons exactly in visual style. A simple upright notification BELL with a small top loop, gently flared rounded dome, clean lower lip and one small rounded clapper below. Front-facing, centered, broad simple readable silhouette. Matte muted slate-blue polymer material, shallow almost-flat 2.5D relief, softly rounded small bevels, gentle upper-left highlight and soft navy self-shading. Quiet restrained shading like sound.png, no glossy chrome, no silver, no heavy extrusion, no angled perspective. Single bell ONLY, no notification number, no red badge, no vibration arcs, no lines, no text, no enclosing tile, no background or floor, no cast shadow outside object. Entire bell occupies about 80% of a square transparent canvas with balanced padding. Production asset, readable at 24px, intended final transparent PNG 192x192.",
+  "references": [
+    "../../img/sound.png",
+    "../../img/vibrate.png"
+  ]
+}
