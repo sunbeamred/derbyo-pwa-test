@@ -116,12 +116,21 @@ export function MatchScreen({ m, close, findNew, minimize }) {
       <${Scoreboard} m=${m} openProfile=${setProfileOf} openStands=${() => setStandsOpen(true)} />
       <${Board} m=${m} tap=${tapCell} />
       <div class="slot">
-        ${notes.length ? html`<div class=${cx("notes", ((m.offerRaise && !m.watching) || m.roundOver) && "hidden")}>
+        ${notes.length ? html`<div class=${cx("notes", ((m.offerRaise && !m.watching) || m.roundOver || m.drawOffer === "theirs") && "hidden")}>
           ${notes.map((c) => html`<div><b>${(c.label ?? c.title) + ": "}</b><span>${c.note}</span></div>`)}</div>` : null}
-        ${m.offerRaise && !m.watching ? html`<div class="raise-offer glass">
+        ${m.drawOffer === "theirs" ? html`<div class="raise-offer glass">
+            <span>${m.opponent.name} предлагает ничью в матче</span>
+            <button class="navy-btn small" onClick=${() => m.answerDraw(false)}>Играть</button>
+            <button class="gold-pill press" onClick=${() => m.answerDraw(true)}>Ничья</button>
+          </div>`
+        : m.offerRaise && !m.watching ? html`<div class="raise-offer glass">
             <span>Снова ничья. Следующий раунд — «${m.raisedLevel}»?</span>
-            <button class="navy-btn small" onClick=${() => m.raiseLevel(false)}>Оставить</button>
+            ${m.canOfferDraw ? html`<button class="navy-btn small wide" onClick=${() => m.offerDraw()}>Предложить ничью</button>` : null}
             <button class="gold-pill press" onClick=${() => m.raiseLevel(true)}>Сложнее</button>
+          </div>`
+        : m.canOfferDraw && m.roundOver ? html`<div class="raise-offer glass">
+            <span>Три ничьи подряд. Закончить матч вничью?</span>
+            <button class="gold-pill press" onClick=${() => m.offerDraw()}>Предложить</button>
           </div>`
         : m.roundOver ? html`<${ResultBubble} m=${m} key=${m.finishSignal} />`
         : !notes.length ? html`<p class=${cx("slot-line", (shownToast || m.reward) && "hidden")}>${slotLine}</p>` : null}

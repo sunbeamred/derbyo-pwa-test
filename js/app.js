@@ -134,6 +134,14 @@ function App() {
       setStack([...s, { name, props, key: ++keys, at: Date.now() }]);
     },
     back: (then) => { afterPop.current = typeof then === "function" ? then : null; history.back(); },
+    /** A room's locker; with the rooms list under it when it was opened from elsewhere (a link, an invite), so «назад» lands there. */
+    locker: (m) => {
+      if (live.current.leaving) return;
+      const s = live.current.stack, add = s.some((x) => x.name === "lobby") ? [] : [{ name: "lobby", props: {}, key: ++keys, at: 0 }];
+      add.push({ name: "locker", props: { m }, key: ++keys, at: Date.now() });
+      add.forEach((_, i) => history.pushState({ d: s.length + i + 1 }, ""));
+      setStack([...s, ...add]);
+    },
   };
   const coverOpened = () => history.pushState({ d: depth(), cover: true }, "");
   const coverClosed = () => { if (history.state?.cover) { skipPop.current = true; history.back(); } };
@@ -201,7 +209,7 @@ function App() {
         const m = watchClose(new OnlineMatch(s));
         if (s.role === "player" && !s.seatTaken) {
           for (let i = 0; i < 50 && !m.state; i++) await new Promise((r) => setTimeout(r, 100));
-          if (!m.hasBoard) { nav.push("locker", { m }); return true; }
+          if (!m.hasBoard) { nav.locker(m); return true; }
         }
         open(m);
         return true;
@@ -217,7 +225,7 @@ function App() {
       const m = watchClose(new OnlineMatch(s));
       for (let i = 0; i < 50 && !m.state; i++) await new Promise((r) => setTimeout(r, 100));
       setTab(1);
-      if (!m.hasBoard) nav.push("locker", { m }); else open(m);
+      if (!m.hasBoard) nav.locker(m); else open(m);
     },
   };
   const ret = () => { setMatch(minimized); setMinimized(null); setMatchLeaving(false); coverOpened(); };

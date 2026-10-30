@@ -91,6 +91,8 @@ export const breakable = (n) => n.replaceAll("_", "_​").replaceAll("-", "-​"
  * (a quick flick or past a third of its height). It sits in the part of the screen the keyboard leaves free. */
 export function Panel({ onClose, closable = true, shut = false, children, class: c }) {
   const [out, setOut] = useState(false);
+  // A sheet opened inside a screen sits below the tab bar's layer: the bar steps aside while it is up.
+  useEffect(() => { document.body.classList.add("sheet-up"); return () => document.body.classList.remove("sheet-up"); }, []);
   const panel = useRef(), dim = useRef();
   const g = useRef(null);
   const gone = useRef(false);
