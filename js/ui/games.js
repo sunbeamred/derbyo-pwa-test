@@ -51,10 +51,13 @@ function PickSheet({ head, placeholder, find, row, used, choose, dismiss, empty 
     return () => { live = false; clearTimeout(t); };
   }, [query]);
   const hits = found.slice(0, 6).reverse();
+  // The closest match sits at the bottom, by the keyboard: the list opens scrolled down to it.
+  const scroller = useRef();
+  useEffect(() => { const el = scroller.current; if (el) el.scrollTop = el.scrollHeight; }, [found]);
   const pick = (x) => { if (!used.has(x.id)) { choose(x); dismiss(); } };
   return html`<div class="answer">
     ${head ? html`<div class="cond-bubble glass dg-ask">${head}</div>` : null}
-    <div class="answer-scroll">
+    <div class="answer-scroll" ref=${scroller}>
       ${query.trim().length < 2 ? html`<p class="hint-line">${empty}</p>`
         : !hits.length ? html`<p class="hint-line">Ничего не нашли — проверь написание</p>`
         : html`<div class="hits">${hits.map((x) => html`<button class=${cx("hit", used.has(x.id) && "used")} disabled=${used.has(x.id)} onClick=${() => pick(x)}>${row(x, used.has(x.id))}<i>↵</i></button>`)}</div>`}
@@ -513,6 +516,7 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [intro, setIntro] = useState(null);
+  const [showRoom, setShowRoom] = useState(false);
   const chatSeen = useRef(0);
   const [, tick] = useState(0);
   const clockOff = useRef(0);
@@ -590,8 +594,11 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
   const hintLeft = v?.nextHintAt ? Math.max(0, Math.ceil((v.nextHintAt - (Date.now() + clockOff.current)) / 1000)) : null;
   const level = st?.levels?.find((l) => l.level === v?.level);
   const playing = v?.status === "playing";
+  // A finished round stays on the game screen with its answer; the room (seats, level) is one tap away in the menu.
+  useEffect(() => setShowRoom(false), [v?.round]);
+  const inGame = playing || (v?.status === "done" && !showRoom);
   // The round is a match: the app's tab bar steps aside, as it does for tic-tac-toe.
-  useEffect(() => { document.body.classList.toggle("ctx-full", playing); return () => document.body.classList.remove("ctx-full"); }, [playing]);
+  useEffect(() => { document.body.classList.toggle("ctx-full", inGame); return () => document.body.classList.remove("ctx-full"); }, [inGame]);
   // Doors only at a round's very start, not when coming back to one already under way.
   const fresh0 = playing && !v.guesses.length && hintLeft !== null && hintLeft > 110 ? `${v.code}-${v.round}` : null;
   useEffect(() => {
@@ -618,9 +625,10 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
         find=${(q) => ctxApi("search", { query: q }).then((r) => r.players ?? [])} row=${playerRow} used=${used}
         choose=${async (p) => { setBusy(true); await call("guess", { id: p.id }); vibrate(10); setBusy(false); }} dismiss=${leaveSheet} />`}<//>` : null}
     ${chatOpen && v ? html`<${Panel} onClose=${() => setChatOpen(false)} class="chat-panel"><${CtxChatSheet} v=${v} say=${(text) => call("say", { text })} /><//>` : null}
-    ${menuOpen && v ? html`<${Panel} onClose=${() => setMenuOpen(false)}><div class="menu">
+    ${menuOpen && v ? html`<${Panel} onClose=${() => setMenuOpen(false)}><div class="menu ctx-menu-sheet">
         <h2>Комната ${spaced(seat.code)}</h2>
         ${menuRow("Пригласить друзей", share)}
+        ${inGame && !playing ? menuRow("Места и уровень", () => setShowRoom(true)) : null}
         ${host && playing ? menuRow("Остановить раунд — открыть ответ", () => call("giveup"), true) : null}
         ${seated && !playing ? menuRow("Встать на трибуну", () => call("sit", { seat: null })) : null}
         ${menuRow("Выйти из комнаты", () => setLeaving(true), true)}
@@ -629,25 +637,35 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
       actions=${[{ title: "Остаться", run: () => setLeaving(false) }, { title: "Выйти", kind: "destructive", run: leave }]} />` : null}`;
 
   // The round: the answer field on top, the shared list in the middle, the hint clock with chat and menu at the bottom — the match's trays.
-  if (playing) return html`<div class="screen-with-bar daily-screen ctx-round">
+  const result = v?.result ? html`<div class=${cx("dg-result glass", v.winner === you ? "won" : "lost")}>
+      <small>${v.gaveUp ? "Раунд остановлен · загадан был" : v.winner === you ? "Ты угадал первым!" : `Первым угадал ${names.get(v.winner) ?? "кто-то"}`}</small>
+      <div class="dg-answer"><${Face} p=${{ name: v.result.answer.name, photo: v.result.answer.photo }} size=${56} />
+        <span><b>${v.result.answer.name}</b><em>${[v.result.answer.nat && `${v.result.answer.nat.flag} ${v.result.answer.nat.label}`, v.result.answer.pos, v.result.answer.born].filter(Boolean).join(" · ")}</em></span></div>
+    </div>` : null;
+  const next = () => call("start", { level: v.level });
+  if (inGame) return html`<div class="screen-with-bar daily-screen ctx-round">
     <div class="game-top">
       <${LobbyHeader} title=${`Контекстно · раунд ${v.round}`} back=${nav.back} />
-      ${seated ? html`<${AskButton} busy=${busy} text=${`Назови футболиста${sorted[0] ? ` · лучший #${sorted[0].rank}` : ""}`} open=${() => setAsking(true)} />`
+      ${!playing ? result : seated ? html`<${AskButton} busy=${busy} text=${`Назови футболиста${sorted[0] ? ` · лучший #${sorted[0].rank}` : ""}`} open=${() => setAsking(true)} />`
         : html`<button class="primary-btn" disabled=${freeSeat === undefined} onClick=${() => call("sit", { seat: freeSeat })}>
             <img src=${img("plus")} alt="" />${freeSeat === undefined ? "Все 8 мест заняты — ты на трибуне" : "Сесть за стол и играть"}</button>`}
     </div>
     <div class="screen-scroll"><div class="page game-page">
-      ${last ? html`<div class="ctx-last"><small>Последний вариант · ${last.by === you ? "твой" : last.by ? names.get(last.by) : "подсказка для всех"}</small><${CtxRow} f=${last} total=${v.total} hint=${last.hint} /></div>` : null}
+      ${playing && last ? html`<div class="ctx-last"><small>Последний вариант · ${last.by === you ? "твой" : last.by ? names.get(last.by) : "подсказка для всех"}</small><${CtxRow} f=${last} total=${v.total} hint=${last.hint} /></div>` : null}
       ${list ?? html`<div class="dg-empty glass"><img src=${img("game-contexto")} alt="" /><b>Кто загадан?</b>
         <p>Называйте футболистов — каждый получит место по близости к загаданному. Кто первым назовёт №1, выиграл раунд.</p></div>`}
       ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
     </div></div>
     <div class="tray-row ctx-trays">
-      <div class="tray turn-tray glass">
+      ${!playing ? html`<div class=${cx("tray turn-tray glass", host && "over")}>
+        ${host ? html`<button class="primary-btn ctx-next" onClick=${next}><img src=${img("bolt")} alt="" />Следующий раунд</button>`
+          : html`<${HintDial} left=${null} total=${1} /><span class="tray-label"><b>Раунд окончен</b><small>следующий начнёт создатель</small></span>`}
+      </div>`
+      : html`<div class="tray turn-tray glass">
         <${HintDial} left=${hintLeft} total=${v.hintsGiven ? 90 : 120} />
         <span class="tray-label"><b style=${hintLeft !== null && hintLeft <= 10 ? "color:#F6D482" : ""}>${hintLeft === null ? "Подсказок больше не будет" : hintLeft <= 0 ? "Открываем подсказку…" : "Подсказка для всех"}</b>
           <small>${v.guesses.length} ${plural(v.guesses.length, "вариант", "варианта", "вариантов")}${sorted[0] ? ` · лучший #${sorted[0].rank}` : ""}</small></span>
-      </div>
+      </div>`}
       <div class="tray tools-tray glass">
         <button class="tool press" onClick=${() => setChatOpen(true)} aria-label=${unread ? `Чат, новых сообщений: ${unread}` : "Чат"}>
           <img src=${img("chat")} alt="" />${unread ? html`<b class="badge">${unread}</b>` : null}</button>
@@ -676,11 +694,6 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
         </div>`
       : !v ? null
       : html`
-        ${v.result ? html`<div class=${cx("dg-result glass", v.winner === you ? "won" : "lost")}>
-            <small>${v.gaveUp ? "Раунд остановлен · загадан был" : v.winner === you ? "Ты угадал первым!" : `Первым угадал ${names.get(v.winner) ?? "кто-то"}`}</small>
-            <div class="dg-answer"><${Face} p=${{ name: v.result.answer.name, photo: v.result.answer.photo }} size=${56} />
-              <span><b>${v.result.answer.name}</b><em>${[v.result.answer.nat && `${v.result.answer.nat.flag} ${v.result.answer.nat.label}`, v.result.answer.pos, v.result.answer.born].filter(Boolean).join(" · ")}</em></span></div>
-          </div>` : null}
         <div class="code-bar glass">
           <span class="cb-t"><small class="cap">КОД КОМНАТЫ</small><b class="cb-code">${spaced(seat.code)}</b></span>
           <button class="cb-btn press" onClick=${copy} aria-label="Скопировать код"><${Icon} name=${copied ? "check" : "copy"} size="18" /></button>
@@ -694,8 +707,7 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join }) {
           : html`<div class="settings-card ctx-settings">
             <img src=${img(LEVEL_ICON[v.level] ?? "settings")} alt="" />
             <span><small>Уровень · выбирает создатель</small><b>${level?.label ?? "—"}</b></span></div>`}
-        <${CtxTalk} v=${v} say=${(text) => call("say", { text })} />
-        ${list}`}
+        <${CtxTalk} v=${v} say=${(text) => call("say", { text })} />`}
       ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
     </div></div>
     <${BottomBar}>
