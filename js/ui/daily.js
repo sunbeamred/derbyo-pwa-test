@@ -195,7 +195,7 @@ export function DailyView({ nav }) {
   const level = mem().endless.level;
   const lstats = mem().endless.stats[level] || { played: 0, wins: 0, streak: 0, best: 0 };
   const memo = mem();
-  return html`<div class="screen-with-bar daily-screen"><div class="screen-scroll"><div class="page">
+  return html`<div class="screen-with-bar daily-screen"><div class="game-top">
     <${LobbyHeader} title="Футболист дня" back=${nav.back} />
     <div class="segmented talk-tabs dg-tabs" role="tablist">
       ${[["daily", st ? `Дня · №${st.day}` : "Футболист дня"], ["endless", "Бесконечный"]].map(([m, t]) => html`<button role="tab" aria-selected=${mode === m} class=${cx("press", mode === m && "on")} onClick=${() => mode !== m && setMode(m)}>${t}</button>`)}
@@ -204,6 +204,7 @@ export function DailyView({ nav }) {
         onClick=${() => level !== l.level && nextRound(l.level)}><img src=${img(LEVEL_ICON[l.level])} alt="" /><b>${l.label}</b></button>`)}</div>
       <p class="dg-line">Серия ${lstats.streak} · рекорд ${lstats.best} · угадано ${lstats.wins} из ${lstats.played}</p>`
     : st ? html`<p class="dg-line">Один футболист на всех · новый через ${clock(st.nextAt - (Date.now() + offset.current))}</p>` : null}
+  </div><div class="screen-scroll"><div class="page game-page">
     ${!st && !err ? html`<p class="hint-line pad">Загружаем…</p>` : null}
     ${st && game && !rows.length && !game.over ? html`<div class="dg-empty glass">
         <img src=${img("game-daily")} alt="" /><b>Угадай футболиста за ${st.maxGuesses} попыток</b>
