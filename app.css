@@ -1021,3 +1021,6 @@ img.globe { display: inline-block; width: 1.5em; height: 1.5em; margin: -.25em -
 .mini-game-screen .lobby-header h1 { flex: 1; }
 .mg-open { flex: none; width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; color: var(--soft); background: rgba(255, 255, 255, .06); }
 .mg-frame { flex: 1; width: 100%; border: 0; border-radius: 18px; background: #0B1726; }
+.raise-offer .navy-btn.wide { width: auto; padding: 0 10px; font-size: 12px; line-height: 1.15; max-width: 104px; }
+/* A sheet is up: the tab bar and the return bar step aside (the sheet lives in a screen's layer, under theirs). */
+body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: none; transition: opacity .2s; }

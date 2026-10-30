@@ -128,6 +128,9 @@ export class OnlineMatch {
     else if (!this.rematchOffer && !st.rematchClosed) this.myRematchSent = false;
     this.rematchUnanswered = !this.rematchOffer && !!st.rematchClosed && !!this.myRematchSent;
     this.raise = st.raise ?? null;
+    // A draw for the whole match, after three drawn rounds in a row (the site's rule): offered by one, agreed by the other.
+    this.drawOffer = this.watching || !st.drawOffer ? null : st.drawOffer === st.selfId ? "mine" : "theirs";
+    this.canOfferDraw = !this.watching && !!st.canAgreeDraw && !st.drawOffer;
     this.freeLeave = this.watching ? null : st.freeLeave ?? null;
     this.reactions(st.reactions);
     this.score = [st.score[this.mySeat] ?? 0, st.score[1 - this.mySeat] ?? 0];
@@ -298,6 +301,8 @@ export class OnlineMatch {
     const next = this.nextBreather ? 4 : Number.isFinite(this.state?.nextLevel) ? this.state.nextLevel : this.levelOfRound(this.round + 1);
     return { prev: prev && prev !== cur ? LEVELS[prev - 1] : null, cur: LEVELS[cur - 1], next: next && next !== cur ? LEVELS[next - 1] : null };
   }
+  offerDraw() { this.act("offer_draw").then(() => this.show(`Предложили ничью · ждём ${this.opponent.name}`, true)).catch(() => {}); }
+  answerDraw(yes) { this.act(yes ? "accept_draw" : "decline_draw").catch(() => {}); }
   get offerRaise() { return !!this.state?.canRaise && this.raise?.by !== this.mySeat; }
   get raisedLevel() { return LEVELS[Math.min(LEVELS.length - 1, (this.state?.nextLevel ?? this.levelIndexNow + 1))]; }
   raiseLevel(yes) {
