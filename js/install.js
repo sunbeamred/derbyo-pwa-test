@@ -1,5 +1,6 @@
 // The offer to put DERBYO on the home screen, on the first visit in a browser.
 import { html, useState, useEffect, cx, img, Icon } from "./ui/common.js";
+import { notifications } from "./push.js";
 
 let deferred = null;
 addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; });
@@ -64,4 +65,29 @@ export function InstallRow({ open }) {
     <span class="mode-ic"><img src="icons/icon-192.png" alt="" style="border-radius:9px" /></span>
     <span class="mode-t"><b>Установить на экран «Домой»</b><small>На весь экран, без панелей браузера</small></span>
     <${Icon} name="right" size="13" weight="3" class="chev" /></button>`;
+}
+
+/** Once, in the app opened from the home screen: notifications for friends' invites. */
+export function PushAskSheet({ close }) {
+  const [out, setOut] = useState(false);
+  const [err, setErr] = useState(null);
+  const leave = () => { notifications.asked(); setOut(true); setTimeout(close, 250); };
+  const enable = async () => {
+    try { await notifications.enable(); leave(); } catch (e) { if (notifications.permission() === "default") setErr(e.message); else leave(); }
+  };
+  return html`<div class=${cx("overlay install", out && "out")}>
+    <div class="dim" onClick=${leave}></div>
+    <div class="panel install-panel" role="dialog" aria-label="Уведомления">
+      <div class="grip-row"><span class="grip"></span></div>
+      <div class="inst">
+        <div class="inst-head">
+          <img class="inst-icon bell" src=${img("bell")} alt="" />
+          <span><b>Включить уведомления?</b><small>Узнаешь сразу, когда друг зовёт сыграть или добавляет в друзья.</small></span>
+        </div>
+        ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
+        <button class="primary-btn" onClick=${enable}><img src=${img("bell")} alt="" />Включить</button>
+        <button class="navy-btn tall" onClick=${leave}>Не сейчас</button>
+      </div>
+    </div>
+  </div>`;
 }

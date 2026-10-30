@@ -10,9 +10,9 @@ import { ViewerList } from "./sheets.js";
 // MARK: settings (server/presets.mjs)
 
 export const PRESETS = [
-  { id: "easy", name: "Новичок", description: "Только звёзды, без тренеров", icon: "level-rookie", level: 1, tokens: 6 },
+  { id: "easy", name: "Новичок", description: "Сборные и позиции, только звёзды", icon: "level-rookie", level: 1, tokens: 6 },
   { id: "amateur", name: "Любитель", description: "Известные игроки топ-лиг, без тренеров", icon: "level-amateur", level: 2, tokens: 6 },
-  { id: "medium", name: "Знаток", description: "Не только звёзды, иногда тренер", icon: "level-knower", level: 3, tokens: 5 },
+  { id: "medium", name: "Знаток", description: "Не только звёзды, бывают тренер и одноклубник", icon: "level-knower", level: 3, tokens: 5 },
   { id: "hard", name: "Легенда", description: "Глубокие составы, тренеры и одноклубники", icon: "level-legend", level: 4, tokens: 4 },
   { id: "encyclopedia", name: "Энциклопедия", description: "Редкие игроки, тренеры и одноклубники", icon: "expert", level: 5, tokens: 4 },
 ];
@@ -172,7 +172,7 @@ export function LevelCards({ chosen, set }) {
     });
     return html`<button class=${cx("pick-card press", on && "on")} disabled=${lockedEnc} onClick=${flip}>
       <img src=${img(p.icon)} alt="" /><span class="pc-t"><b>${p.name}</b>
-      <small>${enc ? (lockedEnc ? "только вместе с Легендой" : "решающий раунд") : `${p.description} · ${p.tokens} ${p.tokens === 4 ? "жетона" : "жетонов"}`}</small></span>
+      <small>${enc ? (lockedEnc ? "только вместе с Легендой" : "раунды после Легенды") : `${p.description} · ${p.tokens} ${p.tokens === 4 ? "жетона" : "жетонов"}`}</small></span>
       <${PickMark} on=${on} /></button>`;
   });
 }
@@ -272,7 +272,7 @@ export function RoomView({ nav, app }) {
   const [friend, setFriend] = useState(null);
   useEffect(() => { const t = setTimeout(() => { setFriend("tima_kz"); Sound.play("turn"); }, 5000); return () => clearTimeout(t); }, []);
   useEffect(() => { if (has("demoSettings")) nav.push("settings", { settings, set: setSettings }); }, []);
-  const text = `Сыграем в DERBYO? Комната ${code}: derbyo.online/r/${code.replace(" ", "")}`;
+  const text = `Сыграем в DERBYO? Комната ${code}: https://derbyo.online/#join=${code.replace(" ", "")}`;
   const share = async () => { try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); } } catch {} };
   const copy = async () => { try { await navigator.clipboard.writeText(code.replace(" ", "")); } catch {} setCopied(true); setTimeout(() => setCopied(false), 1500); };
   const ex = [extras(settings), settings.closed ? "🔒 по паролю" : ""].filter(Boolean).join(" · ");

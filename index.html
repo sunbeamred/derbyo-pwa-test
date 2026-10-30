@@ -4,8 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-visual, user-scalable=no">
 <title>DERBYO</title>
-<meta name="description" content="Футбольные крестики-нолики: тестовая версия приложения DERBYO.">
-<meta name="robots" content="noindex">
+<meta name="description" content="DERBYO — футбольные мини-игры и дуэли онлайн.">
 <meta name="theme-color" content="#060D16">
 <meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,7 +20,7 @@
 <div id="root"></div>
 <script type="module" src="js/app.js"></script>
 <script>
-if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js");
+if ("serviceWorker" in navigator && isSecureContext) navigator.serviceWorker.register("sw.js");
 </script>
 </body>
 </html>

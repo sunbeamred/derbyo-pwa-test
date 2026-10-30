@@ -5,6 +5,7 @@ import { account, leaderboard, playerProfile, social } from "../net.js";
 import { Sound } from "../sound.js";
 import { flagOf, flagOrGlobe } from "../online.js";
 import { Panel } from "./common.js";
+import { notifications, PUSH_KINDS } from "../push.js";
 
 const PERIODS = [["rating", "Рейтинг"], ["week", "Неделя"], ["friends", "Друзья"]];
 
@@ -98,6 +99,9 @@ function Friends({ open }) {
     return () => clearTimeout(t);
   }, [q]);
   const answer = async (id, action) => { try { await social.friend(id, action); vibrate(10); load(); } catch (x) { setErr(x.message); } };
+  // A call to a game: the friend gets it in the app and as a push; accepting opens a closed room for the two.
+  const call = async (id) => { setErr(null); try { await social.invite(id); vibrate(10); load(); } catch (x) { setErr(x.message); } };
+  const invitation = async (i, action) => { setErr(null); try { await takeInvite(i, action); load(); } catch (x) { setErr(x.message); load(); } };
   const row = (p, side) => html`<div class="fr-row">
     <button class="fr-who press" onClick=${() => open(p.id, load)}><${Face} name=${p.nickname} photo=${p.avatar} small=${true} />
       <span class="lb-name"><b>${flagOrGlobe(p.country) ? html`<i class="flag">${flagView(flagOrGlobe(p.country))}</i> ` : null}${p.nickname}</b>
@@ -114,8 +118,16 @@ function Friends({ open }) {
     ${st.incoming.length ? html`<h4 class="section">ЗАЯВКИ · ${st.incoming.length}</h4><div class="board-list glass">${st.incoming.map((p) => row(p, html`<span class="fr-btns">
       <button class="round-ok press" aria-label="Принять" onClick=${() => answer(p.id, "accept")}><${Icon} name="check" size="16" weight="2.5" /></button>
       <button class="round-no press" aria-label="Отклонить" onClick=${() => answer(p.id, "decline")}><${Icon} name="x" size="14" weight="2.5" /></button></span>`))}</div>` : null}
+    ${st.invites?.length ? html`<h4 class="section">ПРИГЛАШЕНИЯ В ИГРУ</h4><div class="board-list glass">${st.invites.map((i) => html`<div class="fr-row invite-row">
+      <span class="lb-name"><b>${i.nickname}</b><small>${i.status === "accepted" ? "комната готова" : i.direction === "incoming" ? "зовёт сыграть" : "ждём ответа"}</small></span>
+      ${i.status === "accepted" ? html`<button class="chip-btn press" onClick=${() => invitation(i, "go")}>Зайти</button>`
+        : i.direction === "incoming" ? html`<span class="fr-btns">
+          <button class="round-ok press" aria-label="Принять" onClick=${() => invitation(i, "go")}><${Icon} name="check" size="16" weight="2.5" /></button>
+          <button class="round-no press" aria-label="Отклонить" onClick=${() => invitation(i, "decline")}><${Icon} name="x" size="14" weight="2.5" /></button></span>`
+        : html`<button class="text-btn muted" onClick=${() => invitation(i, "cancel")}>Отменить</button>`}</div>`)}</div>` : null}
     <h4 class="section">ДРУЗЬЯ · ${st.friends.length}</h4>
-    ${st.friends.length ? html`<div class="board-list glass">${st.friends.map((p) => row(p, html`<${Icon} name="right" size="14" style="opacity:.4" />`))}</div>`
+    ${st.friends.length ? html`<div class="board-list glass">${st.friends.map((p) => row(p, st.invites?.some((i) => i.nickname === p.nickname) ? html`<${Icon} name="right" size="14" style="opacity:.4" />`
+      : html`<button class="chip-btn press" onClick=${() => call(p.id)}><img src=${img("invite")} alt="" />Позвать</button>`))}</div>`
       : html`<p class="hint-line small pad">Пока никого. Найди друга по нику или открой профиль соперника после матча.</p>`}
     ${st.outgoing.length ? html`<h4 class="section">ОТПРАВЛЕННЫЕ</h4><div class="board-list glass">${st.outgoing.map((p) => row(p,
       html`<button class="text-btn muted" onClick=${() => answer(p.id, "cancel")}>Отменить</button>`))}</div>` : null}
@@ -187,6 +199,50 @@ function Settings() {
   return html`<div class="settings-list">
     ${row(html`<img src=${img("sound")} alt="" />`, "Звук", "Ходы, таймер, победа", Sound.enabled, (v) => { Sound.enabled = v; if (v) Sound.play("turn"); })}
     ${row(html`<img src=${img("vibrate")} alt="" />`, "Вибрация", "Отклик на нажатия и ходы", Prefs.vibration, (v) => { Prefs.vibration = v; vibrate(15); })}
+    ${account.profile?.registered && "showFlag" in account.profile ? html`<${NotifyRow} />` : null}
+    ${location.pathname.startsWith("/app/") ? html`<a class="toggle-card press full-site" href="/full">
+      <span class="tc-ic"><${Icon} name="home" size="18" weight="2" /></span>
+      <span class="tc-t"><b>Полная версия сайта</b><small>derbyo.online как на компьютере</small></span>
+      <${Icon} name="right" size="13" weight="3" class="chev" /></a>` : null}
+  </div>`;
+}
+
+/** Notifications: one switch, and a pencil that picks which kinds come. */
+function NotifyRow() {
+  const [on, setOn] = useState(null);
+  const [err, setErr] = useState(null);
+  const [edit, setEdit] = useState(false);
+  const [shut, setShut] = useState(false);
+  const check = () => notifications.enabled().then(setOn).catch(() => setOn(false));
+  useEffect(() => { check(); }, []);
+  const supported = notifications.supported(), denied = notifications.permission() === "denied", prefs = notifications.prefs;
+  const kinds = PUSH_KINDS.filter(([k]) => prefs[k]).map(([, t]) => t);
+  const detail = !supported ? "Работают в приложении с экрана «Домой»" : denied ? "Запрещены в настройках телефона"
+    : on ? (kinds.length ? kinds.join(" · ") : "Все виды выключены") : "Приглашения в игру и заявки в друзья";
+  const flip = async (v) => {
+    setErr(null); setOn(v);
+    try { if (v) await notifications.enable(); else await notifications.disable(); vibrate(10); } catch (e) { setErr(e.message); }
+    check();
+  };
+  return html`<div class="toggle-card notify-row">
+      <span class="tc-ic"><img src=${img("bell")} alt="" /></span>
+      <span class="tc-t"><b>Уведомления</b><small>${err ?? detail}</small></span>
+      ${on ? html`<button class="pencil-btn press" aria-label="Выбрать уведомления" onClick=${() => { setShut(false); setEdit(true); }}><${Icon} name="pencil" size="16" weight="2" /></button>` : null}
+      ${supported && !denied ? html`<input type="checkbox" class="switch" aria-label="Уведомления" checked=${!!on} disabled=${on === null} onClick=${(e) => flip(e.target.checked)} />` : null}
+    </div>
+    ${edit ? html`<${Panel} shut=${shut} onClose=${() => setEdit(false)}><${NotifyKinds} /><//>` : null}`;
+}
+
+function NotifyKinds() {
+  const [p, setP] = useState(notifications.prefs);
+  const [err, setErr] = useState(null);
+  const set = (k, v) => { const n = { ...p, [k]: v }; setP(n); notifications.setPrefs(n).catch((e) => setErr(e.message)); };
+  return html`<div class="profile notify-kinds">
+    <h3 class="sheet-title">Уведомления</h3>
+    <div class="settings-list">${PUSH_KINDS.map(([k, t, d]) => html`<label class="toggle-card">
+      <span class="tc-t"><b>${t}</b><small>${d}</small></span>
+      <input type="checkbox" class="switch" checked=${p[k]} onClick=${(e) => set(k, e.target.checked)} /></label>`)}</div>
+    ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
   </div>`;
 }
 
@@ -230,7 +286,7 @@ export function ProfileTab({ children }) {
     } catch (x) { setErr(x.message); }
     setBusy(false);
   };
-  const logout = async () => { setBusy(true); try { await account.send("logout", {}); } catch (x) { setErr(x.message); } setBusy(false); };
+  const logout = async () => { setBusy(true); try { await notifications.forget(); await account.send("logout", {}); } catch (x) { setErr(x.message); } setBusy(false); };
   if (!account.ready) return html`<div class="screen-scroll"><div class="page"><h1 class="big-title">Профиль</h1><p class="hint-line pad">Соединяемся с derbyo.online…</p>${children}</div></div>`;
   const t = rankTier(p.rating ?? 0);
   const editable = p.registered && "avatar" in p;
@@ -244,7 +300,7 @@ export function ProfileTab({ children }) {
         <span class="pf-name"><b>${account.name}</b><span>${p.showFlag === false ? html`<i class="flag">${flagView("🌐")}</i>` : flagOrGlobe(p.country) ? html`<i class="flag">${flagView(flagOrGlobe(p.country))}</i>` : null}<em class="lvl" style=${`--c:${levelColor(p.level)}`}>Ур. ${p.level}</em>${p.registered ? null : html`<small>гость</small>`}</span></span>
         <span class="pf-rating">${p.rating != null ? html`<b class="grad" style=${`${tierStyle(p.rating)};filter:drop-shadow(0 0 6px ${t.b}80)`}>${p.rating}</b>
           <small>${p.rank ? html`<${Place} n=${p.rank} />` : t.name}</small>`
-          : html`<small>${p.registered ? "рейтинг после 5 игр" : "рейтинг — после входа"}</small>`}</span>
+          : html`<small>${p.registered ? "рейтинг после 5 игр с 2 соперниками" : "рейтинг — после входа"}</small>`}</span>
       </div>
       <div class="pf-stats"><span><b>${p.games}</b><small>Игр</small></span><span><b>${p.games ? Math.round((p.wins / p.games) * 100) : 0}%</b><small>Побед</small></span><span><b>${p.bestStreak}</b><small>Лучшая серия</small></span></div>
       ${p.registered ? html`<div class="pf-stats small"><span><b>${p.wins}</b><small>Выиграно</small></span><span><b>${p.draws ?? 0}</b><small>Вничью</small></span><span><b>${p.losses ?? 0}</b><small>Проиграно</small></span></div>` : null}
@@ -284,4 +340,11 @@ export function ProfileTab({ children }) {
     ${sheet.kind === "password" ? html`<${ChangePassword} done=${() => setShut(true)} />`
       : html`<${PlayerCard} id=${sheet.id} onChange=${() => setFriendsKey((k) => k + 1)} />`}<//>` : null}
   </div>`;
+}
+
+/** Opens a friend's invitation: accepting (or the sender, once accepted) gets a seat; the app opens that room. */
+export async function takeInvite(i, action = "go") {
+  if (action !== "go") { await social.invitation(i.id, action); return; }
+  const r = await social.invitation(i.id, i.direction === "incoming" && i.status !== "accepted" ? "accept" : "claim");
+  if (r.session) dispatchEvent(new CustomEvent("derbyo-session", { detail: r.session }));
 }

@@ -983,3 +983,17 @@ img.globe { width: 1.5em; height: 1.5em; margin: -.25em -.1em; vertical-align: m
 .talk-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 14px 8px; }
 .people-note { font-size: 12px; line-height: 1.35; color: var(--gold); padding: 2px 2px 0 48px; }
 .talk-tabs button.on { background: linear-gradient(#2F5D93, #24497A); box-shadow: inset 0 0 0 1px rgba(120, 170, 255, .35); }
+.full-site { text-decoration: none; color: inherit; }
+
+/* Notifications: the bell in the ask sheet, the pencil next to the switch, and a friend's call over the app. */
+.inst-icon.bell { box-shadow: none; object-fit: contain; }
+.notify-row .pencil-btn { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--soft); background: rgba(255, 255, 255, .06); border: 1px solid var(--navy-line); }
+.notify-kinds .settings-list { margin-top: 12px; }
+.invite-row .lb-name { flex: 1; }
+.invite-toast { background: rgba(22, 34, 50, .94); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); position: fixed; z-index: 60; left: 12px; right: 12px; top: calc(env(safe-area-inset-top) + 10px); display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; border-radius: 18px; animation: toast-in .35s cubic-bezier(.2, .9, .3, 1.2); }
+.invite-toast > img { width: 34px; height: 34px; }
+.invite-toast > span { flex: 1; min-width: 0; }
+.invite-toast b { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.invite-toast small { display: block; font-size: 12px; color: var(--soft); }
+.invite-toast .accept { background: linear-gradient(#3FE0A0, #22B57C); border: 0; color: #062016; }
+@keyframes toast-in { from { transform: translateY(-120%); opacity: 0; } }

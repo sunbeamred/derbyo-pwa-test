@@ -123,6 +123,10 @@ export class OnlineMatch {
     this.rematchOffer = st.rematch ?? null;
     this.rematchAsked = this.rematchOffer?.by === this.mySeat;
     this.oppRematch = !!this.rematchOffer && this.rematchOffer.by !== this.mySeat;
+    // My offer went unanswered (expired, declined, opponent left): the button stays «Новый соперник».
+    if (this.rematchAsked) this.myRematchSent = true;
+    else if (!this.rematchOffer && !st.rematchClosed) this.myRematchSent = false;
+    this.rematchUnanswered = !this.rematchOffer && !!st.rematchClosed && !!this.myRematchSent;
     this.raise = st.raise ?? null;
     this.freeLeave = this.watching ? null : st.freeLeave ?? null;
     this.reactions(st.reactions);
@@ -230,9 +234,13 @@ export class OnlineMatch {
     const them = this.them, me = this.me;
     const until = them?.awayDeadline ?? them?.returnDeadline;
     this.oppAwayFor = them && (until || !them.online || them.status === "hidden") && !this.roundOver ? Math.max(0, Math.round((now - (them.since ?? now)) / 1000)) : null;
-    this.oppAwayBudget = until ? Math.max(0, Math.ceil((until - now) / 1000)) : Math.round((them?.hideLeftMs ?? 45000) / 1000);
+    // Rings scale to the server's own numbers: the level's time-away budget (45…25 s), the deadline's whole span, the room's turn time.
+    this.awayTotal = g.hideBudget ? Math.round(g.hideBudget / 1000) : 45;
+    this.oppAwayTotal = until && them?.since ? Math.max(1, Math.round((until - them.since) / 1000)) : this.awayTotal;
+    this.turnTotal = this.state?.settings?.seconds || 60;
+    this.oppAwayBudget = until ? Math.max(0, Math.ceil((until - now) / 1000)) : Math.round((them?.hideLeftMs ?? this.awayTotal * 1000) / 1000);
     // Shown only once some of the budget is spent; levels without a budget never show it.
-    this.awaySeconds = g.hideBudget && me && me.hideLeftMs < g.hideBudget ? Math.round(me.hideLeftMs / 1000) : 45;
+    this.awaySeconds = g.hideBudget && me && me.hideLeftMs < g.hideBudget ? Math.round(me.hideLeftMs / 1000) : this.awayTotal;
     // Waiting for the other player: a rematch I offered, or the next round I am ready for.
     const st = this.state;
     const waitUntil = this.rematchAsked ? this.rematchOffer.until : this.nextAsked ? st.readyDeadline : null;
@@ -298,6 +306,8 @@ export class OnlineMatch {
   }
   /** The server says when you may leave without it counting: the other side stopped answering. */
   get canLeaveFree() { return !!this.freeLeave; }
+  /** A match the quick search found (its rematches too): a new opponent comes from the same search; a room match leads back to the menu. */
+  get fromQuick() { return !!this.state?.quick; }
   get hasBoard() { return !!this.g; }
 
   profile(owner) {

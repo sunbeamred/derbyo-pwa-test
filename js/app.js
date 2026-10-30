@@ -6,12 +6,13 @@ import { has } from "./data.js";
 import { Match, Opponent, store } from "./model.js";
 import { MatchScreen } from "./ui/match.js";
 import { HomeView, GameLobby, QuickPickView, SearchView, RoomView, JoinCodeView, LockerRoom, MatchSettingsView } from "./ui/lobby.js";
-import { InstallSheet, installState, InstallRow, isStandalone, isIOS } from "./install.js";
+import { InstallSheet, installState, InstallRow, isStandalone, isIOS, PushAskSheet } from "./install.js";
+import { notifications } from "./push.js";
 import { TabBar } from "./ui/tabbar.js";
-import { ONLINE, account, createRoom, joinRoom, savedSession } from "./net.js";
+import { ONLINE, account, createRoom, joinRoom, savedSession, social } from "./net.js";
 import { OnlineMatch } from "./online.js";
 import { OnlineLobby, OnlineSearch, OnlineRoom, OnlineJoinCode, OnlineLocker } from "./ui/live.js";
-import { RatingTab, ProfileTab } from "./ui/account.js";
+import { RatingTab, ProfileTab, takeInvite } from "./ui/account.js";
 import "./touch.js";
 
 // Online (this app's own host) the screens play on the site's server; the GitHub copy and demo links stay offline.
@@ -49,6 +50,8 @@ function App() {
   const [searchLeaving, setSearchLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [install, setInstall] = useState(() => installState.shouldOffer());
+  const [askPush, setAskPush] = useState(false);
+  const [invite, setInvite] = useState(null);
   const live = useRef({});
   const stackRef = useRef();
   /** Our own history.back() for a cover: its popstate must not also pop a screen. */
@@ -206,6 +209,14 @@ function App() {
         return true;
       }
     },
+    /** A seat the server already gave (a friend's invitation): the locker until both are ready, or the match. */
+    session: async (s) => {
+      if (busyNow()) { setBusy(true); return; }
+      const m = watchClose(new OnlineMatch(s));
+      for (let i = 0; i < 50 && !m.state; i++) await new Promise((r) => setTimeout(r, 100));
+      setTab(1);
+      if (!m.hasBoard) nav.push("locker", { m }); else open(m);
+    },
   };
   const ret = () => { setMatch(minimized); setMinimized(null); setMatchLeaving(false); coverOpened(); };
 
@@ -230,6 +241,54 @@ function App() {
     })}
   </div>`;
 
+  // Notifications (sandbox server): asked once in the installed app of a signed-in player; the phone's subscription follows the account.
+  const sandbox = ONLINE && account.profile?.registered && "showFlag" in account.profile;
+  useEffect(() => {
+    if (!sandbox) return;
+    notifications.refresh();
+    if (notifications.shouldAsk()) setAskPush(true);
+  }, [sandbox, account.profile?.id]);
+  // A friend's call while the app is open: a banner; a tap on a push opens the app at #invite= or #friends.
+  useEffect(() => {
+    if (!sandbox) return;
+    const seen = new Set();
+    const poll = () => document.hidden || social.state().then((st) => {
+      const i = st.invites?.find((x) => x.direction === "incoming" && x.status === "pending" && !seen.has(x.id));
+      if (i) { seen.add(i.id); setInvite(i); }
+    }).catch(() => {});
+    poll();
+    const t = setInterval(poll, 15000);
+    return () => clearInterval(t);
+  }, [sandbox]);
+  const route = (hash) => {
+    const inv = hash.match(/^#invite=([\w-]{8,64})$/);
+    if (inv) social.state().then((st) => {
+      const i = st.invites?.find((x) => x.id === inv[1]);
+      if (!i) alert("Приглашение уже не действует");
+      else return takeInvite(i);
+    }).catch((e) => alert(e.message));
+    else if (hash === "#friends") setTab(2);
+    else return false;
+    return true;
+  };
+  useEffect(() => {
+    const onSession = (e) => app.session(e.detail);
+    const onMessage = (e) => { if (e.data?.open) route(new URL(e.data.open).hash); };
+    addEventListener("derbyo-session", onSession);
+    navigator.serviceWorker?.addEventListener("message", onMessage);
+    return () => { removeEventListener("derbyo-session", onSession); navigator.serviceWorker?.removeEventListener("message", onMessage); };
+  }, []);
+  useEffect(() => {
+    if (ONLINE && /^#(invite=|friends$)/.test(location.hash)) { const h = location.hash; history.replaceState(history.state, "", location.pathname + location.search); route(h); }
+  }, []);
+
+  // The site's room link (derbyo.online/#join=123456, #watch=, #room=) reaches a phone here: join once, then forget it.
+  useEffect(() => {
+    const m = ONLINE && location.hash.match(/^#(join|watch|room)=(\d{6})$/);
+    if (!m) return;
+    history.replaceState(history.state, "", location.pathname + location.search);
+    app.joinRoom(m[2], { role: m[1] === "watch" ? "spectator" : "player" });
+  }, []);
   return html`<div class=${cx("app", minimized && !match && "has-return")}>
     <main class="tab-body">
       <section class="tab-pane" hidden=${tab !== 0}>${ONLINE ? html`<${RatingTab} visible=${tab === 0} />` : html`<${Placeholder} title="Рейтинг" text="Неделя и всё время, все и друзья, твоё место снизу. Следующий шаг прототипа." />`}</section>
@@ -253,6 +312,11 @@ function App() {
       message=${`Ты ещё играешь с ${minimized?.opponent.name ?? "соперником"}. Доиграй или выйди из матча — потом можно в другую комнату.`}
       actions=${[{ title: "Вернуться в матч", kind: "bold", run: () => { setBusy(false); ret(); } }, { title: "Отмена", run: () => setBusy(false) }]} />` : null}
     ${install && !match ? html`<${InstallSheet} close=${() => setInstall(false)} />` : null}
+    ${askPush && !install && !match ? html`<${PushAskSheet} close=${() => setAskPush(false)} />` : null}
+    ${invite && !match ? html`<div class="invite-toast glass" role="alert">
+      <img src=${img("invite")} alt="" /><span><b>${invite.nickname}</b><small>зовёт сыграть</small></span>
+      <button class="chip-btn press accept" onClick=${() => { const i = invite; setInvite(null); takeInvite(i).catch((e) => alert(e.message)); }}>Играть</button>
+      <button class="round-no press" aria-label="Скрыть" onClick=${() => setInvite(null)}><${Icon} name="x" size="14" weight="2.5" /></button></div>` : null}
     <input id="kbd-proxy" aria-hidden="true" tabindex="-1" />
   </div>`;
 }

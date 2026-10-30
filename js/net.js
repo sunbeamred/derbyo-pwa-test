@@ -66,6 +66,8 @@ export const social = {
   state: () => api("/api/social/state"),
   search: (q) => api(`/api/social/search?q=${encodeURIComponent(q)}`).then((r) => r.players),
   friend: (target, action) => api("/api/social/friend", { target, action }),
+  invite: (target) => api("/api/social/invite", { target }),
+  invitation: (id, action) => api("/api/social/invitation", { id, action }),
 };
 export const openRooms = () => api("/api/rooms").then((r) => r.rooms);
 export const siteStats = () => api("/api/stats");
@@ -192,3 +194,11 @@ export function photoOf(x) {
 
 /** Live on the site's API: on this app's own host. The GitHub Pages copy and `?demo…` links stay the offline prototype. */
 export const ONLINE = ![...new URLSearchParams(location.search).keys()].some((k) => k.startsWith("demo")) && !location.hostname.endsWith("github.io");
+
+/** Web push on the sandbox server: the phone's subscription and which kinds it wants. */
+export const pushApi = {
+  key: () => api("/api/push/key").then((r) => r.key),
+  subscribe: (subscription, prefs) => api("/api/push/subscribe", { subscription, prefs }),
+  prefs: (endpoint, prefs) => api("/api/push/prefs", { endpoint, prefs }),
+  unsubscribe: (endpoint) => api("/api/push/unsubscribe", { endpoint }),
+};

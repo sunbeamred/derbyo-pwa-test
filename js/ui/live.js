@@ -238,7 +238,7 @@ export function OnlineRoom({ nav, app }) {
   // Changed settings go to the server, after the first (sent with the room itself).
   useEffect(() => { if (first.current) { first.current = false; return; } if (m && passwordOK(settings)) m.settings(createBody(settings)).catch(() => {}); }, [settings, m]);
   const code = m?.code ?? "··· ···";
-  const text = `Сыграем в DERBYO? Комната ${code}: derbyo.online/r/${code.replace(" ", "")}`;
+  const text = `Сыграем в DERBYO? Комната ${code}: https://derbyo.online/#join=${code.replace(" ", "")}`;
   const share = async () => { try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); } } catch {} };
   const copy = async () => { try { await navigator.clipboard.writeText(code.replace(" ", "")); } catch {} setCopied(true); setTimeout(() => setCopied(false), 1500); };
   const friend = m?.them;

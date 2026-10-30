@@ -64,7 +64,7 @@ export function ProfileSheet({ m, owner, viewer = null, close }) {
         <b class="grad" style=${`${tierStyle(p.rating)};filter:drop-shadow(0 0 6px ${t.b}${Math.round(t.glow * 255).toString(16).padStart(2, "0")})`}>${p.rating}</b>
         ${p.rank ? html`<small><span class=${cx(placeStyle(p.rank) && "grad", p.rank <= 5 && "top")} style=${placeStyle(p.rank)}>${p.rank}</span> место в рейтинге</small>`
           : html`<small>${bot ? "фиксированный рейтинг" : "рейтинг"}</small>`}
-      </span>` : m.online ? html`<span class="pf-rating"><small>${bot ? "бот" : owner === 0 ? "рейтинг после 5 игр" : "рейтинг на сайте"}</small></span>` : null}
+      </span>` : m.online ? html`<span class="pf-rating"><small>${bot ? "бот" : owner === 0 ? "рейтинг после 5 игр с 2 соперниками" : "рейтинг на сайте"}</small></span>` : null}
     </div>
     ${!bot && p.games != null ? html`<div class="pf-stats">
       <span><b>${p.games}</b><small>Игр</small></span><span><b>${p.winRate}%</b><small>Побед</small></span><span><b>${p.bestStreak}</b><small>Лучшая серия</small></span></div>` : null}

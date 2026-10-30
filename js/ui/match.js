@@ -85,7 +85,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     <button class=${cx("navy-btn menu-row", destructive && "destructive")} disabled=${!enabled}
       onClick=${() => { if (Date.now() - menuOpenedAt.current < 500) return; leaveMenu?.(); run(); store.changed(); }}>${title}</button>`;
   const invite = async () => {
-    const text = `Сыграем в DERBYO? Комната ${m.code}: derbyo.online/r/${m.code.replace(" ", "")}`;
+    const text = `Сыграем в DERBYO? Комната ${m.code}: https://derbyo.online/#join=${m.code.replace(" ", "")}`;
     try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); m.show("Приглашение скопировано", true); store.changed(); } } catch {}
   };
   const menu = (leave) => (leaveMenu = leave, html`<div class="menu">
@@ -340,9 +340,9 @@ export function TurnDial({ m, size = 52 }) {
   const low = mine && m.seconds <= 10 && !m.roundOver;
   const reviewing = m.review && !m.roundOver;
   const tint = m.roundOver ? GOLD : reviewing ? GOLD : m.paused ? MUTED : low ? "#FF8B97" : m.seat(m.turn) === 0 ? RED : MINT;
-  const fill = m.roundOver ? 1 : reviewing ? m.review.left / 20 : Math.min(1, Math.max(0, m.seconds) / 60);
+  const fill = m.roundOver ? 1 : reviewing ? m.review.left / 20 : Math.min(1, Math.max(0, m.seconds) / (m.turnTotal ?? 60));
   const R = 50 - 5, C = 2 * Math.PI * R, r2 = 50 - 18, C2 = 2 * Math.PI * r2;
-  const away = m.oppAwayFor !== null ? { f: m.oppAwayBudget / 45, c: m.mySeat === 1 ? RED : MINT } : m.awaySeconds < 45 ? { f: m.awaySeconds / 45, c: "rgba(201,213,227,.7)" } : null;
+  const away = m.oppAwayFor !== null ? { f: Math.min(1, m.oppAwayBudget / (m.oppAwayTotal ?? 45)), c: m.mySeat === 1 ? RED : MINT } : m.awaySeconds < (m.awayTotal ?? 45) ? { f: m.awaySeconds / (m.awayTotal ?? 45), c: "rgba(201,213,227,.7)" } : null;
   return html`<span class="dial" style=${`width:${size}px;height:${size}px`} aria-label=${m.roundOver ? "Раунд окончен" : `Осталось ${m.seconds} секунд на ход`}>
     <svg viewBox="0 0 100 100">
       <circle cx="50" cy="50" r="48" fill="rgba(0,0,0,.3)" />
@@ -379,15 +379,15 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
   const sub = m.watching ? html`<small>${m.review ? `зачёт: ${m.review.name ?? ""}` : m.paused ? "игроки взяли паузу" : "ты на трибуне"}</small>`
     : m.review ? html`<small>зачёт: ${m.review.name ?? byId[m.review.playerId].name}</small>`
     : m.oppAwayFor !== null ? html`<small style=${`color:${m.mySeat === 1 ? "#FFB3C1" : "#91FFD3"}`}>◒ ${opp} · ещё ${m.oppAwayBudget} с</small>`
-    : m.awaySeconds < 45 ? html`<small>${m.awaySeconds > 0 ? `вне игры: ещё ${m.awaySeconds} с` : "время вне игры вышло"}</small>` : null;
+    : m.awaySeconds < (m.awayTotal ?? 45) ? html`<small>${m.awaySeconds > 0 ? `вне игры: ещё ${m.awaySeconds} с` : "время вне игры вышло"}</small>` : null;
 
   return html`<div class="tray-row">
     <div class=${cx("tray turn-tray glass", m.roundOver && !m.watching && "over")}>
       ${m.roundOver && m.watching ? html`<${TurnDial} m=${m} size=${48} /><${StandsBetween} m=${m} />`
-      : m.roundOver ? html`<${RoundButton} m=${m} findNew=${findNew} />` : html`
+      : m.roundOver ? html`<${RoundButton} m=${m} findNew=${findNew} close=${close} />` : html`
         <${TurnDial} m=${m} size=${48} />
-        ${m.canLeaveFree && !m.watching ? html`<button class="tray-label press" onClick=${m.paused ? close : findNew}>
-            <b style="color:#32E5A1">${m.paused ? "Выйти без штрафа »" : "Новый соперник »"}</b>
+        ${m.canLeaveFree && !m.watching ? html`<button class="tray-label press" onClick=${m.paused || (m.online && !m.fromQuick) ? close : findNew}>
+            <b style="color:#32E5A1">${m.paused || (m.online && !m.fromQuick) ? "Выйти без штрафа »" : "Новый соперник »"}</b>
             <small>${m.paused ? `${opp} не продолжает игру` : `${opp} не отвечает`}</small></button>`
         : pause ? html`<button class="tray-label press" onClick=${() => { pause.run(); store.changed(); }}>
             <b style=${`color:${pause.color}`}>${pause.title}</b><small>${pause.detail}</small></button>`
@@ -412,21 +412,23 @@ function StandsBetween({ m }) {
 }
 
 /** At the end of a round the dial swells into this button: what comes next. */
-function RoundButton({ m, findNew }) {
+function RoundButton({ m, findNew, close }) {
   const done = m.matchOver, gone = done && m.oppLeft;
   // After the match leaving costs nothing, so a rematch nobody answers for 10 s offers a new opponent.
-  const offerNew = (m.canLeaveFree && (m.rematchAsked || m.nextAsked)) || (m.online && done && m.rematchAsked && m.readyLeft <= 20);
+  const offerNew = (m.canLeaveFree && (m.rematchAsked || m.nextAsked)) || (m.online && done && m.rematchAsked && m.readyLeft <= 20) || (done && m.rematchUnanswered);
   const waiting = (m.rematchAsked || m.nextAsked) && !offerNew;
   const opp = m.opponent.name;
+  // After a room match there is no search to go back to: the way out is the menu.
+  const toMenu = m.online && !m.fromQuick;
   // Online the other player may have offered the rematch first: the same button accepts it.
   const accept = done && !gone && m.oppRematch;
   const acceptLeft = accept && m.rematchOffer ? Math.max(0, Math.ceil((m.rematchOffer.until - m.now()) / 1000)) : 0;
-  const title = gone || offerNew ? "Новый соперник" : waiting ? (m.online && !m.readyLeft ? `Ждём ${opp}` : `Ждём ${opp} · ${m.readyLeft} с`) : accept ? "Принять реванш" : done ? "Реванш" : "Следующий раунд";
-  const detail = m.watching ? "начнут игроки" : gone ? `${opp} покинул матч` : accept ? `${opp} предлагает · ${acceptLeft} с` : offerNew ? `${opp} не отвечает · ${m.readyLeft} с`
+  const title = gone || offerNew ? (toMenu ? "Выйти в меню" : "Новый соперник") : waiting ? (m.online && !m.readyLeft ? `Ждём ${opp}` : `Ждём ${opp} · ${m.readyLeft} с`) : accept ? "Принять реванш" : done ? "Реванш" : "Следующий раунд";
+  const detail = m.watching ? "начнут игроки" : gone ? `${opp} покинул матч` : accept ? `${opp} предлагает · ${acceptLeft} с` : offerNew ? (m.rematchUnanswered ? `${opp} не принял реванш` : `${opp} не отвечает · ${m.readyLeft} с`)
     : waiting ? (m.rematchAsked ? "реванш предложен" : `ты готов к раунду ${m.round + 1}`) : done ? `ещё матч с ${opp}` : `раунд ${m.round + 1} · ${m.nextLevel}${m.nextBreather ? " после ничьей" : ""}`;
   const kind = waiting ? "wait" : done && !gone && !offerNew ? "gold" : "green";
   return html`<button class=${cx("round-btn press", kind)} disabled=${m.watching} aria-label=${`${title}, ${detail}`}
-    onClick=${() => { gone || offerNew ? findNew() : done ? m.rematch() : m.askNextRound(); store.changed(); }}>
+    onClick=${() => { gone || offerNew ? (toMenu ? close() : findNew()) : done ? m.rematch() : m.askNextRound(); store.changed(); }}>
     <span class="rb-text"><b>${title}</b><small>${detail}</small></span>
     ${waiting ? html`<span class="spinner"></span>` : html`<span class="chev2">»</span>`}
   </button>`;
