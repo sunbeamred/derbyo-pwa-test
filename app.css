@@ -1449,37 +1449,49 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .sound-btn .badge { top: -5px; right: -5px; }
 .mode-ic .badge { top: -6px; right: -7px; }
 
-/* The quick game's search: a radar on a night pitch. Rings breathe out from you, a red beam sweeps round
-   (2.8 s a turn) and lights up players' faces as it passes; on a match it stops and flashes mint. */
-.radar { --R: min(132px, 34vw); position: relative; width: calc(var(--R) * 2 + 44px); aspect-ratio: 1; flex: none; }
-.radar::before { content: ""; position: absolute; inset: 22px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(22, 196, 126, .12), rgba(22, 196, 126, .04) 55%, transparent 71%); }
-.rd-grid { position: absolute; inset: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
-  background: radial-gradient(circle, transparent 32.4%, rgba(255, 255, 255, .09) 33%, transparent 33.6%, transparent 65.6%, rgba(255, 255, 255, .09) 66.2%, transparent 66.8%),
-    linear-gradient(transparent calc(50% - .5px), rgba(255, 255, 255, .07) 50%, transparent calc(50% + .5px)),
-    linear-gradient(90deg, transparent calc(50% - .5px), rgba(255, 255, 255, .07) 50%, transparent calc(50% + .5px)); }
-.rd-sweep { position: absolute; inset: 22px; border-radius: 50%; will-change: transform; animation: rd-spin 2.8s linear infinite;
-  background: conic-gradient(from 0deg, transparent 0deg 250deg, rgba(255, 83, 100, .08) 290deg, rgba(255, 83, 100, .32) 352deg, rgba(255, 150, 160, .85) 359deg, transparent 360deg); }
-@keyframes rd-spin { to { transform: rotate(360deg); } }
-.rd-wave { position: absolute; inset: calc(50% - 38px); border-radius: 50%; border: 2px solid rgba(255, 83, 100, .55); opacity: 0; animation: rd-wave 2.8s ease-out infinite; }
-.rd-wave.w2 { animation-delay: .93s; }
-.rd-wave.w3 { animation-delay: 1.86s; }
-@keyframes rd-wave { 0% { opacity: .8; transform: scale(1); } 100% { opacity: 0; transform: scale(3.4); } }
-.rd-blip { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; overflow: hidden; opacity: .14;
-  transform: rotate(var(--a)) translateY(calc(var(--r) * var(--R) * -1)) rotate(calc(var(--a) * -1)) scale(.85);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, .25); animation: rd-blip 2.8s var(--d) ease-out infinite; }
-.rd-blip img { width: 100%; height: 100%; object-fit: cover; }
-@keyframes rd-blip { 0% { opacity: 1; box-shadow: 0 0 0 2px #FF5364, 0 0 16px rgba(255, 83, 100, .8); }
-  70%, 100% { opacity: .14; box-shadow: 0 0 0 2px rgba(255, 255, 255, .25); } }
-.rd-me { position: absolute; inset: calc(50% - 38px); border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #0B1626;
-  box-shadow: 0 0 0 3px #FF5364, 0 0 34px rgba(255, 83, 100, .55); transition: box-shadow .4s; }
-.rd-me img { width: 100%; height: 100%; object-fit: cover; }
-.rd-me b { font-size: 24px; font-weight: 800; }
-.search.found .rd-sweep, .search.failed .rd-sweep { animation-play-state: paused; opacity: 0; transition: opacity .4s; }
-.search.found .rd-blip, .search.failed .rd-blip { animation: none; opacity: 0; transition: opacity .3s; }
-.search.failed .rd-wave { animation: none; }
-.search.found .rd-wave { border-color: rgba(50, 229, 161, .7); }
-.search.found .rd-me { box-shadow: 0 0 0 3px #32E5A1, 0 0 44px rgba(50, 229, 161, .7); }
+/* The quick game's search, as on the site: a twenty-second derby on a little pitch — two red crosses and a mint
+   nought chase the ball and each side scores once — while the real matchmaking runs (site foundation.css). */
+.queue-football{width:min(100%,540px);aspect-ratio:2.05;position:relative;isolation:isolate;pointer-events:none;margin:0;border-radius:32px;background:radial-gradient(ellipse at 25% 70%,#ff647413,transparent 50%),radial-gradient(ellipse at 80% 30%,#4fe3b51a,transparent 50%),linear-gradient(145deg,#203b50,#0b1928 75%);border:1px solid #466176;box-shadow:inset 0 1px #c2e8ff22,inset 0 -8px 18px #0003,0 20px 35px #0004;contain:paint}
+.queue-pitch{position:absolute;inset:14% 8%;border:1px solid #acc9db30;border-radius:3px;background:repeating-linear-gradient(90deg,#abcfe904 0 16.66%,transparent 16.66% 33.33%)}
+.queue-pitch:before{content:'';position:absolute;left:50%;top:0;bottom:0;border-left:1px solid #acc9db30}
+.queue-pitch:after{content:'';position:absolute;width:20%;aspect-ratio:1;left:40%;top:50%;transform:translateY(-50%);border:1px solid #acc9db30;border-radius:50%;background:radial-gradient(circle,#acc9db55 0 2px,transparent 3px)}
+.queue-box{position:absolute;top:29%;height:42%;width:14%;border:1px solid #acc9db30}
+.queue-box.left{left:0;border-left:0}
+.queue-box.right{right:0;border-right:0}
+.queue-goal{position:absolute;top:36%;width:6%;height:28%;z-index:1;background:repeating-linear-gradient(0deg,transparent 0 7px,#c5e6f526 7px 8px),repeating-linear-gradient(90deg,#081727 0 7px,#c5e6f526 7px 8px);border:2px solid #bfd5e2aa;border-radius:4px;box-shadow:0 5px 7px #0005,inset 0 0 8px #0005}
+.queue-goal.left{left:3%;transform:skewY(-8deg);--goal-color:#56eab7;animation:queue-goal-left 20s infinite}
+.queue-goal.right{right:3%;transform:skewY(8deg);--goal-color:#ff7183;animation:queue-goal-right 20s infinite}
+.queue-goal:after{content:'';position:absolute;inset:-22px;background:radial-gradient(ellipse,var(--goal-color),transparent 68%);opacity:0;animation:inherit;animation-name:queue-goal-glow-left;z-index:-1}
+.queue-goal.right:after{animation-name:queue-goal-glow-right}
+.queue-runner,.queue-ball-runner{position:absolute;inset:0;pointer-events:none;animation-duration:20s;animation-iteration-count:infinite;animation-timing-function:linear}
+.queue-piece{position:absolute;left:0;top:0;width:clamp(38px,10.3vw,55px);height:clamp(38px,10.3vw,55px);transform:translate(-50%,-62%)}
+.queue-piece:after{content:'';position:absolute;left:12%;right:12%;height:15%;bottom:-6%;border-radius:50%;background:#0005;filter:blur(2px);z-index:-1}
+.queue-piece img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 4px 2px #0004);animation:queue-stride .65s ease-in-out infinite alternate}
+.queue-red-one{transform:translate(23%,66%);animation-name:queue-red-one}
+.queue-red-two{transform:translate(46%,30%);animation-name:queue-red-two}
+.queue-green{transform:translate(68%,58%);animation-name:queue-green}
+.queue-red-two img{animation-delay:-.25s}
+.queue-green img{animation-delay:-.4s}
+.queue-ball-runner{transform:translate(29%,64%);animation-name:queue-ball;z-index:3}
+.queue-ball{position:absolute;left:0;top:0;width:clamp(15px,4.4vw,23px);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 50% 45%,#243240 0 18%,transparent 20%),radial-gradient(circle at 7% 23%,#243240 0 13%,transparent 15%),radial-gradient(circle at 88% 20%,#243240 0 15%,transparent 17%),radial-gradient(circle at 25% 90%,#243240 0 16%,transparent 18%),radial-gradient(circle at 95% 78%,#243240 0 16%,transparent 18%),#edf4f8;box-shadow:inset -3px -4px 5px #12283980,inset 2px 2px 4px #fff,0 4px 4px #0007;animation:queue-ball-spin 2s linear infinite}
+.queue-football .queue-celebrate{position:absolute;top:15%;font-size:10px;letter-spacing:3px;font-weight:800;opacity:0;transform:translateY(6px);animation:queue-celebrate-left 20s infinite;color:#9affd9;left:12%}
+.queue-football .queue-celebrate.right{left:auto;right:12%;color:#ffadb8;animation-name:queue-celebrate-right}
+@keyframes queue-stride{from{transform:translateY(0) rotate(-4deg)}to{transform:translateY(-4px) rotate(4deg)}}
+@keyframes queue-red-one{0%,5%,60%,100%{transform:translate(23%,66%)}10%{transform:translate(25%,62%)}20%{transform:translate(33%,69%)}30%{transform:translate(43%,66%)}42%,51%{transform:translate(28%,63%)}65%{transform:translate(28%,65%)}73%{transform:translate(50%,68%)}80%{transform:translate(65%,59%)}84%{transform:translate(71%,57%)}88%{transform:translate(75%,53%)}90%{transform:translate(75%,48%)}92%{transform:translate(75%,53%)}95%{transform:translate(49%,65%)}}
+@keyframes queue-red-two{0%,8%,60%,100%{transform:translate(46%,30%)}17%,21%{transform:translate(46%,29%)}26%{transform:translate(55%,32%)}35%{transform:translate(45%,36%)}44%,52%{transform:translate(32%,33%)}68%,72%{transform:translate(48%,29%)}80%{transform:translate(62%,31%)}88%,93%{transform:translate(75%,30%)}}
+@keyframes queue-green{0%,10%,60%,100%{transform:translate(68%,58%)}20%{transform:translate(63%,51%)}25%{transform:translate(58%,43%)}30%{transform:translate(48%,50%)}36%{transform:translate(32%,50%)}42%{transform:translate(23%,46%)}46%{transform:translate(20%,46%)}49%{transform:translate(20%,39%)}52%{transform:translate(20%,46%)}54%{transform:translate(20%,41%)}56%{transform:translate(20%,46%)}66%{transform:translate(59%,57%)}73%{transform:translate(51%,44%)}80%{transform:translate(65%,45%)}85%,91%{transform:translate(82%,43%)}95%{transform:translate(75%,52%)}}
+@keyframes queue-ball{0%,5%,59%,60%,100%{transform:translate(29%,64%);opacity:1}10%{transform:translate(30%,59%)}17%{transform:translate(43%,35%)}21%{transform:translate(46%,36%)}25%{transform:translate(57%,46%)}30%{transform:translate(50%,54%)}36%{transform:translate(34%,54%)}42%{transform:translate(24%,51%)}46%,50%{transform:translate(7%,50%);opacity:1}53%{transform:translate(7%,50%);opacity:0}56%{transform:translate(29%,64%);opacity:0}65%{transform:translate(34%,64%)}70%{transform:translate(47%,34%)}74%{transform:translate(50%,38%)}80%{transform:translate(69%,58%)}84%{transform:translate(75%,55%)}87%,91%{transform:translate(93%,50%);opacity:1}94%{transform:translate(93%,50%);opacity:0}97%{transform:translate(29%,64%);opacity:0}}
+@keyframes queue-ball-spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes queue-goal-left{0%,44%,55%,100%{transform:skewY(-8deg)}47%{transform:skewY(-8deg) scaleX(1.18)}50%{transform:skewY(-8deg) scaleX(.96)}}
+@keyframes queue-goal-right{0%,85%,94%,100%{transform:skewY(8deg)}88%{transform:skewY(8deg) scaleX(1.18)}91%{transform:skewY(8deg) scaleX(.96)}}
+@keyframes queue-goal-glow-left{0%,44%,57%,100%{opacity:0}48%,51%{opacity:.4}}
+@keyframes queue-goal-glow-right{0%,85%,96%,100%{opacity:0}89%,92%{opacity:.4}}
+@keyframes queue-celebrate-left{0%,45%,58%,100%{opacity:0;transform:translateY(6px)}48%,53%{opacity:1;transform:translateY(0)}}
+@keyframes queue-celebrate-right{0%,86%,98%,100%{opacity:0;transform:translateY(6px)}89%,93%{opacity:1;transform:translateY(0)}}
+.queue-football { border-radius: 23px; }
+.queue-goal { border-width: 1.5px; }
+.queue-football .queue-celebrate { font-size: 8px; }
+.search.found .queue-football *, .search.failed .queue-football *, .search.found .queue-football :after { animation-play-state: paused !important; }
 .search-copy { display: flex; flex-direction: column; gap: 8px; }
 .search-copy p { margin-top: 0; }
 .search-time { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }

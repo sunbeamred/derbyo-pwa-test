@@ -141,11 +141,10 @@ export function OnlineSearch({ done }) {
     if (r?.session) { done({ session: r.session }); return; }
     done(bot ? { bot: true } : null);
   };
-  const me = account.profile;
   return html`<div class=${cx("search", found && "found", err && "failed")}>
     <div class="search-head"><button class="text-btn red" onClick=${() => cancel(false)}>Отмена</button><b>Быстрая игра</b><span style="width:60px"></span></div>
     <div class="search-mid">
-      <${Radar} found=${!!found} me=${me?.avatar ?? null} name=${account.name} />
+      <${Derby} />
       <div class="search-copy">
         <h2>${err ? "Не получилось" : found ? "Соперник найден" : "Ищем соперника"}</h2>
         <p>${err ?? (found ? `Комната ${found.code ?? ""} · ${lvl}` : html`${QuickChoice.summary} · <b class="search-time">${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}</b>`)}</p>
@@ -155,20 +154,16 @@ export function OnlineSearch({ done }) {
   </div>`;
 }
 
-// Faces the sweep lights up as it passes: the radar is looking through the players.
-const BLIPS = [["messi", 28, .78], ["cr7", 96, .58], ["mbappe", 150, .86], ["modric", 212, .62], ["henry", 262, .84], ["iniesta", 322, .6]];
-
-/** The search as a radar on a night pitch: rings breathe out from you, a red beam sweeps round and lights up
- * players' faces as it passes; on a match the beam stops and everything flashes mint. */
-function Radar({ found, me, name }) {
-  return html`<div class="radar" aria-hidden="true">
-    <span class="rd-grid"></span>
-    <span class="rd-wave"></span><span class="rd-wave w2"></span><span class="rd-wave w3"></span>
-    <span class="rd-sweep"></span>
-    ${BLIPS.map(([who, deg, r]) => html`<span class="rd-blip" style=${`--a:${deg}deg;--r:${r};--d:${(deg / 360) * 2.8}s`}><img src=${`img/p_${who}.jpg`} alt="" /></span>`)}
-    <span class="rd-me">${me ? html`<img src=${me} alt="" />` : html`<b>${(name || "?").slice(0, 2).toUpperCase()}</b>`}</span>
-  </div>`;
-}
+/** The site's search scene: a twenty-second derby on a little pitch while the real matchmaking runs. */
+const Derby = () => html`<div class="queue-football" aria-hidden="true">
+  <div class="queue-pitch"><i class="queue-box left"></i><i class="queue-box right"></i></div>
+  <div class="queue-goal left"></div><div class="queue-goal right"></div>
+  <div class="queue-runner queue-red-one"><span class="queue-piece"><img src=${img("mark-x")} alt="" /></span></div>
+  <div class="queue-runner queue-red-two"><span class="queue-piece"><img src=${img("mark-x")} alt="" /></span></div>
+  <div class="queue-runner queue-green"><span class="queue-piece"><img src=${img("mark-o")} alt="" /></span></div>
+  <div class="queue-ball-runner"><span class="queue-ball"></span></div>
+  <span class="queue-celebrate">ГОЛ!</span><span class="queue-celebrate right">ГОЛ!</span>
+</div>`;
 
 /** One player in the duel bubble: photo, name, flag with rating and place, readiness. */
 function DuelSide({ p, red, side }) {
