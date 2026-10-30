@@ -109,6 +109,10 @@ function Friends({ open }) {
   /** The friend's call, in the row instead of «Позвать»: invited with a countdown, then «Войти»; or theirs to accept. */
   const callSide = (p) => {
     const i = calls.find((x) => x.friend === p.id);
+    // The match you have minimised with this friend in it: back to it, as from the bar over the menu.
+    const cur = invites.current;
+    if (!i && cur && ((p.watch && p.watch === cur.code) || cur.names.includes(p.nickname)))
+      return html`<button class="chip-btn press go" onClick=${() => dispatchEvent(new CustomEvent("derbyo-return"))}>Вернуться</button>`;
     // A friend in a live game can be watched; while you play yourself, you cannot call anyone.
     if (!i && p.presence === "in_match") return p.watch ? html`<button class="chip-btn press" onClick=${() => dispatchEvent(new CustomEvent("derbyo-watch", { detail: p.watch }))}><img src=${img("eye")} alt="" />Смотреть</button>` : null;
     if (!i) return html`<button class="chip-btn press" disabled=${invites.busy} onClick=${() => call(p.id)}><img src=${img("invite")} alt="" />Позвать</button>`;
@@ -325,9 +329,9 @@ export function ProfileTab({ children }) {
     ${p.registered ? html`<${Friends} key=${friendsKey} open=${(id) => openSheet({ kind: "player", id })} />`
       : mode ? html`<form class="auth" onSubmit=${submit}>
           <h4 class="section">${mode === "login" ? "ВХОД" : "РЕГИСТРАЦИЯ"}</h4>
-          <label class="pw-field"><${Icon} name="profile" size="16" /><input value=${nick} onInput=${(e) => setNick(e.target.value)} placeholder="Ник" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" /></label>
+          <label class="pw-field"><${Icon} name="profile" size="16" /><input value=${nick} maxlength=${mode === "register" ? 16 : 20} onInput=${(e) => setNick(e.target.value)} placeholder="Ник" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" /></label>
           <label class="pw-field"><${Icon} name="lock" size="16" /><input type="password" value=${pw} onInput=${(e) => setPw(e.target.value)} placeholder="Пароль" autocomplete=${mode === "login" ? "current-password" : "new-password"} /></label>
-          ${mode === "register" ? html`<p class="hint-line small pad">Ник — 3–20 латинских букв, цифр, «_» или «-». Пароль от 6 символов. Твои игры гостем останутся в аккаунте.</p>` : null}
+          ${mode === "register" ? html`<p class="hint-line small pad">Ник — 3–16 латинских букв, цифр, «_» или «-». Пароль от 6 символов. Твои игры гостем останутся в аккаунте.</p>` : null}
           ${err ? html`<p class="hint-line small pad" style="color:#FF9AA8">${err}</p>` : null}
           <button class="primary-btn" type="submit" disabled=${busy || nick.trim().length < 3 || pw.length < 6}>${busy ? html`<span class="spinner"></span>` : mode === "login" ? "Войти" : "Создать аккаунт"}</button>
           <button class="text-btn muted" type="button" onClick=${() => { setMode(null); setErr(null); }}>Отмена</button>
@@ -335,7 +339,7 @@ export function ProfileTab({ children }) {
       : html`<div class="two"><button class="primary-btn" onClick=${() => setMode("login")}>Войти</button><button class="navy-btn tall" onClick=${() => setMode("register")}>Регистрация</button></div>
         <p class="hint-line small pad">Тот же аккаунт, что на derbyo.online: рейтинг, уровень и друзья общие. Друзья и фото профиля — после входа.</p>
         <h4 class="section">ИМЯ ГОСТЯ</h4>
-        <label class="pw-field"><input value=${guest} maxlength="24" onInput=${(e) => setGuest(e.target.value)} onBlur=${() => { const v = guest.trim(); if (v) account.guestName = v; else setGuest(account.name); }} /></label>`}
+        <label class="pw-field"><input value=${guest} minlength="3" maxlength="16" onInput=${(e) => setGuest(e.target.value)} onBlur=${() => { const v = guest.trim(); if (v.length >= 3) account.guestName = v; else setGuest(account.name); }} /></label>`}
     <h4 class="section">НАСТРОЙКИ</h4>
     <${Settings} />
     ${p.registered ? html`<div class="settings-list">

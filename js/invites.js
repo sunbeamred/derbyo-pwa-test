@@ -9,6 +9,8 @@ const changed = () => listeners.forEach((f) => f(list));
 export const invites = {
   /** True while you play a match yourself (minimised or open): no calls out, the button is grey. */
   busy: false,
+  /** The minimised match ({ code, names }), so the friends list can offer «Вернуться» for it. */
+  current: null,
   get list() { return list; },
   on(f) { listeners.add(f); return () => listeners.delete(f); },
   /** A call made or answered just now: look again at once. */
