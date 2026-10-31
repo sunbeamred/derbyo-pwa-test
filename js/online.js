@@ -170,7 +170,7 @@ export class OnlineMatch {
     this.oppSelected = !this.roundOver && (this.watching || g.turn !== this.mySeat) ? g.selected : null;
     if (this.turn !== 0 || this.roundOver) this.selected = null;
     this.sharedClues = {};
-    g.clues?.forEach((c, i) => { if (c) this.sharedClues[i] = { open: (c.purchased ?? []).map((l) => HINT_ID[l]), facts: c.facts, mask: c.mask, options: c.options?.map((o) => ({ id: o.id, name: o.name, used: o.used })) }; });
+    g.clues?.forEach((c, i) => { if (c) this.sharedClues[i] = { open: (c.purchased ?? []).map((l) => HINT_ID[l]), facts: c.facts, mask: c.mask, bio: c.bio, options: c.options?.map((o) => ({ id: o.id, name: o.name, used: o.used })) }; });
     this.review = g.review ? { id: g.review.id, owner: this.owner(g.review.owner), cell: g.review.cell, name: g.review.name, playerId: null, until: g.review.until, left: 20 } : null;
     this.paused = !!g.paused;
     this.choices = g.choices ?? null;

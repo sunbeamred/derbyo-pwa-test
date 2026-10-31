@@ -132,23 +132,33 @@ function ScoutChoices({ m, cell, clue, bought }) {
     <div class="scout-head"><img src=${img("scout")} alt="" /><b>Скаут</b><span class="cost small"><img src=${img("coin")} alt="" /><b>${m.tokens}</b></span></div>
     <p class="hint-line small">Подсказки видны обоим. Каждая покупается отдельно.</p>
     ${choice(Hints.profile, "Футбольные факты без имени")}
-    ${choice(Hints.letters, "Первые буквы и длина имени")}
-    ${choice(Hints.four, "Один верный ответ среди четырёх")}
+    ${choice(Hints.letters, "Первые буквы и ещё одна в длинных словах")}
+    ${choice(Hints.four, "Год рождения, годы карьеры и трофей")}
     <p class="hint-line tiny">Два самостоятельных верных захвата подряд: +1. Не более +2 за раунд.</p>
   </div>`;
 }
 
 /** The site's scout reveal: «ОТКРЫТО ДЛЯ ОБОИХ», the facts, the mask, the four names. */
-function ClueCard({ clue, picked, used, pick }) {
+export function ClueCard({ clue, picked, used, pick }) {
   return html`<div class="clue">
     <div class="clue-head"><img src=${img("scout")} alt="" /><small>ОТКРЫТО ДЛЯ ОБОИХ</small><b>${clue.open.map((h) => Hints[h].title).join(" · ")}</b></div>
     ${clue.open.includes("profile") ? (clue.facts ?? clueFacts(clue)).map((f) => html`<div class="fact"><small>${f.label}</small><b>${[f.flag, f.text].filter(Boolean).join(" ")}</b></div>`) : null}
-    ${clue.open.includes("letters") ? html`<div class="mask">${(clue.mask ? clue.mask.split(" ") : clueMask(clue)).map((w) => html`<b>${w}</b>`)}</div>
-      <p class="hint-line small">Первые буквы открыты, точки заменяют остальные.</p>` : null}
+    ${clue.open.includes("letters") ? html`<div class="mask">${(clue.mask ? clue.mask.split(" ") : clueMask(clue)).map((w) => html`<span class="mask-word">${[...w].map((ch) => (ch === "•" ? html`<i></i>` : html`<b>${ch}</b>`))}</span>`)}</div>` : null}
+    ${clue.open.includes("four") && clue.bio ? html`<${BioCard} bio=${clue.bio} />` : null}
     ${clue.open.includes("four") && clue.options ? html`<p class="hint-line small">Выбери имя. Ошибка передаст ход.</p>
       <div class="four">${clue.options.map((p, j) => html`<button class=${cx("four-opt", picked?.id === p.id && "on")} disabled=${p.used || used.has(p.id)} onClick=${() => pick(p)}>
         <i>${j + 1}</i><b>${p.name}</b></button>`)}</div>` : null}
   </div>`;
+}
+
+const TROPHY_IMG = { UCL: "trophy-ucl", WC: "trophy-wc", COPA: "trophy-copa", EURO: "trophy", BDOR: "golden-ball" };
+/** «Биография»: the birth year, the career years and one trophy the cell does not ask for, as the «Профиль» rows. */
+function BioCard({ bio }) {
+  const row = (label, value, icon) => html`<div class="fact bio-row"><small>${label}</small>
+    <b class=${cx(!value && "none")}>${icon ? html`<img src=${img(icon)} alt="" />` : null}${value ?? "нет данных"}</b></div>`;
+  return html`${row("Год рождения", bio.born)}
+    ${row("Карьера", bio.career?.replace("–", " — "))}
+    ${row("Трофей", bio.trophy ?? (bio.career ? "других нет" : null), bio.trophy ? TROPHY_IMG[bio.trophyKey] : null)}`;
 }
 
 /** One chat message; online, a double tap on someone else's gives it a heart, as the site's double click. */

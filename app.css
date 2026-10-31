@@ -1588,3 +1588,15 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .away-bubble.low .ab-time { color: #FF8A96 !important; }
 
 .app-build { margin: 6px 0 0; text-align: center; font-size: 11px; color: var(--muted); }
+/* «Буквы»: open letters in gold, hidden ones as quiet dots, each in an even slot; words kept apart. */
+.mask { gap: 8px 18px; padding: 14px 12px; justify-content: center; }
+.mask-word { display: inline-flex; align-items: center; }
+.mask-word b, .mask-word i { width: 15px; height: 26px; display: grid; place-items: center; }
+.mask-word b { font-family: inherit; font-size: 21px; font-weight: 800; letter-spacing: 0; color: var(--gold); }
+.mask-word i::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: rgba(201, 213, 227, .4); }
+/* «Биография»: the «Профиль» rows; the trophy with its picture. */
+.bio-row b { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.bio-row b img { width: 22px; height: 22px; object-fit: contain; }
+.bio-row b.none { color: var(--muted); font-weight: 600; }
+.clue-head small { white-space: nowrap; }
+.clue-head b { text-align: right; }
