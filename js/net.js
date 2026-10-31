@@ -303,3 +303,6 @@ export function startVisitPing() {
   document.addEventListener("visibilitychange", () => { if (!document.hidden) ping(); });
 }
 export const sendFeedback = (message, context = {}) => api("/api/feedback", { message, context });
+/** The owner's replies to this player's reports; read ones are marked so they show once. */
+export const feedbackReplies = () => api("/api/feedback/mine", {});
+export const feedbackSeen = () => api("/api/feedback/seen", {});

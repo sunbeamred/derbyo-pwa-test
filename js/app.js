@@ -11,7 +11,7 @@ import { notifications } from "./push.js";
 import { invites, secondsLeft } from "./invites.js";
 import { updates } from "./update.js";
 import { TabBar } from "./ui/tabbar.js";
-import { ONLINE, account, createRoom, joinRoom, savedSession, social, sendFeedback, startVisitPing, setPlace, link } from "./net.js";
+import { ONLINE, account, createRoom, joinRoom, savedSession, social, sendFeedback, feedbackReplies, feedbackSeen, startVisitPing, setPlace, link } from "./net.js";
 import { OnlineMatch } from "./online.js";
 import { OnlineLobby, OnlineSearch, OnlineRoom, OnlineJoinCode, OnlineLocker } from "./ui/live.js";
 import { RatingTab, ProfileTab, takeInvite } from "./ui/account.js";
@@ -375,6 +375,15 @@ function App() {
   // Where the player is, for the admin's live breakdown of who is online.
   useEffect(() => setPlace(match ? (match.watching ? "grid-watch" : match.opponent?.isBot || !match.online ? "grid-bot" : "grid-match")
     : searching ? "grid-search" : tab === 0 ? "rating" : tab === 2 ? "profile" : screenPlace(stack[stack.length - 1])));
+  // The owner's answers to this player's reports: checked at launch, every few minutes and on return to the app.
+  const [replies, setReplies] = useState(null);
+  useEffect(() => {
+    if (!ONLINE) return;
+    const check = () => { if (!document.hidden) feedbackReplies().then((v) => { const fresh = (v.items || []).filter((x) => !x.seen); if (fresh.length) setReplies(fresh); }).catch(() => {}); };
+    const t0 = setTimeout(check, 3000), t = setInterval(check, 180000);
+    document.addEventListener("visibilitychange", check);
+    return () => { clearTimeout(t0); clearInterval(t); document.removeEventListener("visibilitychange", check); };
+  }, []);
   // Playing a match yourself (on screen or minimised) blocks calling friends.
   const playing = [match, minimized].find((x) => x && x.online && !x.watching && !x.closed && !x.matchOver);
   invites.busy = !!playing;
@@ -420,6 +429,7 @@ function App() {
       <button class="chip-btn press accept" onClick=${() => { const i = invite; setInvite(null); takeInvite(i).catch((e) => alert(e.message)); }}>Играть</button>
       <button class="round-no press" aria-label="Скрыть" onClick=${() => setInvite(null)}><${Icon} name="x" size="14" weight="2.5" /></button></div>` : null}
     ${feedback ? html`<${FeedbackSheet} context=${feedback} close=${() => setFeedback(null)} />` : null}
+    ${replies && !match && !feedback && !install && !news && !askPush ? html`<${ReplySheet} items=${replies} close=${() => { setReplies(null); feedbackSeen().catch(() => {}); }} />` : null}
     <input id="kbd-proxy" aria-hidden="true" tabindex="-1" />
   </div>`;
 }
@@ -499,12 +509,22 @@ function FeedbackSheet({ context, close }) {
   };
   return html`<${Panel} shut=${shut} onClose=${close}><div class="profile feedback-sheet">
     <h3 class="sheet-title">Обратная связь</h3>
-    ${state?.id ? html`<p class="hint-line pad">Спасибо! Сообщение отправлено, номер ${state.id}.</p>
+    ${state?.id ? html`<p class="hint-line pad">Спасибо! Сообщение отправлено, номер ${state.id}. Ответ придёт сюда, в приложение.</p>
       <button class="primary-btn" onClick=${() => setShut(true)}>Готово</button>`
     : html`<p class="hint-line small pad">Расскажи, что случилось или что улучшить.${context.room ? " Номер комнаты добавим сами." : ""}</p>
       <textarea class="fb-text" rows="5" maxlength="2000" placeholder="Например: не засчитало Месси за Барселону" value=${text} onInput=${(e) => setText(e.target.value)}></textarea>
       ${state?.error ? html`<p class="hint-line small pad" style="color:#FF9AA8">${state.error}</p>` : null}
       <button class="primary-btn" disabled=${state === "busy" || text.trim().length < 8} onClick=${send}>${state === "busy" ? html`<span class="spinner"></span>` : "Отправить"}</button>`}
+  </div><//>`;
+}
+
+/** The owner's reply to a report: what the player wrote, then the answer. */
+function ReplySheet({ items, close }) {
+  const [shut, setShut] = useState(false);
+  return html`<${Panel} shut=${shut} onClose=${close}><div class="profile feedback-sheet">
+    <h3 class="sheet-title">${items.length > 1 ? "Ответы на твои обращения" : "Ответ на твоё обращение"}</h3>
+    ${items.map((x) => html`<div class="reply-item" key=${x.id}><p class="reply-mine">${x.message}</p><p class="reply-text">${x.reply}</p></div>`)}
+    <button class="primary-btn" onClick=${() => setShut(true)}>Понятно</button>
   </div><//>`;
 }
 
