@@ -250,8 +250,17 @@ function Settings() {
     ${row(html`<img src=${img("sound")} alt="" />`, "Звук", "Ходы, таймер, победа", Sound.enabled, (v) => { Sound.enabled = v; if (v) Sound.play("turn"); })}
     ${row(html`<img src=${img("vibrate")} alt="" />`, "Вибрация", "Отклик на нажатия и ходы", Prefs.vibration, (v) => { Prefs.vibration = v; vibrate(15); })}
     ${account.profile && "showFlag" in account.profile ? html`<${NotifyRow} />` : null}
-    <p class="app-build">Версия ${BUILD}</p>
+    <p class="app-build">Версия ${BUILD} · ${screenSizes()}</p>
   </div>`;
+}
+
+/** What the phone tells the app about its screen (layout height / visible height / screen height · bottom inset),
+ * so a screenshot of the profile shows where a strip at the bottom comes from. */
+function screenSizes() {
+  let b = 0;
+  try { const d = document.createElement("div"); d.style.cssText = "position:fixed;padding-bottom:env(safe-area-inset-bottom);visibility:hidden"; document.body.append(d); b = parseFloat(getComputedStyle(d).paddingBottom) || 0; d.remove(); } catch {}
+  const vv = window.visualViewport;
+  return `${innerHeight}/${Math.round(vv?.height ?? innerHeight)}/${screen.height} · ${Math.round(b)}${navigator.standalone ? " · app" : ""}`;
 }
 
 /** Notifications: one switch, and a pencil that picks which kinds come. */
