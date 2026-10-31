@@ -127,7 +127,6 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   return html`<div class="match">
     <div class="match-body">
       <${Scoreboard} m=${m} openProfile=${setProfileOf} openStands=${() => setStandsOpen(true)} />
-      ${m.online && !m.watching && m.oppAwayFor != null && !m.oppLeft && !m.roundOver ? html`<${AwayBubble} m=${m} />` : null}
       <${Board} m=${m} tap=${tapCell} />
       <div class="slot">
         ${notes.length ? html`<div class=${cx("notes", ((m.offerRaise && !m.watching) || m.roundOver || m.drawOffer === "theirs") && "hidden")}>
@@ -220,18 +219,8 @@ function LevelRow({ m, live }) {
   </div>`;
 }
 
-/** The opponent left the app or lost the line: what happened and how long they have before the round goes to you. */
-function AwayBubble({ m }) {
-  const left = Math.max(0, m.oppAwayBudget ?? 0);
-  const what = m.oppAwayKind === "offline" ? "потерял связь" : "вышел из игры";
-  return html`<div class=${cx("away-bubble", left <= 10 && "low")} role="status">
-    <span class="ab-dot"></span><span><b>${m.opponent.name}</b> ${what}</span>
-    <b class="ab-time num">${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}</b>
-  </div>`;
-}
-
 /** Under a player in the header: what the player is doing (in the game, minimised, offline…) and the ring of
- * their time-away budget while they are away, emptying as it is spent. */
+ * their time-away budget, always there; it empties while they are away. */
 function SideTag({ m, owner }) {
   const mine = owner === 0, isBot = !mine && m.opponent.isBot;
   if (isBot) return html`<span class="side-st"><span class="st in">● в игре</span></span>`;
@@ -248,8 +237,8 @@ function SideTag({ m, owner }) {
   // The budget: the server's seconds left (counting down while away), out of the level's total.
   const total = (mine || !m.oppAwayTotal ? m.awayTotal : m.oppAwayTotal) ?? 45;
   const left_s = mine ? (m.watching ? m.leftAwayBudget : m.awaySeconds) : m.oppAwayBudget;
-  // Shown only while the player is away and it counts down: a still «30» by the status read as a riddle.
-  const ring = m.online && m.g?.hideBudget && left_s != null && away !== null ? html`<span class=${cx("away-ring", away !== null && "on", left_s <= 5 && "low")}>
+  // Each player's time-away timer stays in the header (owner, 2026-11-01): full and green in the game, gold and emptying while away.
+  const ring = m.online && m.g?.hideBudget && left_s != null && !left ? html`<span class=${cx("away-ring", away !== null && "on", left_s <= 5 && "low")}>
     <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" pathLength="100" style=${`stroke-dashoffset:${100 - Math.max(0, Math.min(100, (left_s / total) * 100))}`} /></svg><b>${left_s}</b></span>` : null;
   return html`<span class=${cx("side-st", mine && "mine")}>${mine ? html`${status}${ring}` : html`${ring}${status}`}</span>`;
 }
