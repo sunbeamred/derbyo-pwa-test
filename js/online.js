@@ -215,7 +215,10 @@ export class OnlineMatch {
         case "rematch": case "raise":
           if (e.text && !mine) this.show(`${e.actorName ?? ""}: ${e.text}`.replace(/^: /, ""), true);
           break;
-        case "hint": case "review": case "pause_request": case "pause": case "resume": case "join": case "leave": case "disconnect": case "connect": case "absence": case "hide-budget": case "viewer":
+        // Leaving is already on screen (pill, bubble with the countdown, sound); only the return gets a line, in the bubble's words.
+        case "connect": if (!mine && !this.watching && g.stage === "play") this.show(`${e.actorName ?? this.opponent.name} вернулся в игру`, true); break;
+        case "disconnect": case "pause_request": break;
+        case "hint": case "review": case "pause": case "resume": case "join": case "absence": case "hide-budget": case "viewer":
           if (e.text) this.show(e.actorName && !e.text.includes(e.actorName) ? `${e.actorName}: ${e.text}` : e.text, e.type === "resume" || e.type === "connect" || e.type === "join");
           break;
       }
@@ -259,7 +262,6 @@ export class OnlineMatch {
     const waitUntil = this.rematchAsked ? this.rematchOffer.until : this.nextAsked ? st.readyDeadline : null;
     if (waitUntil) { this.readyLeft = Math.max(0, Math.ceil((waitUntil - now) / 1000)); this.readyTotal = this.rematchAsked ? 30 : Math.round((st.readyTotal ?? 90000) / 1000); }
     if (this.turn === 0 && !this.watching && !this.roundOver && !this.paused && (this.seconds === 15 || this.seconds === 5) && prev !== this.seconds) {
-      this.show(this.seconds === 15 ? "Осталось 15 секунд на ход" : "5 секунд — последний шанс ответить", false);
       this.timerAlert++;
     }
   }
@@ -311,13 +313,20 @@ export class OnlineMatch {
     const next = this.nextBreather ? 4 : Number.isFinite(this.state?.nextLevel) ? this.state.nextLevel : this.levelOfRound(this.round + 1);
     return { prev: prev && prev !== cur ? LEVELS[prev - 1] : null, cur: LEVELS[cur - 1], next: next && next !== cur ? LEVELS[next - 1] : null };
   }
-  offerDraw() { this.act("offer_draw").then(() => this.show(`Предложили ничью · ждём ${this.opponent.name}`, true)).catch(() => {}); }
+  offerDraw() { this.act("offer_draw").then(() => store.changed()).catch(() => {}); }
+  /** My open offer stays on screen as a quiet line, like the opponent's offer stays as a card. */
+  get myOffer() {
+    if (this.watching) return null;
+    if (this.drawOffer === "mine") return `Ничья предложена · ждём ${this.opponent.name}`;
+    if (this.raise?.by === this.mySeat && this.state?.canRaise) return `Сложнее предложено · ждём ${this.opponent.name}`;
+    return null;
+  }
   answerDraw(yes) { this.act(yes ? "accept_draw" : "decline_draw").catch(() => {}); }
   get offerRaise() { return !!this.state?.canRaise && this.raise?.by !== this.mySeat; }
   get raisedLevel() { return LEVELS[Math.min(LEVELS.length - 1, (this.state?.nextLevel ?? this.levelIndexNow + 1))]; }
   raiseLevel(yes) {
     const answer = this.raise ? (yes ? "accept_raise" : "decline_raise") : yes ? "offer_raise" : "decline_raise";
-    this.act(answer).then(() => { if (answer === "offer_raise") this.show(`Предложили сложнее · ждём ${this.opponent.name}`, true); store.changed(); }).catch(() => {});
+    this.act(answer).then(() => store.changed()).catch(() => {});
   }
   /** The server says when you may leave without it counting: the other side stopped answering. */
   get canLeaveFree() { return !!this.freeLeave; }
@@ -331,7 +340,7 @@ export class OnlineMatch {
     if (c && (c.games || c.rating != null)) return { name: m.name, photo: c.avatar ?? null, flag: flagOrGlobe(c.country), rating: c.rating, rank: c.rank, level: c.level, games: c.games, winRate: c.games ? Math.round((c.wins / c.games) * 100) : 0, bestStreak: c.bestStreak };
     if (owner === 0 && account.profile && !this.watching && !this.hotseat) {
       const p = account.profile;
-      return { name: this.leftName, flag: null, rating: p.rating, rank: p.rank, level: p.level, games: p.games, winRate: p.games ? Math.round((p.wins / p.games) * 100) : 0, bestStreak: p.bestStreak };
+      return { name: this.leftName, flag: this.myFlag, rating: p.rating, rank: p.rank, level: p.level, games: p.games, winRate: p.games ? Math.round((p.wins / p.games) * 100) : 0, bestStreak: p.bestStreak };
     }
     return { name: m?.name ?? "—", flag: null, rating: null, rank: null, level: null, games: null, winRate: null, bestStreak: null };
   }

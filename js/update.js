@@ -1,7 +1,7 @@
 // New versions: a small fix loads by itself at a quiet moment; a release the owner announces shows the «Обновить» bubble.
 // Every publish raises BUILD here, `version` in version.json and VERSION in sw.js to the same number.
 // An announced one also sets `announce` in version.json to that number, with a short `text` for the bubble.
-export const BUILD = 105;
+export const BUILD = 106;
 
 let latest = null;
 export const updates = {

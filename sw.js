@@ -1,5 +1,5 @@
 // Offline cache: the app shell and its art; a new version replaces the old cache. The API is never cached.
-const VERSION = "derbyo-pwa-105";
+const VERSION = "derbyo-pwa-106";
 
 const SHELL = ["./", "index.html", "app.css", "manifest.webmanifest", "vendor/preact-htm.js",
   "js/app.js", "js/data.js", "js/model.js", "js/sound.js", "js/install.js", "js/push.js", "js/update.js", "js/invites.js", "js/ui/common.js", "js/ui/match.js", "js/ui/sheets.js", "js/ui/profile.js", "js/ui/lobby.js", "js/ui/tabbar.js", "js/touch.js", "js/net.js", "js/online.js", "js/ui/live.js", "js/ui/daily.js", "js/ui/games.js", "js/ui/account.js"];
