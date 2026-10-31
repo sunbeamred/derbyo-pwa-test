@@ -456,6 +456,8 @@ input { font-family: inherit; }
 .pside.theirs .pinfo { align-items: flex-end; text-align: right; }
 .pname { height: 34px; display: flex; align-items: flex-end; font-size: clamp(11.5px, 17.5cqi, 14px); font-weight: 700; line-height: 16px; overflow: hidden; overflow-wrap: break-word; max-width: 100%; }
 /* A one-word nick never breaks inside the word: it shrinks to fit the line, then ends in «…». */
+/* A nick in parts shrinks to its longest part as well, so no part is cut at the edge. */
+.pname.fit { font-size: clamp(10px, calc(160cqi / var(--n)), 14px); }
 .pname.one { display: block; white-space: nowrap; text-overflow: ellipsis; padding-top: 18px; font-size: clamp(10px, calc(160cqi / var(--n)), 14px); }
 .pstatus { display: flex; align-items: center; white-space: nowrap; font-size: clamp(10px, 16.5cqi, 13.5px); font-weight: 800; max-width: 100%; min-width: 0; overflow: hidden; }
 .pstatus .st { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -492,6 +494,9 @@ input { font-family: inherit; }
 .round-steps { display: flex; align-items: center; gap: 5px; }
 .round-steps b { font-size: 10px; color: #A4B9CB; font-variant-numeric: tabular-nums; }
 .step { width: 12px; height: 6px; border-radius: 3px; background: #354A5D; position: relative; }
+/* Four or five rounds keep the score box no wider than its digits, so the names keep their room. */
+.round-steps.many { gap: 3px; }
+.round-steps.many .step { width: 7px; }
 .step.x { background: #FF8998; }
 .step.o { background: #7EE5B8; }
 .step.d { background: #A4B9CB; }
