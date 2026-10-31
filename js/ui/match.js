@@ -247,6 +247,21 @@ function SideTag({ m, owner }) {
 }
 
 /** A player as on the site's player card, folded into half the header width. */
+/** A nick without spaces breaks onto two lines once, after «_», «.» or «-», where the lines come out most even and
+ * each keeps three characters besides the sign («Toremurat_04» stays whole); the type shrinks to the longer line,
+ * down to 10px, then ends in «…». */
+function nameView(name) {
+  if (/\s/.test(name)) return html`<span class="pname">${breakable(name)}</span>`;
+  let parts = [name];
+  for (let at = 1; at < name.length; at++) {
+    const head = name.slice(0, at), tail = name.slice(at);
+    if (!/[_.-]$/.test(head) || head.length - 1 < 3 || tail.replace(/[_.-]/g, "").length < 3) continue;
+    if (Math.max(head.length, tail.length) < Math.max(...parts.map((p) => p.length))) parts = [head, tail];
+  }
+  const longest = Math.max(...parts.map((p) => p.length));
+  return html`<span class=${cx("pname fit", parts.length === 1 && "one")} style=${`--n:${longest}`}>${parts.join("\u200b")}</span>`;
+}
+
 function PlayerSide({ name, photo, flag, mark, red, tokens, active, mine, isBot, reaction, away = null, left = false, onClick }) {
   const [echo, setEcho] = useState(null);
   useEffect(() => {
@@ -265,7 +280,7 @@ function PlayerSide({ name, photo, flag, mark, red, tokens, active, mine, isBot,
   return html`<button class=${cx("pside", mine ? "mine" : "theirs", active && "active")} onClick=${onClick} aria-label=${`${name}, открыть профиль`}>
     ${mine ? avatar : null}
     <span class="pinfo">
-      <span class=${cx("pname", !/[\s_.-]/.test(name) && "one")} style=${`--n:${name.length}`}>${breakable(name)}</span>
+      ${nameView(name)}
       <span class="tokens ptokens"><img src=${img("coin")} alt="" /><b>${tokens}</b></span>
     </span>
     ${!mine ? avatar : null}
@@ -282,7 +297,7 @@ function RoundSteps({ results, current, live }) {
     const r = i < results.length ? results[i] : undefined;
     steps.push(html`<i class=${cx("step", r === undefined ? "" : r === 0 ? "x" : r === 1 ? "o" : "d", i === current - 1 && live && "live")}></i>`);
   }
-  return html`<div class="round-steps">${first > 0 ? html`<b>+${first}</b>` : null}${steps}</div>`;
+  return html`<div class=${cx("round-steps", total - first > 3 && "many")}>${first > 0 ? html`<b>+${first}</b>` : null}${steps}</div>`;
 }
 
 export function ConditionIcon({ icon, size = 34 }) {
