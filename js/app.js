@@ -88,6 +88,15 @@ function App() {
   live.current = { match, minimized, stack, searching, leaving, tab, matchLeaving };
 
   useEffect(() => store.on(redraw), []);
+  // The profile tab reads the account again each time it opens (and when the app comes back on it): a match since
+  // the last look changed the rating, which the leaderboard already shows.
+  useEffect(() => {
+    if (!ONLINE || tab !== 2) return;
+    account.refresh();
+    const f = () => { if (!document.hidden) account.refresh(); };
+    document.addEventListener("visibilitychange", f);
+    return () => document.removeEventListener("visibilitychange", f);
+  }, [tab]);
   // Online: who you are on the site, and a match you were in before the app was closed.
   useEffect(() => {
     if (!ONLINE) return;

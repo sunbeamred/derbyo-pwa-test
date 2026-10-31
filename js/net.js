@@ -85,6 +85,11 @@ export const account = {
     store.changed();
     return this.profile;
   },
+  /** The profile again (rating, games, place): the tab shows the numbers of now, as the leaderboard does. */
+  async refresh() {
+    try { const me = await api("/api/account/me"); if (me.profile) { this.profile = me.profile; store.changed(); } } catch {}
+    return this.profile;
+  },
   async send(route, body) {
     const r = await api(`/api/account/${route}`, body);
     this.profile = r.profile;
