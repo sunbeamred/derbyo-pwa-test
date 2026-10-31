@@ -50,8 +50,12 @@ export class OnlineMatch {
     this.opponent = { name: "соперник", isBot: false, flag: null, rating: null, rank: null, present: null };
     savedSession.set(session);
     this.stopStream = openStream(session.token, (f) => this.frame(f));
-    this.pulse = setInterval(() => this.post("/api/pulse", {}).catch(() => {}), 15000);
-    this.onVisibility = () => this.post("/api/presence", { status: document.hidden ? "hidden" : "active" }).catch(() => {});
+    // Where I am (in the app or minimised) is told on every change and again every 15 s: on iPhone the network wakes
+    // after the app does, and one lost «active» used to leave the server counting my time away down to a lost round.
+    // The `id` makes api() retry it like any safe request.
+    const presence = () => this.post("/api/presence", { id: uuid(), status: document.hidden ? "hidden" : "active" }).catch(() => {});
+    this.pulse = setInterval(presence, 15000);
+    this.onVisibility = presence;
     document.addEventListener("visibilitychange", this.onVisibility);
     this.onHide = () => { try { navigator.sendBeacon?.("/api/presence", new Blob([JSON.stringify({ status: "hidden", token: session.token })], { type: "application/json" })); } catch {} };
     addEventListener("pagehide", this.onHide);
