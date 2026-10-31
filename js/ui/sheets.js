@@ -139,7 +139,7 @@ function ScoutChoices({ m, cell, clue, bought }) {
 }
 
 /** The site's scout reveal: «ОТКРЫТО ДЛЯ ОБОИХ», the facts, the mask, the four names. */
-function ClueCard({ clue, picked, used, pick }) {
+export function ClueCard({ clue, picked, used, pick }) {
   return html`<div class="clue">
     <div class="clue-head"><img src=${img("scout")} alt="" /><small>ОТКРЫТО ДЛЯ ОБОИХ</small><b>${clue.open.map((h) => Hints[h].title).join(" · ")}</b></div>
     ${clue.open.includes("profile") ? (clue.facts ?? clueFacts(clue)).map((f) => html`<div class="fact"><small>${f.label}</small><b>${[f.flag, f.text].filter(Boolean).join(" ")}</b></div>`) : null}
@@ -152,16 +152,13 @@ function ClueCard({ clue, picked, used, pick }) {
 }
 
 const TROPHY_IMG = { UCL: "trophy-ucl", WC: "trophy-wc", COPA: "trophy-copa", EURO: "trophy", BDOR: "golden-ball" };
-/** «Биография»: born, the career years and one trophy the cell does not ask for, as three even tiles. */
+/** «Биография»: the birth year, the career years and one trophy the cell does not ask for, as the «Профиль» rows. */
 function BioCard({ bio }) {
-  const tile = (label, value, icon) => html`<div class="bio-tile">
-    ${icon ? html`<img src=${img(icon)} alt="" />` : null}
-    <b class=${cx(!value && "none")}>${value ?? "—"}</b><small>${label}</small></div>`;
-  return html`<div class="bio">
-    ${tile("год рождения", bio.born)}
-    ${tile("карьера", bio.career)}
-    ${bio.trophy ? tile("трофей", bio.trophy, TROPHY_IMG[bio.trophyKey]) : tile(bio.career ? "других трофеев" : "трофей", bio.career ? "нет" : null)}
-  </div>`;
+  const row = (label, value, icon) => html`<div class="fact bio-row"><small>${label}</small>
+    <b class=${cx(!value && "none")}>${icon ? html`<img src=${img(icon)} alt="" />` : null}${value ?? "нет данных"}</b></div>`;
+  return html`${row("Год рождения", bio.born)}
+    ${row("Карьера", bio.career?.replace("–", " — "))}
+    ${row("Трофей", bio.trophy ?? (bio.career ? "других нет" : null), bio.trophy ? TROPHY_IMG[bio.trophyKey] : null)}`;
 }
 
 /** One chat message; online, a double tap on someone else's gives it a heart, as the site's double click. */
