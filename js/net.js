@@ -285,10 +285,19 @@ export const pushApi = {
 
 /** A message to the team (the site's own feedback box). */
 /** Counts the app in the site's visit statistics as the site's pages do: a ping every 30 s while it is on screen. */
+/** Where the player is now (the app shell sets it), sent with the visit ping for the admin's live breakdown. */
+let place = "", placeTimer = 0, pingNow = null;
+export function setPlace(p) {
+  if (p === place) return;
+  place = p;
+  clearTimeout(placeTimer);
+  placeTimer = setTimeout(() => pingNow?.(), 1500);
+}
 export function startVisitPing() {
   if (!ONLINE) return;
   const tab = uuid().replace(/-/g, "");
-  const ping = () => api("/api/site-presence", { tab, active: !document.hidden }).catch(() => {});
+  const ping = () => api("/api/site-presence", { tab, active: !document.hidden, place }).catch(() => {});
+  pingNow = () => { if (!document.hidden) ping(); };
   ping();
   setInterval(() => { if (!document.hidden) ping(); }, 30000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) ping(); });
