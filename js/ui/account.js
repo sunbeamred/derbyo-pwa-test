@@ -7,6 +7,7 @@ import { flagOf, flagOrGlobe } from "../online.js";
 import { Panel } from "./common.js";
 import { notifications, PUSH_KINDS } from "../push.js";
 import { invites, secondsLeft } from "../invites.js";
+import { BUILD } from "../update.js";
 
 const PERIODS = [["rating", "Рейтинг"], ["week", "Неделя"], ["friends", "Друзья"]];
 
@@ -249,10 +250,7 @@ function Settings() {
     ${row(html`<img src=${img("sound")} alt="" />`, "Звук", "Ходы, таймер, победа", Sound.enabled, (v) => { Sound.enabled = v; if (v) Sound.play("turn"); })}
     ${row(html`<img src=${img("vibrate")} alt="" />`, "Вибрация", "Отклик на нажатия и ходы", Prefs.vibration, (v) => { Prefs.vibration = v; vibrate(15); })}
     ${account.profile && "showFlag" in account.profile ? html`<${NotifyRow} />` : null}
-    ${location.pathname.startsWith("/app/") ? html`<a class="toggle-card press full-site" href="/full">
-      <span class="tc-ic"><${Icon} name="home" size="18" weight="2" /></span>
-      <span class="tc-t"><b>Полная версия сайта</b><small>derbyo.online как на компьютере</small></span>
-      <${Icon} name="right" size="13" weight="3" class="chev" /></a>` : null}
+    <p class="app-build">Версия ${BUILD}</p>
   </div>`;
 }
 

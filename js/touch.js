@@ -19,6 +19,10 @@ function fit() {
   root.style.setProperty("--vv-top", `${Math.round(top)}px`);
   root.style.setProperty("--vv-h", `${Math.round(h)}px`);
   root.classList.toggle("kb-open", innerHeight - h - top > 60);
+  // The home-screen app on iPhone can get a layout shorter than the screen (a strip left under the bottom bar):
+  // stretch it to the whole screen. Portrait only (manifest), so the screen's height is the long side.
+  const full = navigator.standalone && !root.classList.contains("kb-open") ? Math.max(screen.height, screen.width) : 0;
+  root.style.setProperty("--app-h", full > innerHeight ? `${full}px` : "100%");
 }
 vv?.addEventListener("resize", fit);
 vv?.addEventListener("scroll", fit);
