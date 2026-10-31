@@ -11,7 +11,7 @@ import { notifications } from "./push.js";
 import { invites, secondsLeft } from "./invites.js";
 import { updates } from "./update.js";
 import { TabBar } from "./ui/tabbar.js";
-import { ONLINE, account, createRoom, joinRoom, savedSession, social, sendFeedback, startVisitPing, link } from "./net.js";
+import { ONLINE, account, createRoom, joinRoom, savedSession, social, sendFeedback, startVisitPing, setPlace, link } from "./net.js";
 import { OnlineMatch } from "./online.js";
 import { OnlineLobby, OnlineSearch, OnlineRoom, OnlineJoinCode, OnlineLocker } from "./ui/live.js";
 import { RatingTab, ProfileTab, takeInvite } from "./ui/account.js";
@@ -22,6 +22,9 @@ import "./touch.js";
 // Online (this app's own host) the screens play on the site's server; the GitHub copy and demo links stay offline.
 const SCREENS = ONLINE ? { lobby: OnlineLobby, quickPick: QuickPickView, room: OnlineRoom, code: OnlineJoinCode, locker: OnlineLocker, settings: MatchSettingsView, minigame: MiniGameView, daily: DailyView, contexto: ContextoView, links: LinksView }
   : { lobby: GameLobby, quickPick: QuickPickView, room: RoomView, code: JoinCodeView, locker: LockerRoom, settings: MatchSettingsView, minigame: MiniGameView, daily: DailyView, contexto: ContextoView, links: LinksView };
+/** The admin's names for the play tab's screens (server/site-presence.mjs keeps them as given). */
+const PLACES = { lobby: "grid-lobby", code: "grid-lobby", quickPick: "grid-quick", room: "grid-room", locker: "grid-room", settings: "grid-room", daily: "daily", contexto: "contexto", links: "links" };
+const screenPlace = (s) => (!s ? "menu" : s.name === "minigame" ? "mini-" + (String(s.props?.game?.path ?? "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 18) || "game") : PLACES[s.name] ?? "other");
 const matchDemo = ["demoBoard", "demoWin", "demoWinLater", "demoLoseLater", "demoLongMatch", "demoMix", "demoLastMove", "demoOppReview", "demoMismatch", "demoHuman", "demoFriendAsk", "demoWatch"].some(has);
 const humanDemo = ["demoOppAway", "demoHuman", "demoFriendAsk", "demoWatch", "demoOppIdle", "demoOppLeaves", "demoOppPause"].some(has);
 /** How long a screen takes to slide in or out, and a cover to rise or fall (ms). */
@@ -369,6 +372,9 @@ function App() {
     history.replaceState(history.state, "", location.pathname + location.search);
     app.joinRoom(m[2], { role: m[1] === "watch" ? "spectator" : "player" });
   }, []);
+  // Where the player is, for the admin's live breakdown of who is online.
+  useEffect(() => setPlace(match ? (match.watching ? "grid-watch" : match.opponent?.isBot || !match.online ? "grid-bot" : "grid-match")
+    : searching ? "grid-search" : tab === 0 ? "rating" : tab === 2 ? "profile" : screenPlace(stack[stack.length - 1])));
   // Playing a match yourself (on screen or minimised) blocks calling friends.
   const playing = [match, minimized].find((x) => x && x.online && !x.watching && !x.closed && !x.matchOver);
   invites.busy = !!playing;

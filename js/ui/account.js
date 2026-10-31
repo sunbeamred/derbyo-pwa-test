@@ -128,11 +128,17 @@ function Friends({ open }) {
   const [q, setQ] = useState("");
   const [found, setFound] = useState(null);
   const [err, setErr] = useState(null);
-  const load = () => social.state().then(setSt).catch((e) => setErr(e.message));
+  // A failed look (the phone asleep, a moment without network) shows its error only until the next one works.
+  const load = () => { if (document.hidden) return; social.state().then((v) => { setSt(v); setErr(null); }).catch((e) => setErr(e.message)); };
   // Calls change by the second (countdowns, answers): the shared poll keeps them fresh here too.
   const [calls, setCalls] = useState(invites.list);
   useEffect(() => { const off = invites.on(setCalls); const t = setInterval(() => setCalls(invites.list.filter((i) => i.expires > Date.now())), 1000); return () => { off(); clearInterval(t); }; }, []);
-  useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t); }, []);
+  useEffect(() => {
+    load(); const t = setInterval(load, 30000);
+    const back = () => { if (!document.hidden) load(); };
+    document.addEventListener("visibilitychange", back);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", back); };
+  }, []);
   useEffect(() => {
     const v = q.trim();
     if (v.length < 3) { setFound(null); return; }
