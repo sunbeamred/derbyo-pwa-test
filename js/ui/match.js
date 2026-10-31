@@ -452,7 +452,8 @@ function StandsBetween({ m }) {
 function RoundButton({ m, findNew, close }) {
   const done = m.matchOver, gone = done && m.oppLeft;
   // After the match leaving costs nothing, so a rematch nobody answers for 10 s offers a new opponent.
-  const offerNew = (m.canLeaveFree && (m.rematchAsked || m.nextAsked)) || (m.online && done && m.rematchAsked && m.readyLeft <= 20) || (done && m.rematchUnanswered);
+  const vanished = m.freeLeave === "gone" && !done;
+  const offerNew = vanished || (m.canLeaveFree && (m.rematchAsked || m.nextAsked)) || (m.online && done && m.rematchAsked && m.readyLeft <= 20) || (done && m.rematchUnanswered);
   const waiting = (m.rematchAsked || m.nextAsked) && !offerNew;
   const opp = m.opponent.name;
   // After a room match there is no search to go back to: the way out is the menu.
@@ -461,7 +462,7 @@ function RoundButton({ m, findNew, close }) {
   const accept = done && !gone && m.oppRematch;
   const acceptLeft = accept && m.rematchOffer ? Math.max(0, Math.ceil((m.rematchOffer.until - m.now()) / 1000)) : 0;
   const title = gone || offerNew ? (toMenu ? "Выйти в меню" : "Новый соперник") : waiting ? (m.online && !m.readyLeft ? `Ждём ${opp}` : `Ждём ${opp} · ${m.readyLeft} с`) : accept ? "Принять реванш" : done ? "Реванш" : "Следующий раунд";
-  const detail = m.watching ? "начнут игроки" : gone ? `${opp} покинул матч` : accept ? `${opp} предлагает · ${acceptLeft} с` : offerNew ? (m.rematchUnanswered ? `${opp} не принял реванш` : `${opp} не отвечает · ${m.readyLeft} с`)
+  const detail = m.watching ? "начнут игроки" : gone ? `${opp} покинул матч` : accept ? `${opp} предлагает · ${acceptLeft} с` : offerNew ? (vanished ? `${opp} вышел · победа за тобой` : m.rematchUnanswered ? `${opp} не принял реванш` : `${opp} не отвечает · ${m.readyLeft} с`)
     : waiting ? (m.rematchAsked ? "реванш предложен" : `ты готов к раунду ${m.round + 1}`) : done ? `ещё матч с ${opp}` : `раунд ${m.round + 1} · ${m.nextLevel}${m.nextBreather ? " после ничьей" : ""}`;
   const kind = waiting ? "wait" : done && !gone && !offerNew ? "gold" : "green";
   return html`<button class=${cx("round-btn press", kind)} disabled=${m.watching} aria-label=${`${title}, ${detail}`}
