@@ -88,7 +88,10 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   const lastReview = useRef(null);
   if (m.review?.owner === 1 && !m.watching) lastReview.current = m.review;
 
-  const notes = [...m.rows, ...m.cols].filter((c) => c.note);
+  // Only the cell in play explains its two conditions (yours, or the one the other side is looking at): six notes at
+  // once filled the whole space under the board.
+  const focus = m.selected ?? m.oppSelected ?? null;
+  const notes = focus === null ? [] : [m.rows[Math.floor(focus / 3)], m.cols[focus % 3]].filter((c) => c?.note);
   const slotLine = m.watching ? "Ты на трибуне: ходить нельзя, болеть в чате можно" : m.turn === 0 ? "Выбери клетку и назови футболиста" : "Ход соперника. Присмотри клетку на свой ход";
 
   let leaveMenu = null;

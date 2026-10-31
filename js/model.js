@@ -20,7 +20,7 @@ export const Opponent = {
 export const Hints = {
   profile: { id: "profile", cost: 1, title: "Профиль" },
   letters: { id: "letters", cost: 2, title: "Буквы" },
-  four: { id: "four", cost: 4, title: "4 имени" },
+  four: { id: "four", cost: 4, title: "Биография" },
 };
 
 /** What the scout has opened on one cell; every hint on a cell points at the same hidden answer. */
@@ -34,7 +34,8 @@ export function clueFacts(clue) {
   }
   return out;
 }
-export const clueMask = (clue) => clue.answer.name.split(" ").map((w) => [...w][0] + "•".repeat(Math.max(0, [...w].length - 1)));
+/** Offline «Буквы», as the server's: the first letter of each word and, in a word longer than four, one from the middle. */
+export const clueMask = (clue) => clue.answer.name.split(" ").map((w) => { const c = [...w], k = c.length > 4 ? Math.floor(c.length / 2) : -1; return c.map((ch, j) => (j === 0 || j === k ? ch : "•")).join(""); });
 
 /** A training bot's name, as in the iOS app (MatchModel.swift). */
 export const botName = () => "Бот " + ["Oliver", "Harry", "Jack", "George", "Charlie", "Alfie", "Freddie", "Archie", "Leo", "Theo", "Oscar", "Henry"][Math.floor(Math.random() * 12)];
@@ -276,10 +277,8 @@ export class Match {
     const c = this.sharedClues[i];
     if (c.open.includes(hint.id)) return false;
     c.open.push(hint.id);
-    if (hint.id === "four") {
-      const others = shuffle(players.filter((x) => x.id !== c.answer.id && !fits(x, i))).slice(0, 3);
-      c.options = shuffle([c.answer, ...others]);
-    }
+    // Offline cards know only the birth year.
+    if (hint.id === "four") c.bio = { born: c.answer.born ? String(c.answer.born) : null, career: null, trophy: null, trophyKey: null };
     return true;
   }
 

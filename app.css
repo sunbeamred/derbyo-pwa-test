@@ -1588,3 +1588,17 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .away-bubble.low .ab-time { color: #FF8A96 !important; }
 
 .app-build { margin: 6px 0 0; text-align: center; font-size: 11px; color: var(--muted); }
+/* «Буквы»: open letters in gold, hidden ones as quiet dots of the same width, words kept apart. */
+.mask { gap: 6px 16px; padding: 12px 14px; justify-content: center; }
+.mask-word { display: inline-flex; gap: 3px; align-items: center; }
+.mask-word b { width: 17px; text-align: center; font-family: inherit; font-size: 22px; font-weight: 800; letter-spacing: 0; color: var(--gold); }
+.mask-word i { width: 17px; height: 22px; display: grid; place-items: center; }
+.mask-word i::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: rgba(201, 213, 227, .35); }
+/* «Биография»: three even tiles. */
+.bio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bio-tile { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; padding: 12px 6px 10px; border-radius: 12px; background: rgba(11, 24, 40, .7); text-align: center; }
+.bio-tile img { width: 30px; height: 30px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(246, 212, 130, .35)); }
+.bio-tile b { font-size: 18px; font-weight: 800; line-height: 1.15; color: var(--gold); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.bio-tile:last-child b:not(.none) { font-size: 14px; }
+.bio-tile b.none { color: var(--muted); }
+.bio-tile small { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); }
