@@ -620,7 +620,8 @@ input { font-family: inherit; }
 .raise-offer .navy-btn { width: 92px; flex: none; min-height: 38px; }
 
 /* Bottom trays */
-.tray-row { flex: none; display: flex; gap: 8px; padding: 12px 10px calc(var(--safe-b) + 22px); }
+/* Same height over the home indicator as the tab bar on the menu: Android keeps its 22px, iPhone no longer adds 22 on top of the indicator. */
+.tray-row { flex: none; display: flex; gap: 8px; padding: 12px 10px max(22px, calc(var(--safe-b) - 10px)); }
 .tray { border-radius: 29px; min-height: 58px; }
 .turn-tray { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 5px; }
 .turn-tray.over { padding: 0; border-color: transparent; background: none; }
