@@ -51,6 +51,8 @@ input { font-family: inherit; }
 
 /* App shell */
 #root, .app { position: fixed; inset: 0; }
+/* iPhone home-screen app: the whole screen, even when iOS reports a shorter layout (js/touch.js sets --app-h). */
+#root, .app { bottom: auto; height: var(--app-h, 100%); }
 .app { background: radial-gradient(520px at 50% 0, #12243A, var(--bg)); overflow: hidden; }
 .tab-body, .tab-pane { position: absolute; inset: 0; }
 /* The scroll edge under the floating bar: content dims as it slides beneath it. */
@@ -1587,3 +1589,4 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .away-bubble.low .ab-dot { background: #FF5364; }
 .away-bubble.low .ab-time { color: #FF8A96 !important; }
 
+.app-build { margin: 6px 0 0; text-align: center; font-size: 11px; color: var(--muted); }
