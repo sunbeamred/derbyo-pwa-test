@@ -214,7 +214,6 @@ export class Match {
     }
     this.seconds--;
     if (this.turn === 0 && !this.watching && (this.seconds === 15 || this.seconds === 5)) {
-      this.show(this.seconds === 15 ? "Осталось 15 секунд на ход" : "5 секунд — последний шанс ответить", false);
       this.timerAlert++;
     }
     if (this.seconds <= 0) {
@@ -324,7 +323,6 @@ export class Match {
     if (this.oppPauseAskLeft !== null) { this.acceptPause(); return; }
     if (this.opponent.isBot) { this.startPause(); return; }
     this.pauseAskLeft = Match.pauseAskTimeout;
-    this.show(`Пауза предложена · ждём ${this.opponent.name}`, true);
     if (demoIdle) return;
     this.later(1.5, () => { if (this.pauseAskLeft === null) return; this.show(`${this.opponent.name} согласился на паузу`, true); this.startPause(); });
   }
@@ -357,8 +355,8 @@ export class Match {
     this.awaySeconds = Math.max(0, this.awaySeconds - s);
     this.show(this.awaySeconds > 0 ? `Ты был вне игры ${s} с · осталось ${this.awaySeconds} с` : "Время вне игры исчерпано", false);
   }
-  opponentLeft() { if (this.oppAwayFor !== null || this.opponent.isBot || this.roundOver) return; this.oppAwayFor = 0; this.show(`${this.opponent.name} вышел из игры`, false); }
-  opponentBack() { const g = this.oppAwayFor; if (g === null) return; this.oppAwayFor = null; this.show(`${this.opponent.name} вернулся · был вне игры ${g} с`, true); }
+  opponentLeft() { if (this.oppAwayFor !== null || this.opponent.isBot || this.roundOver) return; this.oppAwayFor = 0; }
+  opponentBack() { const g = this.oppAwayFor; if (g === null) return; this.oppAwayFor = null; this.show(`${this.opponent.name} вернулся в игру`, true); }
 
   passTurn() {
     this.oppSelected = null; this.mismatch = null;

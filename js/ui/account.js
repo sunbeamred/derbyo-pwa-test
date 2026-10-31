@@ -402,6 +402,7 @@ export function ProfileTab({ children }) {
 export async function takeInvite(i, action = "go") {
   if (action !== "go") { await social.invitation(i.id, action); return; }
   const r = await social.invitation(i.id, i.direction === "incoming" && i.status !== "accepted" ? "accept" : "claim");
+  invites.taken(i.id);
   if (r.session) dispatchEvent(new CustomEvent("derbyo-session", { detail: r.session }));
   if (r.contexto) dispatchEvent(new CustomEvent("derbyo-contexto", { detail: { code: r.contexto } }));
 }

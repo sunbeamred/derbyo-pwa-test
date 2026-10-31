@@ -47,6 +47,8 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch {}
     setIntro(firstGame);
   }, [firstGame]);
+  // The doors are due this render (the effect sets them a frame later): the short entrance must not flash first.
+  const introDue = (() => { if (!firstGame || intro) return false; try { return !sessionStorage.getItem("intro-" + firstGame); } catch { return false; } })();
   useEffect(() => {
     if (!m.reward) return;
     if (m.reward.coins) setCoins(m.reward.id);
@@ -111,7 +113,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
         ${menuRow(Sound.enabled ? "Выключить звук" : "Включить звук", () => (Sound.enabled = !Sound.enabled))}
         ${m.paused ? menuRow(m.resumeWait === null ? "Продолжить" : `Ждём ${m.opponent.name}…`, () => m.requestResume())
           : m.oppPauseAskLeft !== null ? menuRow("Принять паузу", () => m.acceptPause())
-          : m.pauseAskLeft !== null ? menuRow(`Пауза предложена · ${m.pauseAskLeft} с`, () => {})
+          : m.pauseAskLeft !== null ? null
           : menuRow("Пауза", () => m.requestPause(), { enabled: !m.canLeaveFree })}
         ${m.turn === 0 && !m.paused ? menuRow("Передать ход", () => m.passOnPurpose()) : null}
         ${m.canLeaveFree ? menuRow(`Выйти без штрафа · ${m.opponent.name} не отвечает`, close)
@@ -144,6 +146,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
             <span>Три ничьи подряд. Закончить матч вничью?</span>
             <button class="gold-pill press" onClick=${() => m.offerDraw()}>Предложить</button>
           </div>`
+        : m.myOffer ? html`<div class="raise-offer glass"><span>${m.myOffer}</span></div>`
         : m.roundOver ? html`<${ResultBubble} m=${m} key=${m.finishSignal} />`
         : !notes.length ? html`<p class=${cx("slot-line", (shownToast || m.reward) && "hidden")}>${slotLine}</p>` : null}
         <div class="slot-notices">
@@ -167,7 +170,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${confirmSurrender ? html`<${Alert} title=${`Сдаться в раунде ${m.round}?`} message=${`Раунд выиграет ${m.opponent.name}. Счёт станет ${m.score[0]}:${m.score[1] + 1}.`}
       onClose=${() => setConfirmSurrender(false)}
       actions=${[{ title: "Играть дальше", run: () => setConfirmSurrender(false) }, { title: "Сдаться", kind: "destructive", run: () => { setConfirmSurrender(false); m.surrender(); store.changed(); } }]} />` : null}
-    ${entering && !intro ? html`<${Entrance} />` : null}
+    ${entering && !intro && !introDue ? html`<${Entrance} />` : null}
     ${intro ? html`<${MatchIntro} m=${m} key=${intro} done=${() => setIntro(null)} />` : null}
   </div>`;
 }
@@ -237,7 +240,9 @@ function SideTag({ m, owner }) {
   const left = mine ? !!m.meLeft : m.oppLeft;
   const missed = mine ? 0 : m.oppMissed || 0;
   const status = left ? html`<span class="st left">○ покинул матч</span>`
-    : missed > 0 && away === null ? html`<span class=${cx("st", missed >= 2 ? "idle" : "missed")}>${missed >= 2 ? "⏱ не отвечает" : "⏱ пропуск"}</span>`
+    // «не отвечает» only when the server says so (the same signal that offers «Выйти без штрафа»).
+    : !mine && m.canLeaveFree && away === null ? html`<span class="st idle">⏱ не отвечает</span>`
+    : missed > 0 && away === null ? html`<span class="st missed">⏱ пропуск</span>`
     : away !== null ? html`<span class="st away">◒ ${kind === "offline" ? "нет связи" : kind === "blurred" ? "в другом окне" : "свернул"}</span>`
     : html`<span class="st in">● в игре</span>`;
   // The budget: the server's seconds left (counting down while away), out of the level's total.
@@ -385,16 +390,13 @@ export function TurnDial({ m, size = 52 }) {
   const reviewing = m.review && !m.roundOver;
   const tint = m.roundOver ? GOLD : reviewing ? GOLD : m.paused ? MUTED : low ? "#FF8B97" : m.seat(m.turn) === 0 ? RED : MINT;
   const fill = m.roundOver ? 1 : reviewing ? m.review.left / 20 : Math.min(1, Math.max(0, m.seconds) / (m.turnTotal ?? 60));
-  const R = 50 - 5, C = 2 * Math.PI * R, r2 = 50 - 18, C2 = 2 * Math.PI * r2;
-  const away = m.oppAwayFor !== null ? { f: Math.min(1, m.oppAwayBudget / (m.oppAwayTotal ?? 45)), c: m.mySeat === 1 ? RED : MINT } : m.awaySeconds < (m.awayTotal ?? 45) ? { f: m.awaySeconds / (m.awayTotal ?? 45), c: "rgba(201,213,227,.7)" } : null;
+  const R = 50 - 5, C = 2 * Math.PI * R;
   return html`<span class="dial" style=${`width:${size}px;height:${size}px`} aria-label=${m.roundOver ? "Раунд окончен" : `Осталось ${m.seconds} секунд на ход`}>
     <svg viewBox="0 0 100 100">
       <circle cx="50" cy="50" r="48" fill="rgba(0,0,0,.3)" />
       <circle cx="50" cy="50" r=${R} fill="none" stroke="#1D2C3D" stroke-width="9.5" />
       <circle class="arc" cx="50" cy="50" r=${R} fill="none" stroke=${tint} stroke-width="9.5" stroke-linecap="round"
         stroke-dasharray=${C} stroke-dashoffset=${C * (1 - fill)} transform="rotate(-90 50 50)" style=${`filter:drop-shadow(0 0 4px ${tint}8c)`} />
-      ${away ? html`<circle class="arc" cx="50" cy="50" r=${r2} fill="none" stroke=${away.c} stroke-width="4" stroke-linecap="round"
-        stroke-dasharray=${C2} stroke-dashoffset=${C2 * (1 - away.f)} transform="rotate(-90 50 50)" />` : null}
     </svg>
     <span class="dial-in">
       ${m.roundOver ? html`<img class="pict" src=${img(m.matchOver ? "finish" : "break")} alt="" />`
@@ -410,7 +412,7 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
   const opp = m.opponent.name;
   let pause = null;
   if (m.watching) pause = null;
-  else if (m.paused) pause = m.resumeWait !== null ? { title: `Ждём ${opp}…`, detail: `ты готов продолжить · ${m.resumeWait} с`, color: MUTED, run: () => {} }
+  else if (m.paused) pause = m.resumeWait !== null ? { title: `Ждём ${opp}…`, detail: "ты готов продолжить", color: MUTED, run: () => {} }
     : { title: "Продолжить ▶︎", detail: "пауза · часы стоят", color: MINT, run: () => m.requestResume() };
   else if (m.oppPauseAskLeft !== null) pause = { title: "Принять паузу", detail: `${opp} просит паузу · ${m.oppPauseAskLeft} с`, color: GOLD, run: () => m.acceptPause() };
   else if (m.pauseAskLeft !== null) pause = { title: "Пауза предложена", detail: `ждём ${opp} · ${m.pauseAskLeft} с`, color: MUTED, run: () => {} };
@@ -418,7 +420,7 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
   const mine = m.turn === 0;
   const title = m.watching ? (m.paused ? "Пауза" : m.review ? `Решает ${m.name(1 - m.review.owner)}` : `Ходит ${m.name(m.turn)}`)
     : m.review?.owner === 0 ? "Ждём решение" : m.review?.owner === 1 ? "Твоё решение"
-    : m.paused ? "Пауза — часы стоят" : mine ? (m.hotseat ? `Ходит ${m.leftName}` : "Твой ход") : m.oppSelected !== null ? `${opp} думает…` : `Ходит ${opp}`;
+    : mine ? (m.hotseat ? `Ходит ${m.leftName}` : "Твой ход") : m.oppSelected !== null ? `${opp} думает…` : `Ходит ${opp}`;
   const color = m.review ? GOLD : m.paused ? MUTED : m.seat(m.turn) === 0 ? "#FFB3C1" : "#91FFD3";
   const sub = m.watching ? html`<small>${m.review ? `зачёт: ${m.review.name ?? ""}` : m.paused ? "игроки взяли паузу" : "ты на трибуне"}</small>`
     // Time away is shown only at the top (the ring by the player's status, the opponent-away bubble), not down here.
@@ -431,7 +433,7 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
         <${TurnDial} m=${m} size=${48} />
         ${m.canLeaveFree && !m.watching ? html`<button class="tray-label press" onClick=${m.paused || (m.online && !m.fromQuick) ? close : findNew}>
             <b style="color:#32E5A1">${m.paused || (m.online && !m.fromQuick) ? "Выйти без штрафа »" : "Новый соперник »"}</b>
-            <small>${m.paused ? `${opp} не продолжает игру` : `${opp} не отвечает`}</small></button>`
+            <small>${opp} не отвечает</small></button>`
         : pause ? html`<button class="tray-label press" onClick=${() => { pause.run(); store.changed(); }}>
             <b style=${`color:${pause.color}`}>${pause.title}</b><small>${pause.detail}</small></button>`
         : html`<span class="tray-label"><b style=${`color:${color}`}>${title}</b>${sub}</span>`}`}
