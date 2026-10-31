@@ -1605,3 +1605,8 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .bio-row b.none { color: var(--muted); font-weight: 600; }
 .clue-head small { white-space: nowrap; }
 .clue-head b { text-align: right; }
+
+/* The owner's reply to a report */
+.reply-item { margin: 4px 0 14px; }
+.reply-mine { margin: 0 0 8px; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,.06); color: var(--muted, #9fb3c8); font-size: 14px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.reply-text { margin: 0; padding: 12px 14px; border-radius: 14px; background: rgba(47,217,154,.12); border-left: 3px solid #2fd99a; color: #fff; font-size: 16px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
