@@ -266,6 +266,8 @@ export function photoOf(x) {
   if (!x) return null;
   if (x.photo && /^https:\/\/a\.espncdn\.com\//.test(x.photo)) return x.photo;
   if (x.photo && x.photo.startsWith("/assets/")) return x.photo;
+  // The card's own Commons photo (Wikidata) first: a plain title can be a disambiguation page («Luis Suárez») or someone else («Nenê»).
+  if (x.photo && /^https:\/\/commons\.wikimedia\.org\/wiki\/Special:FilePath\//.test(x.photo)) return `${x.photo}?width=320`;
   if (!x.wp) return null;
   if (resolved.has(x.wp)) return resolved.get(x.wp);
   wikiPhoto(x.wp);
