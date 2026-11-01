@@ -26,6 +26,9 @@ export function criterion(c) {
   return { key: c.id, title: c.type === "p" ? POSITION[c.key] ?? title : title, icon, note: c.note ?? null };
 }
 
+// The server's HIDE_GRACE: after the time-away budget, an absence this long loses the round.
+const HIDE_GRACE = 5;
+
 export class OnlineMatch {
   constructor(session, { onClosed } = {}) {
     this.online = true;
@@ -258,18 +261,28 @@ export class OnlineMatch {
     // Why a side is away, as the site says it: the tab hidden, another window, or the connection lost.
     const why = (p) => (p?.status === "hidden" ? "hidden" : p?.status === "blurred" ? "blurred" : "offline");
     this.oppAwayKind = this.oppAwayFor === null ? null : why(them);
+    // After the round the away timers stop, but a player who is gone is still gone: keep saying so instead of «в игре».
+    const gone = (p) => !!p && !p.bot && (!p.online || p.status === "hidden" || p.status === "blurred");
+    this.oppGoneKind = this.roundOver && gone(them) ? why(them) : null;
+    this.leftGoneKind = this.roundOver && this.watching && gone(me) ? why(me) : null;
     // From the stands the left player can be away too.
     const mineUntil = me?.awayDeadline ?? me?.returnDeadline;
     this.leftAwayFor = this.watching && me && (mineUntil || !me.online || me.status === "hidden") && !this.roundOver ? Math.max(0, Math.round((now - (me.since ?? now)) / 1000)) : null;
     this.leftAwayKind = this.leftAwayFor === null ? null : why(me);
-    this.leftAwayBudget = mineUntil ? Math.max(0, Math.ceil((mineUntil - now) / 1000)) : Math.round((me?.hideLeftMs ?? this.awayTotal * 1000) / 1000);
     // Rings scale to the server's own numbers: the level's time-away budget (45…25 s), the deadline's whole span, the room's turn time.
     this.awayTotal = g.hideBudget ? Math.round(g.hideBudget / 1000) : 45;
-    this.oppAwayTotal = until && them?.since ? Math.max(1, Math.round((until - them.since) / 1000)) : this.awayTotal;
+    // Once the budget is spent, each absence gets the server's 5-second grace before the round is lost: show that, not 0.
+    const spent = (p) => !!g.hideBudget && !!p && (p.hideStrikes > 0 || p.hideLeftMs === 0);
+    const budget = (p, deadline) => deadline ? Math.max(0, Math.ceil((deadline - now) / 1000)) : spent(p) ? HIDE_GRACE : Math.round((p?.hideLeftMs ?? this.awayTotal * 1000) / 1000);
+    const total = (p, deadline) => deadline && p?.since ? Math.max(1, Math.round((deadline - p.since) / 1000)) : spent(p) ? HIDE_GRACE : this.awayTotal;
+    this.leftAwayBudget = budget(me, mineUntil);
+    this.leftAwayTotal = total(me, mineUntil);
+    this.oppAwayTotal = total(them, until);
     this.turnTotal = this.state?.settings?.seconds || 60;
-    this.oppAwayBudget = until ? Math.max(0, Math.ceil((until - now) / 1000)) : Math.round((them?.hideLeftMs ?? this.awayTotal * 1000) / 1000);
+    this.oppAwayBudget = budget(them, until);
     // Shown only once some of the budget is spent; levels without a budget never show it.
-    this.awaySeconds = g.hideBudget && me && me.hideLeftMs < g.hideBudget ? Math.round(me.hideLeftMs / 1000) : this.awayTotal;
+    this.awaySeconds = spent(me) ? HIDE_GRACE : g.hideBudget && me && me.hideLeftMs < g.hideBudget ? Math.round(me.hideLeftMs / 1000) : this.awayTotal;
+    this.myAwayTotal = spent(me) ? HIDE_GRACE : this.awayTotal;
     // Waiting for the other player: a rematch I offered, or the next round I am ready for.
     const st = this.state;
     const waitUntil = this.rematchAsked ? this.rematchOffer.until : this.nextAsked ? st.readyDeadline : null;

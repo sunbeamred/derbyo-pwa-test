@@ -228,17 +228,18 @@ function SideTag({ m, owner }) {
   const mine = owner === 0, isBot = !mine && m.opponent.isBot;
   if (isBot) return html`<span class="side-st"><span class="st in">● в игре</span></span>`;
   const away = mine ? m.leftAwayFor ?? null : m.oppAwayFor;
-  const kind = mine ? m.leftAwayKind : m.oppAwayKind;
+  const gone = mine ? m.leftGoneKind : m.oppGoneKind;
+  const kind = (mine ? m.leftAwayKind : m.oppAwayKind) ?? gone;
   const left = mine ? !!m.meLeft : m.oppLeft;
   const missed = mine ? 0 : m.oppMissed || 0;
   const status = left ? html`<span class="st left">○ покинул матч</span>`
     // «не отвечает» only when the server says so (the same signal that offers «Выйти без штрафа»).
     : !mine && m.canLeaveFree && away === null ? html`<span class="st idle">⏱ не отвечает</span>`
     : missed > 0 && away === null ? html`<span class="st missed">⏱ пропуск</span>`
-    : away !== null ? html`<span class="st away">◒ ${kind === "offline" ? "нет связи" : kind === "blurred" ? "в другом окне" : "свернул"}</span>`
+    : away !== null || gone ? html`<span class="st away">◒ ${kind === "offline" ? "нет связи" : kind === "blurred" ? "в другом окне" : "свернул"}</span>`
     : html`<span class="st in">● в игре</span>`;
   // The budget: the server's seconds left (counting down while away), out of the level's total.
-  const total = (mine || !m.oppAwayTotal ? m.awayTotal : m.oppAwayTotal) ?? 45;
+  const total = (mine ? (m.watching ? m.leftAwayTotal : m.myAwayTotal) : m.oppAwayTotal) ?? m.awayTotal ?? 45;
   const left_s = mine ? (m.watching ? m.leftAwayBudget : m.awaySeconds) : m.oppAwayBudget;
   // Each player's time-away timer stays in the header (owner, 2026-11-01): full and green in the game, gold and emptying while away.
   const ring = m.online && m.g?.hideBudget && left_s != null && !left ? html`<span class=${cx("away-ring", away !== null && "on", left_s <= 5 && "low")}>
