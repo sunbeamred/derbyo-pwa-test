@@ -243,6 +243,8 @@ export class OnlineMatch {
     const now = this.now();
     const prev = this.seconds;
     this.seconds = g.deadline ? Math.max(0, Math.ceil((g.deadline - now) / 1000)) : g.remaining ? Math.ceil(g.remaining / 1000) : g.seconds || 0;
+    // A room made on the site «Без таймера» has no turn clock: the dial shows ∞, as the site does, not a frozen 0.
+    this.untimed = !g.seconds && !g.deadline && !g.remaining;
     if (this.review) this.review.left = Math.max(0, Math.ceil((this.review.until - now) / 1000));
     const pr = this.pauseRequest;
     const left = pr && pr.until > now ? Math.ceil((pr.until - now) / 1000) : null;
