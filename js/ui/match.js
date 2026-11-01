@@ -393,12 +393,12 @@ function Cell({ cell, cross, selected, locked, oppPick, clued, recent, disputed,
 /** The turn clock as a ring by the thumb; after a round it closes in the winner's colour around their mark. */
 export function TurnDial({ m, size = 52 }) {
   const mine = m.turn === 0;
-  const low = mine && m.seconds <= 10 && !m.roundOver;
+  const low = mine && m.seconds <= 10 && !m.roundOver && !m.untimed;
   const reviewing = m.review && !m.roundOver;
   const tint = m.roundOver ? GOLD : reviewing ? GOLD : m.paused ? MUTED : low ? "#FF8B97" : m.seat(m.turn) === 0 ? RED : MINT;
-  const fill = m.roundOver ? 1 : reviewing ? m.review.left / 20 : Math.min(1, Math.max(0, m.seconds) / (m.turnTotal ?? 60));
+  const fill = m.roundOver || m.untimed ? 1 : reviewing ? m.review.left / 20 : Math.min(1, Math.max(0, m.seconds) / (m.turnTotal ?? 60));
   const R = 50 - 5, C = 2 * Math.PI * R;
-  return html`<span class="dial" style=${`width:${size}px;height:${size}px`} aria-label=${m.roundOver ? "Раунд окончен" : `Осталось ${m.seconds} секунд на ход`}>
+  return html`<span class="dial" style=${`width:${size}px;height:${size}px`} aria-label=${m.roundOver ? "Раунд окончен" : m.untimed && !reviewing ? "Ход без ограничения времени" : `Осталось ${m.seconds} секунд на ход`}>
     <svg viewBox="0 0 100 100">
       <circle cx="50" cy="50" r="48" fill="rgba(0,0,0,.3)" />
       <circle cx="50" cy="50" r=${R} fill="none" stroke="#1D2C3D" stroke-width="9.5" />
@@ -409,7 +409,7 @@ export function TurnDial({ m, size = 52 }) {
       ${m.roundOver ? html`<img class="pict" src=${img(m.matchOver ? "finish" : "break")} alt="" />`
         : m.paused ? html`<img class="pict" src=${img("stopwatch")} alt="" />`
         : m.review ? html`<b style="color:#F6D482">${m.review.left}</b>`
-        : html`<b style=${low ? `color:${tint}` : ""}>${m.seconds}</b>`}
+        : html`<b style=${low ? `color:${tint}` : ""}>${m.untimed ? "∞" : m.seconds}</b>`}
     </span>
   </span>`;
 }
