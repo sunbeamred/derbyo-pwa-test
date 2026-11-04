@@ -151,7 +151,7 @@ export function ClueCard({ clue, picked, used, pick }) {
   </div>`;
 }
 
-const TROPHY_IMG = { UCL: "trophy-ucl", WC: "trophy-wc", COPA: "trophy-copa", EURO: "trophy", BDOR: "golden-ball" };
+const TROPHY_IMG = { UCL: "trophy-ucl", WC: "trophy-wc", COPA: "trophy-copa", EURO: "trophy-euro", BDOR: "golden-ball", UEL: "trophy-uel", CWC: "trophy-cwc", FAC: "trophy-fac", CDR: "trophy-cdr", DFB: "trophy-dfb", CI: "trophy-ci", CDF: "trophy-cdf" };
 /** «Биография»: the birth year, the career years and one trophy the cell does not ask for, as the «Профиль» rows. */
 function BioCard({ bio }) {
   const row = (label, value, icon) => html`<div class="fact bio-row"><small>${label}</small>

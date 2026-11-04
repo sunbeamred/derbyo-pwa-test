@@ -280,7 +280,7 @@ export function ContextoView({ nav, join, auto }) {
 const lkApi = caller("links");
 const lkMem = store("derbyo.links.v1", (m) => { m.daily ||= {}; m.endless = Object.assign({ level: 1, round: null, stats: {} }, m.endless); });
 
-const TROPHY_IMG = { "t:UCL": "trophy-ucl", "t:WC": "trophy-wc", "t:COPA": "trophy-copa", "t:EURO": "trophy" };
+const TROPHY_IMG = { "t:UCL": "trophy-ucl", "t:WC": "trophy-wc", "t:COPA": "trophy-copa", "t:EURO": "trophy-euro", "t:UEL": "trophy-uel", "t:CWC": "trophy-cwc", "t:FAC": "trophy-fac", "t:CDR": "trophy-cdr", "t:DFB": "trophy-dfb", "t:CI": "trophy-ci", "t:CDF": "trophy-cdf" };
 /** A link's picture: the club badge, the flag, the coach's photo or the trophy. */
 function LinkPic({ l, size }) {
   const box = `width:${size}px;height:${size}px`;

@@ -6,7 +6,7 @@ import { api, openStream, uuid, savedSession, account } from "./net.js";
 const HINT_LEVEL = { profile: 1, letters: 2, four: 3 };
 const HINT_ID = [null, "profile", "letters", "four"];
 const POSITION = { G: "Вратарь", D: "Защитник", M: "Полузащитник", F: "Нападающий" };
-const TROPHY = { WC: "trophy-wc", EURO: "trophy-euro", UCL: "trophy-ucl", COPA: "copa-america" };
+const TROPHY = { WC: "trophy-wc", EURO: "trophy-euro", UCL: "trophy-ucl", COPA: "copa-america", UEL: "trophy-uel", CWC: "trophy-cwc", FAC: "trophy-fac", CDR: "trophy-cdr", DFB: "trophy-dfb", CI: "trophy-ci", CDF: "trophy-cdf" };
 
 /** A board condition from the server, in the shape the board draws (title, icon, note). */
 export function criterion(c) {
