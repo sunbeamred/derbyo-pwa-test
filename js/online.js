@@ -145,6 +145,9 @@ export class OnlineMatch {
     // A draw for the whole match, after three drawn rounds in a row (the site's rule): offered by one, agreed by the other.
     this.drawOffer = this.watching || !st.drawOffer ? null : st.drawOffer === st.selfId ? "mine" : "theirs";
     this.canOfferDraw = !this.watching && !!st.canAgreeDraw && !st.drawOffer;
+    this.matchDrawAfter = st.matchDrawAfter ?? 12;
+    // No draws against a bot or for two on one screen.
+    this.drawsAllowed = !this.watching && !this.hotseat && !!them && !them.bot;
     this.freeLeave = this.watching ? null : st.freeLeave ?? null;
     this.reactions(st.reactions);
     this.score = [st.score[this.mySeat] ?? 0, st.score[1 - this.mySeat] ?? 0];
@@ -181,6 +184,14 @@ export class OnlineMatch {
     this.oppMissed = g.missed?.[1 - this.mySeat] ?? 0;
     const pr = g.pauseRequest;
     this.pauseRequest = pr;
+    // A draw inside the round: the server opens the offer only when the round is hard, and never says when.
+    this.roundDrawOpen = !this.watching && !this.roundOver && !!g.drawOpen;
+    this.roundDrawOffer = this.watching || this.roundOver || !g.drawOffer ? null : g.drawOffer.by === this.mySeat ? "mine" : "theirs";
+    // The menu button: «!» when a draw has just opened, «1» for the opponent's offer, both until the menu is opened.
+    const opened = !this.drawsAllowed ? "" : (this.roundDrawOpen ? "r" + g.id : "") + (this.canOfferDraw ? "m" + this.round : "");
+    if (opened && opened !== this.drawOpened) this.menuAlert = true;
+    this.drawOpened = opened;
+    this.offerKey = this.roundDrawOffer === "theirs" ? "r" + g.drawOffer.until : this.drawOffer === "theirs" ? "m" + this.round : null;
     this.resume = g.resume;
     this.level = LEVELS[(g.level ?? 2) - 1] ?? "";
     this.levelIndexNow = (g.level ?? 2) - 1;
@@ -232,6 +243,7 @@ export class OnlineMatch {
         // Leaving is already on screen (pill, bubble with the countdown, sound); only the return gets a line, in the bubble's words.
         case "connect": if (!mine && !this.watching && g.stage === "play") this.show(`${e.actorName ?? this.opponent.name} вернулся в игру`, true); break;
         case "disconnect": case "pause_request": break;
+        case "draw_decline": if (!mine && !this.watching) this.show(`${this.opponent.name}: играем дальше`, false); break;
         case "hint": case "review": case "pause": case "resume": case "join": case "absence": case "hide-budget": case "viewer":
           if (e.text) this.show(e.actorName && !e.text.includes(e.actorName) ? `${e.actorName}: ${e.text}` : e.text, e.type === "resume" || e.type === "connect" || e.type === "join");
           break;
@@ -343,10 +355,14 @@ export class OnlineMatch {
   /** My open offer stays on screen as a quiet line, like the opponent's offer stays as a card. */
   get myOffer() {
     if (this.watching) return null;
-    if (this.drawOffer === "mine") return `Ничья предложена · ждём ${this.opponent.name}`;
+    if (this.drawOffer === "mine" || this.roundDrawOffer === "mine") return `Ничья предложена · ждём ${this.opponent.name}`;
     if (this.raise?.by === this.mySeat && this.state?.canRaise) return `Сложнее предложено · ждём ${this.opponent.name}`;
     return null;
   }
+  get menuBadge() { return this.offerKey && this.offerKey !== this.offerSeen ? "1" : this.menuAlert && (this.roundDrawOpen || this.canOfferDraw) ? "!" : null; }
+  menuOpened() { this.offerSeen = this.offerKey; this.menuAlert = false; }
+  offerRoundDraw() { this.act("draw_offer").then(() => store.changed()).catch(() => {}); }
+  answerRoundDraw(yes) { this.act("draw_answer", { accept: yes }).catch(() => {}); }
   answerDraw(yes) { this.act(yes ? "accept_draw" : "decline_draw").catch(() => {}); }
   get offerRaise() { return !!this.state?.canRaise && this.raise?.by !== this.mySeat; }
   get raisedLevel() { return LEVELS[Math.min(LEVELS.length - 1, (this.state?.nextLevel ?? this.levelIndexNow + 1))]; }

@@ -23,6 +23,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   const [standsOpen, setStandsOpen] = useState(false);
   const [viewer, setViewer] = useState(null);
   const [confirmSurrender, setConfirmSurrender] = useState(false);
+  const [drawHint, setDrawHint] = useState(null);
   const [shownToast, setShownToast] = useState(null);
   const [entering, setEntering] = useState(true);
   const [finishing, setFinishing] = useState(0);
@@ -98,12 +99,26 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   const menuRow = (title, run, { destructive = false, enabled = true } = {}) => html`
     <button class=${cx("navy-btn menu-row", destructive && "destructive")} disabled=${!enabled}
       onClick=${() => { if (Date.now() - menuOpenedAt.current < 500) return; leaveMenu?.(); run(); store.changed(); }}>${title}</button>`;
+  // Draws: the row is always there; grey until it opens, and a tap on a grey row says why without any time.
+  const drawRow = (title, open, mine, run, why) => mine ? menuRow(`${title} · ждём ${m.opponent.name}`, () => {}, { enabled: false })
+    : open ? menuRow(title, run)
+    : html`<button class="navy-btn menu-row off" onClick=${() => setDrawHint(why)}>${title}</button>${drawHint === why ? html`<p class="menu-hint">${why}</p>` : null}`;
+  const drawRows = (round) => m.drawsAllowed ? html`
+    ${round ? drawRow("Ничья в раунде", m.roundDrawOpen, m.roundDrawOffer === "mine", () => m.offerRoundDraw(), "Откроется, если раунд затянется") : null}
+    ${drawRow("Ничья в матче", m.canOfferDraw, m.drawOffer === "mine", () => m.offerDraw(), `Откроется после ${m.matchDrawAfter} раундов`)}` : null;
+  const theirDraw = m.roundDrawOffer === "theirs" ? { what: "в раунде", answer: (yes) => m.answerRoundDraw(yes) }
+    : m.drawOffer === "theirs" ? { what: "в матче", answer: (yes) => m.answerDraw(yes) } : null;
   const invite = async () => {
     const text = `Сыграем в DERBYO? Комната ${m.code}: https://derbyo.online/#join=${m.code.replace(" ", "")}`;
     try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); m.show("Приглашение скопировано", true); store.changed(); } } catch {}
   };
   const menu = (leave) => (leaveMenu = leave, html`<div class="menu">
     <h2>Матч</h2>
+    ${theirDraw && !m.watching ? html`<div class="raise-offer glass menu-offer">
+        <span>${m.opponent.name} предлагает ничью ${theirDraw.what}</span>
+        <button class="navy-btn small" onClick=${() => { leave(); theirDraw.answer(false); store.changed(); }}>Играть</button>
+        <button class="gold-pill press" onClick=${() => { leave(); theirDraw.answer(true); store.changed(); }}>Ничья</button>
+      </div>` : null}
     ${m.watching ? html`
       ${menuRow(Sound.enabled ? "Выключить звук" : "Включить звук", () => (Sound.enabled = !Sound.enabled))}
       ${menuRow("Свернуть", minimize)}
@@ -112,13 +127,14 @@ export function MatchScreen({ m, close, findNew, minimize }) {
       ${!m.matchOver ? menuRow("Свернуть матч", minimize) : null}
       ${menuRow(`Пригласить · код ${m.code}`, invite)}
       ${menuRow("Обратная связь", () => dispatchEvent(new CustomEvent("derbyo-feedback", { detail: { room: m.code?.replace(/\s/g, ""), role: "player" } })))}
-      ${m.roundOver ? menuRow(m.canLeaveFree ? "Выйти без штрафа" : m.matchOver ? "На главную" : "Выйти из матча", close) : html`
+      ${m.roundOver ? html`${!m.matchOver ? drawRows(false) : null}${menuRow(m.canLeaveFree ? "Выйти без штрафа" : m.matchOver ? "На главную" : "Выйти из матча", close)}` : html`
         ${menuRow(Sound.enabled ? "Выключить звук" : "Включить звук", () => (Sound.enabled = !Sound.enabled))}
         ${m.paused ? menuRow(m.resumeWait === null ? "Продолжить" : `Ждём ${m.opponent.name}…`, () => m.requestResume())
           : m.oppPauseAskLeft !== null ? menuRow("Принять паузу", () => m.acceptPause())
           : m.pauseAskLeft !== null ? null
           : menuRow("Пауза", () => m.requestPause(), { enabled: !m.canLeaveFree })}
         ${m.turn === 0 && !m.paused ? menuRow("Передать ход", () => m.passOnPurpose()) : null}
+        ${drawRows(true)}
         ${m.canLeaveFree ? menuRow(`Выйти без штрафа · ${m.opponent.name} не отвечает`, close)
           : menuRow("Сдаться в раунде", () => setConfirmSurrender(true), { destructive: true })}`}`}
   </div>`);
@@ -132,21 +148,11 @@ export function MatchScreen({ m, close, findNew, minimize }) {
       <${Scoreboard} m=${m} openProfile=${setProfileOf} openStands=${() => setStandsOpen(true)} />
       <${Board} m=${m} tap=${tapCell} />
       <div class="slot">
-        ${notes.length ? html`<div class=${cx("notes", ((m.offerRaise && !m.watching) || m.roundOver || m.drawOffer === "theirs") && "hidden")}>
+        ${notes.length ? html`<div class=${cx("notes", ((m.offerRaise && !m.watching) || m.roundOver) && "hidden")}>
           ${notes.map((c) => html`<div><b>${(c.label ?? c.title) + ": "}</b><span>${c.note}</span></div>`)}</div>` : null}
-        ${m.drawOffer === "theirs" ? html`<div class="raise-offer glass">
-            <span>${m.opponent.name} предлагает ничью в матче</span>
-            <button class="navy-btn small" onClick=${() => m.answerDraw(false)}>Играть</button>
-            <button class="gold-pill press" onClick=${() => m.answerDraw(true)}>Ничья</button>
-          </div>`
-        : m.offerRaise && !m.watching ? html`<div class="raise-offer glass">
+        ${m.offerRaise && !m.watching ? html`<div class="raise-offer glass">
             <span>Снова ничья. Следующий раунд — «${m.raisedLevel}»?</span>
-            ${m.canOfferDraw ? html`<button class="navy-btn small wide" onClick=${() => m.offerDraw()}>Предложить ничью</button>` : null}
             <button class="gold-pill press" onClick=${() => m.raiseLevel(true)}>Сложнее</button>
-          </div>`
-        : m.canOfferDraw && m.roundOver ? html`<div class="raise-offer glass">
-            <span>Три ничьи подряд. Закончить матч вничью?</span>
-            <button class="gold-pill press" onClick=${() => m.offerDraw()}>Предложить</button>
           </div>`
         : m.myOffer ? html`<div class="raise-offer glass"><span>${m.myOffer}</span></div>`
         : m.roundOver ? html`<${ResultBubble} m=${m} key=${m.finishSignal} />`
@@ -157,7 +163,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
         </div>
       </div>
       <${BottomTray} m=${m} findNew=${findNew} close=${close}
-        openChat=${() => { m.unread = 0; setChatOpen(true); }} openMenu=${() => { menuOpenedAt.current = Date.now(); setMenuOpen(true); }} />
+        openChat=${() => { m.unread = 0; setChatOpen(true); }} openMenu=${() => { menuOpenedAt.current = Date.now(); m.menuOpened(); setDrawHint(null); setMenuOpen(true); }} />
     </div>
     ${finishing && !reduceMotion() ? html`<${FinishAtmosphere} winner=${m.roundWinner === null ? null : m.seat(m.roundWinner)} key=${finishing} />` : null}
     ${coins && !reduceMotion() ? html`<${CoinAtmosphere} key=${coins} done=${() => setCoins(0)} />` : null}
@@ -450,7 +456,8 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
       ${m.chatOff ? null : html`<button class="tool press" onClick=${openChat} aria-label=${m.unread ? `Чат, новых сообщений: ${m.unread}` : "Чат"}>
         <img src=${img("chat")} alt="" />${m.unread ? html`<b class="badge">${m.unread}</b>` : null}</button>
       <i class="tool-sep"></i>`}
-      <button class="tool press" onClick=${openMenu} aria-label="Меню матча"><img src=${img("menu")} alt="" /></button>
+      <button class="tool press" onClick=${openMenu} aria-label=${m.menuBadge === "1" ? "Меню матча: предложение ничьей" : m.menuBadge ? "Меню матча: ничья доступна" : "Меню матча"}>
+        <img src=${img("menu")} alt="" />${m.menuBadge ? html`<b class=${cx("badge", m.menuBadge === "!" && "alert")}>${m.menuBadge}</b>` : null}</button>
     </div>
   </div>`;
 }
