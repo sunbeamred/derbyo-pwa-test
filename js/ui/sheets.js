@@ -245,7 +245,7 @@ export function ReviewDecision({ m, review }) {
 export function StandsSheet({ m, open }) {
   return html`<div class="stands">
     <div class="sheet-head"><h2>Трибуна</h2><small>${m.viewers.length} / ${MAX_VIEWERS}</small></div>
-    <${ViewerList} viewers=${m.viewers} me=${m.myName} relations=${m.viewerRelations} open=${open} />
+    <${ViewerList} viewers=${m.viewers} me=${m.standsMe ?? m.myName} relations=${m.viewerRelations} open=${open} />
     <p class="hint-line small">Нажми на зрителя — откроется профиль. Зрители видят поле и пишут в чат, но не ходят.</p>
   </div>`;
 }

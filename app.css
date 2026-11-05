@@ -660,9 +660,14 @@ input { font-family: inherit; }
 .menu h2 { font-size: 19px; font-weight: 700; }
 .menu-row.destructive { color: #FF8B97; }
 .menu-row.off { opacity: .4; }
+.menu-row.draw { color: var(--gold); position: relative; }
+.row-badge { top: 50%; right: 14px; margin-top: -9px; }
 .menu-hint { margin: -2px 4px 2px; font-size: 12px; color: var(--soft); text-align: center; }
-.menu-offer { animation: none; }
-.badge.alert { background: var(--gold); color: var(--red); }
+.menu-offer { animation: none; background: linear-gradient(#FFE7A3, #E9BD55); color: var(--on-red); }
+.menu-offer span { font-weight: 600; }
+.menu-offer .navy-btn { background: rgba(7, 19, 30, .12); border-color: rgba(7, 19, 30, .25); color: var(--on-red); }
+.draw-yes { flex: none; width: 92px; height: 38px; border-radius: 19px; background: var(--on-red); color: var(--gold); font-size: 15px; font-weight: 700; text-align: center; }
+.badge.warn { width: 18px; padding: 0; background: var(--gold); color: #D7263D; font-size: 13px; font-weight: 900; line-height: 1; box-shadow: 0 0 0 2px #0B1726; }
 
 /* Answer panel */
 .answer { display: flex; flex-direction: column; gap: 10px; min-height: 0; flex: 1 1 auto; }

@@ -154,6 +154,9 @@ export class OnlineMatch {
     this.round = st.round;
     this.roundResults = (st.roundResults ?? []).map((r) => this.owner(r.winner));
     this.viewers = (st.viewers ?? []).map((v) => v.name);
+    // Each viewer's card (rating, games, profile id) for their profile; «you» on the stands is found by id, not by name.
+    this.viewerCards = Object.fromEntries((st.viewers ?? []).map((v) => [v.name, v.card ?? null]));
+    this.standsMe = (st.viewers ?? []).find((v) => v.id === st.selfId)?.name ?? null;
     this.chat = (st.chat ?? []).map((c) => ({ id: c.id, who: c.senderId === st.selfId ? "Ты" : c.name, text: c.text, kind: "text", spectator: c.role === "spectator", likes: c.likeCount ?? 0, liked: !!c.liked }));
     for (const c of st.chat ?? []) if (!this.seenChat.has(c.id)) { this.seenChat.add(c.id); if (!this.firstState && c.senderId !== st.selfId) this.unread++; }
     this.oppLeft = !them && st.round > 0;
@@ -360,7 +363,8 @@ export class OnlineMatch {
     return null;
   }
   get menuBadge() { return this.offerKey && this.offerKey !== this.offerSeen ? "1" : this.menuAlert && (this.roundDrawOpen || this.canOfferDraw) ? "!" : null; }
-  menuOpened() { this.offerSeen = this.offerKey; this.menuAlert = false; }
+  // The «!» moves from the menu button onto the open draw row for this one opening of the menu.
+  menuOpened() { this.offerSeen = this.offerKey; this.freshDraw = !!this.menuAlert; this.menuAlert = false; }
   offerRoundDraw() { this.act("draw_offer").then(() => store.changed()).catch(() => {}); }
   answerRoundDraw(yes) { this.act("draw_answer", { accept: yes }).catch(() => {}); }
   answerDraw(yes) { this.act(yes ? "accept_draw" : "decline_draw").catch(() => {}); }
@@ -390,8 +394,11 @@ export class OnlineMatch {
   avatarOf(owner) { return (owner === 0 ? this.me : this.them)?.card?.avatar ?? (owner === 0 && !this.watching && !this.hotseat ? account.profile?.avatar : null) ?? null; }
   viewerProfile(v) {
     // You in the stands: your own account's numbers.
-    const p = v === account.name ? account.profile : null;
+    const p = v === this.standsMe || v === account.name ? account.profile : null;
     if (p && (p.games || p.rating != null)) return { name: v, photo: p.avatar ?? null, flag: null, rating: p.rating, rank: p.rank, level: p.level, games: p.games, winRate: p.games ? Math.round((p.wins / p.games) * 100) : 0, bestStreak: p.bestStreak };
+    // Someone else: the card the server keeps for them (a guest has none, only a name).
+    const c = this.viewerCards?.[v];
+    if (c) return { name: v, profileId: c.profileId, photo: c.avatar ?? null, flag: flagOf(c.country), rating: c.rating, rank: c.rank, level: c.level, games: c.games, winRate: c.games ? Math.round((c.wins / c.games) * 100) : 0, bestStreak: c.bestStreak };
     return { name: v, flag: null, rating: null, rank: null, level: null, games: null, winRate: null, bestStreak: null };
   }
   get headToHead() { return null; }

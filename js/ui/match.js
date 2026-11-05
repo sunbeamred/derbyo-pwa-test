@@ -96,12 +96,13 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   const slotLine = m.watching ? "Ты на трибуне: ходить нельзя, болеть в чате можно" : m.turn === 0 ? "Выбери клетку и назови футболиста" : "Ход соперника. Присмотри клетку на свой ход";
 
   let leaveMenu = null;
-  const menuRow = (title, run, { destructive = false, enabled = true } = {}) => html`
-    <button class=${cx("navy-btn menu-row", destructive && "destructive")} disabled=${!enabled}
-      onClick=${() => { if (Date.now() - menuOpenedAt.current < 500) return; leaveMenu?.(); run(); store.changed(); }}>${title}</button>`;
+  const menuRow = (title, run, { destructive = false, draw = false, fresh = false, enabled = true } = {}) => html`
+    <button class=${cx("navy-btn menu-row", destructive && "destructive", draw && "draw")} disabled=${!enabled}
+      onClick=${() => { if (Date.now() - menuOpenedAt.current < 500) return; leaveMenu?.(); run(); store.changed(); }}>${title}${fresh ? html`<b class="badge warn row-badge">!</b>` : null}</button>`;
   // Draws: the row is always there; grey until it opens, and a tap on a grey row says why without any time.
   const drawRow = (title, open, mine, run, why) => mine ? menuRow(`${title} · ждём ${m.opponent.name}`, () => {}, { enabled: false })
-    : open ? menuRow(title, run)
+    // Open: our gold, and the first time also the «!» from the menu button, so it is clear where that came from.
+    : open ? menuRow(title, run, { draw: true, fresh: m.freshDraw })
     : html`<button class="navy-btn menu-row off" onClick=${() => setDrawHint(why)}>${title}</button>${drawHint === why ? html`<p class="menu-hint">${why}</p>` : null}`;
   const drawRows = (round) => m.drawsAllowed ? html`
     ${round ? drawRow("Ничья в раунде", m.roundDrawOpen, m.roundDrawOffer === "mine", () => m.offerRoundDraw(), "Откроется, если раунд затянется") : null}
@@ -114,10 +115,10 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   };
   const menu = (leave) => (leaveMenu = leave, html`<div class="menu">
     <h2>Матч</h2>
-    ${theirDraw && !m.watching ? html`<div class="raise-offer glass menu-offer">
+    ${theirDraw && !m.watching ? html`<div class="raise-offer menu-offer">
         <span>${m.opponent.name} предлагает ничью ${theirDraw.what}</span>
         <button class="navy-btn small" onClick=${() => { leave(); theirDraw.answer(false); store.changed(); }}>Играть</button>
-        <button class="gold-pill press" onClick=${() => { leave(); theirDraw.answer(true); store.changed(); }}>Ничья</button>
+        <button class="draw-yes press" onClick=${() => { leave(); theirDraw.answer(true); store.changed(); }}>Ничья</button>
       </div>` : null}
     ${m.watching ? html`
       ${menuRow(Sound.enabled ? "Выключить звук" : "Включить звук", () => (Sound.enabled = !Sound.enabled))}
@@ -163,7 +164,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
         </div>
       </div>
       <${BottomTray} m=${m} findNew=${findNew} close=${close}
-        openChat=${() => { m.unread = 0; setChatOpen(true); }} openMenu=${() => { menuOpenedAt.current = Date.now(); m.menuOpened(); setDrawHint(null); setMenuOpen(true); }} />
+        openChat=${() => { m.unread = 0; setChatOpen(true); }} openMenu=${() => { menuOpenedAt.current = Date.now(); m.menuOpened?.(); setDrawHint(null); setMenuOpen(true); }} />
     </div>
     ${finishing && !reduceMotion() ? html`<${FinishAtmosphere} winner=${m.roundWinner === null ? null : m.seat(m.roundWinner)} key=${finishing} />` : null}
     ${coins && !reduceMotion() ? html`<${CoinAtmosphere} key=${coins} done=${() => setCoins(0)} />` : null}
@@ -457,7 +458,7 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
         <img src=${img("chat")} alt="" />${m.unread ? html`<b class="badge">${m.unread}</b>` : null}</button>
       <i class="tool-sep"></i>`}
       <button class="tool press" onClick=${openMenu} aria-label=${m.menuBadge === "1" ? "Меню матча: предложение ничьей" : m.menuBadge ? "Меню матча: ничья доступна" : "Меню матча"}>
-        <img src=${img("menu")} alt="" />${m.menuBadge ? html`<b class=${cx("badge", m.menuBadge === "!" && "alert")}>${m.menuBadge}</b>` : null}</button>
+        <img src=${img("menu")} alt="" />${m.menuBadge ? html`<b class=${cx("badge", m.menuBadge === "!" && "warn")}>${m.menuBadge}</b>` : null}</button>
     </div>
   </div>`;
 }
