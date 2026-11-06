@@ -136,7 +136,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
           : menuRow("Пауза", () => m.requestPause(), { enabled: !m.canLeaveFree })}
         ${m.turn === 0 && !m.paused ? menuRow("Передать ход", () => m.passOnPurpose()) : null}
         ${drawRows(true)}
-        ${m.canLeaveFree ? menuRow(`Выйти без штрафа · ${m.opponent.name} не отвечает`, close)
+        ${m.canLeaveFree ? menuRow(`Выйти без штрафа · ${m.opponent.name} ${m.oppIdle ? "бездействует" : "не отвечает"}`, close)
           : menuRow("Сдаться в раунде", () => setConfirmSurrender(true), { destructive: true })}`}`}
   </div>`);
 
@@ -176,6 +176,8 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${viewer ? html`<${Panel} onClose=${() => setViewer(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${1} viewer=${viewer} close=${leave} />`}<//>` : null}
     ${profileOf !== null ? html`<${Panel} onClose=${() => setProfileOf(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${profileOf} close=${leave} />`}<//>` : null}
     ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}>${menu}<//>` : null}
+    ${m.idleCheck ? html`<${Alert} title="Ты здесь?" message="Уже второй ход без действий. Если не ответишь, соперник сможет уйти с победой."
+      onClose=${() => { m.imHere(); store.changed(); }} actions=${[{ title: "Я здесь", run: () => { m.imHere(); store.changed(); } }]} />` : null}
     ${confirmSurrender ? html`<${Alert} title=${`Сдаться в раунде ${m.round}?`} message=${`Раунд выиграет ${m.opponent.name}. Счёт станет ${m.score[0]}:${m.score[1] + 1}.`}
       onClose=${() => setConfirmSurrender(false)}
       actions=${[{ title: "Играть дальше", run: () => setConfirmSurrender(false) }, { title: "Сдаться", kind: "destructive", run: () => { setConfirmSurrender(false); m.surrender(); store.changed(); } }]} />` : null}
@@ -241,9 +243,9 @@ function SideTag({ m, owner }) {
   const missed = mine ? 0 : m.oppMissed || 0;
   const status = left ? html`<span class="st left">○ покинул матч</span>`
     // «не отвечает» only when the server says so (the same signal that offers «Выйти без штрафа»).
-    : !mine && m.canLeaveFree && away === null ? html`<span class="st idle">⏱ не отвечает</span>`
+    : !mine && m.canLeaveFree && away === null ? html`<span class="st idle">⏱ ${m.oppIdle ? "бездействует" : "не отвечает"}</span>`
     : missed > 0 && away === null ? html`<span class="st missed">⏱ пропуск</span>`
-    : away !== null || gone ? html`<span class="st away">◒ ${kind === "offline" ? "нет связи" : kind === "blurred" ? "в другом окне" : "свернул"}</span>`
+    : away !== null || gone ? html`<span class="st away">◒ ${kind === "offline" ? "нет связи" : "свернул"}</span>`
     : html`<span class="st in">● в игре</span>`;
   // The budget: the server's seconds left (counting down while away), out of the level's total.
   const total = (mine ? (m.watching ? m.leftAwayTotal : m.myAwayTotal) : m.oppAwayTotal) ?? m.awayTotal ?? 45;
@@ -448,7 +450,7 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
         <${TurnDial} m=${m} size=${48} />
         ${m.canLeaveFree && !m.watching ? html`<button class="tray-label press" onClick=${m.paused || (m.online && !m.fromQuick) ? close : findNew}>
             <b style="color:#32E5A1">${m.paused || (m.online && !m.fromQuick) ? "Выйти без штрафа »" : "Новый соперник »"}</b>
-            <small>${opp} не отвечает</small></button>`
+            <small>${opp} ${m.oppIdle ? "бездействует" : "не отвечает"}</small></button>`
         : pause ? html`<button class="tray-label press" onClick=${() => { pause.run(); store.changed(); }}>
             <b style=${`color:${pause.color}`}>${pause.title}</b><small>${pause.detail}</small></button>`
         : html`<span class="tray-label"><b style=${`color:${color}`}>${title}</b>${sub}</span>`}`}
@@ -506,7 +508,9 @@ function ResultBubble({ m }) {
     : /^Шесть ходов без захвата/.test(m.g?.reason ?? "") ? "Пат: 6 ходов без захвата" : "Ничья в раунде";
   const ws = w === null ? null : m.seat(w);
   const tint = ws === 0 ? RED : ws === 1 ? MINT : GOLD;
-  return html`<div class="result-bubble" style=${`--t:${tint}`}><img src=${img(w === null ? "whistle" : m.mark(w))} alt="" /><b>${title}</b></div>`;
+  // Lost for two turns without a move: say so, or it reads as if the one who left had won by leaving.
+  const why = m.idleLost && !m.watching ? (w === 1 ? "Ты пропустил два хода подряд — соперник ушёл с победой" : w === 0 ? "Соперник не отвечал — победа за тобой" : null) : null;
+  return html`<div class=${cx("result-bubble", why && "with-why")} style=${`--t:${tint}`}><img src=${img(w === null ? "whistle" : m.mark(w))} alt="" /><b>${title}${why ? html`<small>${why}</small>` : null}</b></div>`;
 }
 
 /** .game-reward: the reward card; in 0.3 s, out at 2.35 s. */

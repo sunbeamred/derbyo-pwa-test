@@ -185,6 +185,7 @@ export class OnlineMatch {
     this.choices = g.choices ?? null;
     this.mismatch = g.mismatch ? { cell: g.mismatch.cell, playerId: g.mismatch.player, name: g.mismatch.name, why: g.mismatch.why } : null;
     this.oppMissed = g.missed?.[1 - this.mySeat] ?? 0;
+    this.myMissed = g.missed?.[this.mySeat] ?? 0;
     const pr = g.pauseRequest;
     this.pauseRequest = pr;
     // A draw inside the round: the server opens the offer only when the round is hard, and never says when.
@@ -376,6 +377,13 @@ export class OnlineMatch {
   }
   /** The server says when you may leave without it counting: the other side stopped answering. */
   get canLeaveFree() { return !!this.freeLeave; }
+  /** The other side stopped moving (two turns without a move) rather than lost the line or left. */
+  get oppIdle() { return this.freeLeave === "missed"; }
+  /** «Ты здесь?»: a whole turn of mine already went by without a move, and this one is down to its last 20 seconds. */
+  get idleCheck() { return this.online && !this.watching && !this.hotseat && !this.roundOver && !this.paused && !this.untimed && this.turn === 0 && this.myMissed >= 1 && this.seconds <= 20; }
+  imHere() { this.myMissed = 0; if (this.g?.missed) this.g.missed[this.mySeat] = 0; this.post("/api/action", { id: uuid(), type: "here", game: this.g?.id ?? null }).catch(() => {}); }
+  /** The round ended because a side made no move for two turns and the other left (the server's reason). */
+  get idleLost() { return /^Два хода без действий/.test(this.g?.reason ?? ""); }
   /** A match the quick search found (its rematches too): a new opponent comes from the same search; a room match leads back to the menu. */
   get fromQuick() { return !!this.state?.quick; }
   get hasBoard() { return !!this.g; }

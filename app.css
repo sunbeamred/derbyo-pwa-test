@@ -618,6 +618,8 @@ input { font-family: inherit; }
   background: color-mix(in srgb, var(--t) 16%, transparent); border: 1px solid color-mix(in srgb, var(--t) 55%, transparent);
   box-shadow: 0 0 24px color-mix(in srgb, var(--t) 35%, transparent); animation: bubble-in .45s cubic-bezier(.3, 1.5, .5, 1); max-width: 100%; }
 .result-bubble img { width: 22px; height: 22px; flex: none; }
+.result-bubble.with-why { border-radius: 20px; }
+.result-bubble small { display: block; font-size: 12px; font-weight: 500; color: var(--soft); margin-top: 2px; }
 .result-bubble b { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes bubble-in { from { transform: scale(.7); opacity: 0; } }
 .raise-offer { width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 16px; animation: toast-in .3s ease-out; }
