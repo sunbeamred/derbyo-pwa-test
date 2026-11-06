@@ -178,7 +178,8 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${viewer ? html`<${Panel} onClose=${() => setViewer(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${1} viewer=${viewer} close=${leave} />`}<//>` : null}
     ${profileOf !== null ? html`<${Panel} onClose=${() => setProfileOf(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${profileOf} close=${leave} />`}<//>` : null}
     ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}>${menu}<//>` : null}
-    ${noticeFor(m) ? html`<${Explainer} notice=${noticeFor(m)} />` : null}
+    ${/* One window at a time: «Ты здесь?» and the surrender question first, the explanation waits for them. */
+      noticeFor(m) && !m.idleCheck && !confirmSurrender ? html`<${Explainer} notice=${noticeFor(m)} key=${noticeFor(m).id} />` : null}
     <${DebugTools} m=${m} />
     ${m.idleCheck ? html`<${Alert} title="Ты здесь?" message="Уже второй ход без действий. Если не ответишь, соперник сможет уйти с победой."
       onClose=${() => { m.imHere(); store.changed(); }} actions=${[{ title: "Я здесь", run: () => { m.imHere(); store.changed(); } }]} />` : null}
