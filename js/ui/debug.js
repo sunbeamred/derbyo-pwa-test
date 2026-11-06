@@ -3,7 +3,7 @@
 import { html, useState, cx } from "./common.js";
 import { store } from "../model.js";
 
-const NOTICES = [["away", "Свернул"], ["offline", "Связь"], ["idle", "Бездействие"], ["ready", "Готовность"], ["gone", "Не вернулся"], ["stopped", "Остановлен"]];
+const NOTICES = [["away", "Свернул"], ["spent", "Запас"], ["offline", "Связь"], ["idle", "Бездействие"], ["ready", "Готовность"], ["gone", "Не вернулся"], ["stopped", "Остановлен"]];
 
 export function DebugTools({ m }) {
   const [open, setOpen] = useState(false);
