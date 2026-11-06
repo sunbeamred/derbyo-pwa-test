@@ -238,6 +238,9 @@ function LevelRow({ m, live }) {
 
 /** Under a player in the header: what the player is doing (in the game, minimised, offline…) and the ring of
  * their time-away budget, always there; it empties while they are away. */
+// «нет связи»: a broken link, drawn so it looks the same on every phone (the ⛓️‍💥 emoji is missing on older ones).
+const LINK_BROKEN = html`<svg class="st-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5 5 11a2.1 2.1 0 0 1-3-3l1.5-1.5M9.5 6.5 11 5a2.1 2.1 0 0 1 3 3l-1.5 1.5M5.5 2v2M2 5.5h2M10.5 14v-2M14 10.5h-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+
 function SideTag({ m, owner }) {
   const mine = owner === 0, isBot = !mine && m.opponent.isBot;
   if (isBot) return html`<span class="side-st"><span class="st in">● в игре</span></span>`;
@@ -245,12 +248,11 @@ function SideTag({ m, owner }) {
   const gone = mine ? m.leftGoneKind : m.oppGoneKind;
   const kind = (mine ? m.leftAwayKind : m.oppAwayKind) ?? gone;
   const left = mine ? !!m.meLeft : m.oppLeft;
-  const missed = mine ? 0 : m.oppMissed || 0;
   const status = left ? html`<span class="st left">○ покинул матч</span>`
     // «не отвечает» only when the server says so (the same signal that offers «Выйти без штрафа»).
     : !mine && m.canLeaveFree && away === null ? html`<span class="st idle">⏱ ${m.oppIdle ? "бездействует" : "не отвечает"}</span>`
-    : missed > 0 && away === null ? html`<span class="st missed">⏱ пропуск</span>`
-    : away !== null || gone ? html`<span class="st away">◒ ${kind === "offline" ? "нет связи" : "свернул"}</span>`
+    // A missed turn is not shown (owner, 2026-11-06): «бездействует» comes once it matters.
+    : away !== null || gone ? html`<span class="st away">${kind === "offline" ? html`${LINK_BROKEN} нет связи` : "◒ свернул"}</span>`
     : html`<span class="st in">● в игре</span>`;
   // The budget: the server's seconds left (counting down while away), out of the level's total.
   const total = (mine ? (m.watching ? m.leftAwayTotal : m.myAwayTotal) : m.oppAwayTotal) ?? m.awayTotal ?? 45;
