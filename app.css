@@ -10,7 +10,7 @@
   --cta: linear-gradient(#F5434D, #BE1724);
   --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
   /* The floating tab bar: its lift off the bottom edge, and the room content leaves for it. */
-  --tb-h: 62px; --tb-bottom: max(12px, calc(var(--safe-b) - 20px)); --tb-space: calc(var(--tb-bottom) + var(--tb-h) + 12px);
+  --tb-h: 62px; --tb-bottom: max(8px, calc(var(--safe-b) - 26px)); --tb-space: calc(var(--tb-bottom) + var(--tb-h) + 12px);
   /* iOS motion: sheets and pushes settle fast and soft; springs overshoot a touch. */
   --ease: cubic-bezier(.32, .72, 0, 1); --spring: cubic-bezier(.34, 1.36, .5, 1);
   --font: "Twemoji Country Flags", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
