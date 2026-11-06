@@ -368,7 +368,10 @@ export function OnlineLocker({ nav, app, m }) {
   const canEdit = !!st?.isHost && !st?.quick && !st?.game && (st?.round ?? 0) === 0;
   const edit = (s) => m.settings(createBody(s)).catch(() => {});
   const flip = (k) => setOpen({ ...open, [k]: !open[k] });
-  const meReady = !!m.me?.ready;
+  // Before the match a spectator stays here too, with the seats and the chat (owner, 2026-11-07), not on a bare wait screen.
+  const watching = !!m.watching;
+  const freeSeat = st?.players ? st.players.findIndex((x) => !x) : -1;
+  const meReady = !watching && !!m.me?.ready;
   // A friend's room: the caller has a minute to come in, counted down on their side of the duel.
   const deadline = st?.inviteDeadline ?? null, waitLeft = deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : null;
   const [, tick] = useState(0);
@@ -376,12 +379,15 @@ export function OnlineLocker({ nav, app, m }) {
   const awayNote = deadline && !host?.online ? (waitLeft > 0 ? `зайдёт · ${waitLeft} с` : "не зашёл") : "не в сети";
   return html`<div class="screen-with-bar"><div class="screen-scroll"><div class="page">
     <${LobbyHeader} title=${`Комната ${m.code}`} back=${nav.back} />
-    <div class="locker-title"><small class="cap gold">РАЗДЕВАЛКА</small><h2>${m.closed ? "Комната закрыта" : !host ? "Ждём второго игрока" : "Оба на месте. Пора играть."}</h2></div>
+    <div class="locker-title"><small class="cap gold">РАЗДЕВАЛКА</small><h2>${m.closed ? "Комната закрыта" : watching ? "Ты на трибуне" : !host ? "Ждём второго игрока" : "Оба на месте. Пора играть."}</h2></div>
     <${Duel} leftRed=${m.mySeat === 0}
       left=${{ name: m.leftName, photo: m.avatarOf(0), flag: m.myFlag, rating: m.myRating, rank: m.myRank, ready: meReady, open: () => setProfile({ owner: 0 }) }}
       right=${host ? { name: host.name, bot: !!host.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!host.ready, gone: !host.online, note: awayNote, open: () => setProfile({ owner: 1 }) } : null}>
-      ${!st?.isHost && !m.closed && !meReady ? html`<button class="chip-btn duel-bot press" onClick=${() => m.act("seat", { seat: null }).then(() => { handed.current = true; app.open(m); }).catch(() => {})}>
-        <img src=${img("eye")} alt="" />На трибуну</button>` : null}
+      ${m.closed ? null
+        : watching ? (freeSeat >= 0 ? html`<button class="chip-btn duel-bot press" onClick=${() => m.act("seat", { seat: freeSeat }).catch(() => {})}>
+          <img src=${img("bolt")} alt="" />Сесть играть</button>` : null)
+        : !st?.isHost && !meReady ? html`<button class="chip-btn duel-bot press" onClick=${() => m.act("seat", { seat: null }).catch(() => {})}>
+          <img src=${img("eye")} alt="" />На трибуну</button>` : null}
     <//>
     ${canEdit ? html`<button class="settings-card press" onClick=${() => nav.push("settings", { settings, set: edit })}>
       <img src=${img(presetOf(settings)?.icon ?? "settings")} alt="" />
@@ -394,6 +400,7 @@ export function OnlineLocker({ nav, app, m }) {
   </div></div>
   <${BottomBar}><${RoomBar} m=${m}>
     ${m.closed ? html`<button class="primary-btn" onClick=${nav.back}>К списку комнат</button>`
+      : watching ? html`<button class="primary-btn" disabled>Ждём начала матча</button>`
       : meReady ? html`<${ReadyWait} m=${m} who=${host?.name ?? "соперника"} />`
       : html`<button class="primary-btn" disabled=${!host} onClick=${() => m.ready().catch(() => {})}>${host ? "Начать матч" : "Ждём второго игрока"}</button>`}
   <//><//>

@@ -143,7 +143,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   </div>`);
 
   if (!m.hasBoard || m.closed) return html`<div class="match"><div class="match-wait">
-    <span class="spinner muted big"></span><b>${m.closed ?? "Выходим на поле…"}</b>
+    ${m.closed ? null : html`<span class="spinner muted big"></span>`}<b>${m.closed ?? "Выходим на поле…"}</b>
     <small>${m.closed ? "" : !m.state ? "Соединяемся с сервером" : m.opponent?.present ? `Ждём, пока ${m.opponent.name} выйдет на поле` : "Ждём соперника"}</small>
     <button class="navy-btn" onClick=${close}>${m.closed ? "Закрыть" : "Выйти"}</button></div></div>`;
   return html`<div class="match">

@@ -288,9 +288,10 @@ function App() {
       try {
         const s = await joinRoom(code, { role, password });
         const m = watchClose(new OnlineMatch(s));
-        if (s.role === "player" && !s.seatTaken) {
+        // Before the match, a seat or the stands: the room screen (its seats and chat), not the bare wait screen.
+        if (!s.seatTaken || s.role !== "player") {
           for (let i = 0; i < 50 && !m.state; i++) await new Promise((r) => setTimeout(r, 100));
-          if (!m.hasBoard) { nav.locker(m); return true; }
+          if (!m.hasBoard && !m.closed) { nav.locker(m); return true; }
         }
         open(m);
         return true;
