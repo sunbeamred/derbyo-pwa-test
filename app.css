@@ -203,6 +203,7 @@ input { font-family: inherit; }
 .alert-actions { display: flex; border-top: 1px solid rgba(255, 255, 255, .1); }
 .alert-btn { flex: 1; min-height: 46px; text-align: center; font-size: 16px; color: #6FB3FF; transition: background .15s; }
 .alert-btn:active { background: rgba(255, 255, 255, .08); }
+.alert-btn:disabled { color: #4A6380; transition: color .3s; }
 .alert-btn + .alert-btn { border-left: 1px solid rgba(255, 255, 255, .1); }
 .alert-btn.bold { font-weight: 600; }
 .alert-btn.destructive { color: #FF6B78; font-weight: 600; }

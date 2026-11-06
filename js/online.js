@@ -149,6 +149,8 @@ export class OnlineMatch {
     // No draws against a bot or for two on one screen.
     this.drawsAllowed = !this.watching && !this.hotseat && !!them && !them.bot;
     this.freeLeave = this.watching ? null : st.freeLeave ?? null;
+    // Why the round or the match ended, for the explanation window (js/ui/explain.js); serverSeat is the seat the server means.
+    this.endNotice = st.endNotice ?? null; this.serverSeat = st.seat ?? null;
     this.reactions(st.reactions);
     this.score = [st.score[this.mySeat] ?? 0, st.score[1 - this.mySeat] ?? 0];
     this.round = st.round;
