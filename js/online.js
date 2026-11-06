@@ -291,8 +291,11 @@ export class OnlineMatch {
     this.awayTotal = g.hideBudget ? Math.round(g.hideBudget / 1000) : 45;
     // Once the budget is spent, each absence gets the server's 5-second grace before the round is lost: show that, not 0.
     const spent = (p) => !!g.hideBudget && !!p && (p.hideStrikes > 0 || p.hideLeftMs === 0);
-    const budget = (p, deadline) => deadline ? Math.max(0, Math.ceil((deadline - now) / 1000)) : spent(p) ? HIDE_GRACE : Math.round((p?.hideLeftMs ?? this.awayTotal * 1000) / 1000);
-    const total = (p, deadline) => deadline && p?.since ? Math.max(1, Math.round((deadline - p.since) / 1000)) : spent(p) ? HIDE_GRACE : this.awayTotal;
+    // While minimised with budget left, the server's deadline is the budget plus its 5-second grace: count the budget
+    // alone, or the number drops by those 5 seconds the moment the player comes back.
+    const grace = (p) => !!g.hideBudget && !!p?.online && (p.status === "hidden" || p.status === "blurred") && !spent(p) ? HIDE_GRACE * 1000 : 0;
+    const budget = (p, deadline) => deadline ? Math.max(0, Math.ceil((deadline - grace(p) - now) / 1000)) : spent(p) ? HIDE_GRACE : Math.round((p?.hideLeftMs ?? this.awayTotal * 1000) / 1000);
+    const total = (p, deadline) => deadline && p?.since ? Math.max(1, Math.round((deadline - grace(p) - p.since) / 1000)) : spent(p) ? HIDE_GRACE : this.awayTotal;
     this.leftAwayBudget = budget(me, mineUntil);
     this.leftAwayTotal = total(me, mineUntil);
     this.oppAwayTotal = total(them, until);
