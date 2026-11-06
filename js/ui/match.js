@@ -6,6 +6,7 @@ import { store } from "../model.js";
 import { Sound } from "../sound.js";
 import { AnswerSheet, ChatSheet, ReviewDecision, StandsSheet } from "./sheets.js";
 import { Explainer, noticeFor } from "./explain.js";
+import { DebugTools } from "./debug.js";
 import { ProfileSheet } from "./profile.js";
 
 const RED = "#FF5364", MINT = "#32E5A1", GOLD = "#F6D482", MUTED = "#A8B8CA";
@@ -178,6 +179,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${profileOf !== null ? html`<${Panel} onClose=${() => setProfileOf(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${profileOf} close=${leave} />`}<//>` : null}
     ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}>${menu}<//>` : null}
     ${noticeFor(m) ? html`<${Explainer} notice=${noticeFor(m)} />` : null}
+    <${DebugTools} m=${m} />
     ${m.idleCheck ? html`<${Alert} title="Ты здесь?" message="Уже второй ход без действий. Если не ответишь, соперник сможет уйти с победой."
       onClose=${() => { m.imHere(); store.changed(); }} actions=${[{ title: "Я здесь", run: () => { m.imHere(); store.changed(); } }]} />` : null}
     ${confirmSurrender ? html`<${Alert} title=${`Сдаться в раунде ${m.round}?`} message=${`Раунд выиграет ${m.opponent.name}. Счёт станет ${m.score[0]}:${m.score[1] + 1}.`}

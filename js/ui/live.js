@@ -5,7 +5,7 @@ import { PRESETS, LEVELS, QuickChoice, Section, RoomPassword, Collapsible, summa
 import { ViewerList } from "./sheets.js";
 import { ProfileSheet } from "./profile.js";
 import { Face } from "./account.js";
-import { openRooms, quick, createRoom, account } from "../net.js";
+import { openRooms, quick, createRoom, debugRoom, account } from "../net.js";
 import { OnlineMatch } from "../online.js";
 
 /** The settings screen's choices as the site's create/settings body. */
@@ -88,6 +88,7 @@ export function OnlineLobby({ nav, app }) {
         <button class="navy-btn tall" onClick=${() => nav.push("room")}><img src=${img("invite")} alt="" />Создать</button>
         <button class="mint-btn tall press" onClick=${() => nav.push("code")}><img src=${img("arrow")} alt="" />По коду</button>
       </div>
+      ${hotseat && account.profile?.registered ? html`<button class="navy-btn" onClick=${() => nav.push("room", { debug: true })}>🛠 Тест: соперник-кукла</button>` : null}
     </section>
     <section class="mode-group glass">
       <h4 class="mg-head"><i class="mg-dot"></i>Офлайн<small>без рейтинга</small></h4>
@@ -239,11 +240,11 @@ function useRoom(make, app) {
 }
 
 /** «Создать»: your room on the server. The code is real; a friend joins it from the app or the site. */
-export function OnlineRoom({ nav, app }) {
+export function OnlineRoom({ nav, app, debug = false }) {
   const [settings, setSettings] = useState(newSettings());
   const [copied, setCopied] = useState(false);
   const [waiting, setWaiting] = useState(false);
-  const [m, err] = useRoom(() => createRoom(createBody(settings)).then((s) => new OnlineMatch(s)), app);
+  const [m, err] = useRoom(() => (debug ? debugRoom() : createRoom(createBody(settings))).then((s) => new OnlineMatch(s)), app);
   // The tap shows «Готов» at once; from the next server state on, the server's word is what shows.
   useEffect(() => setWaiting(false), [m?.state]);
   const first = useRef(true);
@@ -330,6 +331,9 @@ export function OnlineLocker({ nav, app, m }) {
   const st = m.state;
   const host = m.them;
   const settings = fromServer(st?.settings, st?.locked);
+  // The host of a room the server made for them (a friend's call) sets the rules here as in their own room, until the match starts.
+  const canEdit = !!st?.isHost && !st?.quick && !st?.game && (st?.round ?? 0) === 0;
+  const edit = (s) => m.settings(createBody(s)).catch(() => {});
   const flip = (k) => setOpen({ ...open, [k]: !open[k] });
   const meReady = !!m.me?.ready;
   // A friend's room: the caller has a minute to come in, counted down on their side of the duel.
@@ -343,9 +347,13 @@ export function OnlineLocker({ nav, app, m }) {
     <${Duel} leftRed=${m.mySeat === 0}
       left=${{ name: m.leftName, photo: m.avatarOf(0), flag: m.myFlag, rating: m.myRating, rank: m.myRank, ready: meReady, open: () => setProfile({ owner: 0 }) }}
       right=${host ? { name: host.name, bot: !!host.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!host.ready, gone: !host.online, note: awayNote, open: () => setProfile({ owner: 1 }) } : null} />
-    <${Collapsible} title="НАСТРОЙКИ МАТЧА" summary=${summary(settings)} open=${open.settings} toggle=${() => flip("settings")}>
+    ${canEdit ? html`<button class="settings-card press" onClick=${() => nav.push("settings", { settings, set: edit })}>
+      <img src=${img(presetOf(settings)?.icon ?? "settings")} alt="" />
+      <span><small>Настройки матча</small><b>${summary(settings)}</b>${extras(settings) ? html`<em>${extras(settings)}</em>` : null}</span>
+      <${Icon} name="right" size="13" weight="3" class="chev" />
+    </button>` : html`<${Collapsible} title="НАСТРОЙКИ МАТЧА" summary=${summary(settings)} open=${open.settings} toggle=${() => flip("settings")}>
       <div class="set-rows">${settingRows(settings).map(([k, v]) => html`<div><span>${k}</span><b>${v}</b></div>`)}</div>
-    <//>
+    <//>`}
     <${RoomTalk} m=${m} />
     <p class="hint-line small">Первый ход — ×. Подсказки и поле общие для всех подключившихся.</p>
   </div></div>

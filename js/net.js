@@ -133,6 +133,8 @@ async function admit(path, body) {
   }
 }
 export const createRoom = (settings) => admit("/api/create", { name: account.name, ...settings }).then(adopt);
+/** Sandbox: a test room against a puppet that looks like a person, with the engineering menu. */
+export const debugRoom = () => admit("/api/debug/room", { name: account.name, preset: "amateur" }).then(adopt);
 export const joinRoom = (code, { password, role = "player" } = {}) => admit("/api/join", { code, name: account.name, password, role }).then(adopt);
 
 /** The quick game's search: a ticket polled every second until the server pairs it. */
