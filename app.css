@@ -1665,9 +1665,9 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 /* Friends where you play (owner, 2026-11-07): «Позвать друга» in the room, friends online on «Играть». */
 .ds.invite .ds-av.call { background: rgba(50, 229, 161, .14); box-shadow: 0 0 0 1.5px rgba(50, 229, 161, .55); color: var(--mint); }
 .ds.invite .ds-name { color: var(--mint); }
-.duel-bot { align-self: center; gap: 6px; }
+.duel .duel-bot { align-self: center; gap: 6px; }
 .duel-bot img { width: 18px; height: 18px; }
-.rf { display: flex; flex-direction: column; gap: 10px; padding-bottom: 4px; }
+.rf { display: flex; flex-direction: column; gap: 10px; padding: 2px 16px calc(var(--safe-b) + 14px); }
 .rf-title { font-size: 18px; font-weight: 700; }
 .rf-busy { font-size: 12px; font-weight: 600; color: var(--gold); flex: none; }
 .rf-share { margin-top: 4px; }
