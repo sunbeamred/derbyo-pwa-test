@@ -1,5 +1,5 @@
 // The match screen (port of MatchView.swift and Motion.swift).
-import { html, useState, useEffect, useRef, cx, img, Icon, Panel, useSheet, Alert, Toast, RatingTag, breakable, vibrate, flagView, useDoubleTap, LikeEcho } from "./common.js";
+import { html, useState, useEffect, useRef, cx, img, Icon, Panel, useSheet, Alert, Toast, RatingTag, breakable, vibrate, flagView, useDoubleTap, LikeEcho, Marquee } from "./common.js";
 import { byId } from "../data.js";
 import { photoOf } from "../net.js";
 import { store } from "../model.js";
@@ -407,7 +407,7 @@ function Cell({ cell, cross, selected, locked, oppPick, clued, recent, disputed,
       ${p.photo ? html`<img class="cell-photo" src=${p.photo} alt="" />` : null}
       <span class="cell-shade"></span>
       <img class="cell-mark" src=${img(cross ? "mark-x" : "mark-o")} alt="" />
-      <span class=${cx("cell-name", p.name.split(" ").some((w) => w.length > 11) && "long")}>${p.name}</span>
+      <span class=${cx("cell-name", ((n) => n > 12 ? "xlong" : n > 9 && "long")(Math.max(...p.name.split(/\s+/).map((w) => w.length))))}>${p.name}</span>
       ${cell.winning ? html`<span class="sheen"></span>` : null}
       ${recent ? html`<span class="echo"></span>` : null}
       ${respect ? html`<span class="respect-badge">🤝 ${respect}</span>` : null}
@@ -459,9 +459,9 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
     : m.review?.owner === 0 ? "Ждём решение" : m.review?.owner === 1 ? "Твоё решение"
     : mine ? (m.hotseat ? `Ходит ${m.leftName}` : "Твой ход") : m.oppSelected !== null ? `${opp} думает…` : `Ходит ${opp}`;
   const color = m.review ? GOLD : m.paused ? MUTED : m.seat(m.turn) === 0 ? "#FFB3C1" : "#91FFD3";
-  const sub = m.watching ? html`<small>${m.review ? `зачёт: ${m.review.name ?? ""}` : m.paused ? "игроки взяли паузу" : "ты на трибуне"}</small>`
+  const sub = m.watching ? html`<small><${Marquee} text=${m.review ? `зачёт: ${m.review.name ?? ""}` : m.paused ? "игроки взяли паузу" : "ты на трибуне"} /></small>`
     // Time away is shown only at the top (the ring by the player's status, the opponent-away bubble), not down here.
-    : m.review ? html`<small>зачёт: ${m.review.name ?? byId[m.review.playerId].name}</small>` : null;
+    : m.review ? html`<small><${Marquee} text=${`зачёт: ${m.review.name ?? byId[m.review.playerId].name}`} /></small>` : null;
 
   return html`<div class="tray-row">
     <div class=${cx("tray turn-tray glass", m.roundOver && !m.watching && "over")}>
@@ -473,7 +473,7 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
             <small>${opp} ${quietWord(m)}</small></button>`
         : pause ? html`<button class="tray-label press" onClick=${() => { pause.run(); store.changed(); }}>
             <b style=${`color:${pause.color}`}>${pause.title}</b><small>${pause.detail}</small></button>`
-        : html`<span class="tray-label"><b style=${`color:${color}`}>${title}</b>${sub}</span>`}`}
+        : html`<span class="tray-label"><b style=${`color:${color}`}><${Marquee} text=${title} /></b>${sub}</span>`}`}
     </div>
     <div class="tray tools-tray glass">
       ${m.chatOff ? null : html`<button class="tool press" onClick=${openChat} aria-label=${m.unread ? `Чат, новых сообщений: ${m.unread}` : "Чат"}>

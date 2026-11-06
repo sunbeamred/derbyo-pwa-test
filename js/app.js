@@ -1,7 +1,7 @@
 // The app shell (port of DerbyoApp.swift): tabs, the play tab's screen stack, the match and search covers,
 // the bar that returns to a minimised match, and the offer to install on the home screen.
 import { html, render, useState, useEffect, useReducer, useRef } from "../vendor/preact-htm.js";
-import { cx, img, Icon, Alert, Panel } from "./ui/common.js";
+import { cx, img, Icon, Alert, Panel, Marquee } from "./ui/common.js";
 import { has } from "./data.js";
 import { Match, Opponent, store } from "./model.js";
 import { MatchScreen } from "./ui/match.js";
@@ -601,7 +601,7 @@ const ReturnBar = ({ m, go, drop }) => html`<div class="return-bar glass-bar">
   <button class="rb-main press" onClick=${go}>
     <span class="rb-dot"><i></i></span>
     <span class="rb-t"><small>${m.watching ? "Ты на трибуне" : "Матч идёт"}</small>
-      <b>${m.watching ? m.leftName + " — " : ""}${m.opponent.name} · ${m.score[0]}:${m.score[1]} · раунд ${m.round}</b></span>
+      <b><${Marquee} text=${`${m.watching ? m.leftName + " — " : ""}${m.opponent.name} · ${m.score[0]}:${m.score[1]} · раунд ${m.round}`} /></b></span>
     <span class="rb-go">Вернуться</span>
   </button>
   <button class="round-no press" aria-label=${m.watching ? "Уйти с трибуны" : "Выйти из матча"} onClick=${drop}><${Icon} name="x" size="14" weight="2.5" /></button>
@@ -611,7 +611,7 @@ const ReturnBar = ({ m, go, drop }) => html`<div class="return-bar glass-bar">
 const ElsewhereBar = ({ r, go, drop }) => html`<div class="return-bar glass-bar">
   <button class="rb-main press" onClick=${go}>
     <span class="rb-dot"><i></i></span>
-    <span class="rb-t"><small>Матч идёт</small><b>${r.bot ? "Против бота" : r.opponent ?? "Соперник"}</b></span>
+    <span class="rb-t"><small>Матч идёт</small><b><${Marquee} text=${r.bot ? "Против бота" : r.opponent ?? "Соперник"} /></b></span>
     <span class="rb-go">Вернуться</span>
   </button>
   <button class="chip-btn rb-quit press" onClick=${drop}>Сдаться</button>

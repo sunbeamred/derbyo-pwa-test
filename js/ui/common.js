@@ -1,5 +1,5 @@
 // Shared pieces (Theme.swift and the small views the screens share).
-import { html, useState, useEffect, useRef } from "../../vendor/preact-htm.js";
+import { html, useState, useEffect, useLayoutEffect, useRef } from "../../vendor/preact-htm.js";
 import { BUILD } from "../update.js";
 
 export { html, useState, useEffect, useRef };
@@ -88,6 +88,27 @@ export const CloseButton = ({ onClick }) =>
   html`<button class="close-btn press" onClick=${onClick} aria-label="Закрыть"><${Icon} name="x" size="15" weight="2.8" /></button>`;
 
 /** Nicknames like damir_andromeda may wrap after "_", "-" or ".". */
+/** A name that may not fit one line (owner, 2026-11-06): it glides to its end and back, slowly, only when it does
+ *  not fit; with reduced motion it keeps the ellipsis. Not for the match header (it would distract). */
+export function Marquee({ text, class: c }) {
+  const box = useRef(null), inner = useRef(null);
+  const [shift, setShift] = useState(0);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const b = box.current, i = inner.current;
+      if (!b || !i) return;
+      const over = i.scrollWidth - b.clientWidth;
+      setShift(over > 2 && !matchMedia("(prefers-reduced-motion: reduce)").matches ? Math.ceil(over) + 2 : 0);
+    };
+    measure();
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(measure) : null;
+    ro?.observe(box.current);
+    return () => ro?.disconnect();
+  }, [text]);
+  const style = shift ? `--mq:-${shift}px;--mq-t:${(4 + shift / 18).toFixed(1)}s` : "";
+  return html`<span class=${cx("mq", shift && "run", c)} ref=${box}><span class="mq-in" ref=${inner} style=${style}>${text}</span></span>`;
+}
+
 export const breakable = (n) => n.replaceAll("_", "_​").replaceAll("-", "-​").replaceAll(".", ".​");
 
 /** A panel that slides up from the bottom edge: a dim layer behind it closes it, so does a downward drag
