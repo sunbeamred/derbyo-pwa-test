@@ -496,10 +496,10 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
       : m.roundOver ? html`<${RoundButton} m=${m} findNew=${findNew} close=${close} />` : html`
         <${TurnDial} m=${m} size=${48} />
         ${m.canLeaveFree && !m.watching ? html`<button class="tray-label press" onClick=${m.paused || (m.online && !m.fromQuick) ? close : findNew}>
-            <b style="color:#32E5A1">${m.paused || (m.online && !m.fromQuick) ? "Выйти без штрафа »" : "Новый соперник »"}</b>
-            <small>${opp} ${quietWord(m)}</small></button>`
+            <b class="wrap" style="color:#32E5A1">${m.paused || (m.online && !m.fromQuick) ? "Выйти без штрафа" : "Новый соперник"}</b>
+            <small><${Marquee} text=${`${opp} ${quietWord(m)}`} /></small></button>`
         : pause ? html`<button class="tray-label press" onClick=${() => { pause.run(); store.changed(); }}>
-            <b style=${`color:${pause.color}`}>${pause.title}</b><small>${pause.detail}</small></button>`
+            <b class="wrap" style=${`color:${pause.color}`}>${pause.title}</b><small><${Marquee} text=${pause.detail} /></small></button>`
         : html`<span class="tray-label"><b style=${`color:${color}`}><${Marquee} text=${title} /></b>${sub}</span>`}`}
     </div>
     <div class="tray tools-tray glass">
