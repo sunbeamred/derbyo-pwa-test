@@ -1654,3 +1654,7 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .mq.run .mq-in { animation: mq var(--mq-t, 6s) ease-in-out 1.5s infinite; }
 @keyframes mq { 0%, 15% { transform: translateX(0); } 45%, 60% { transform: translateX(var(--mq)); } 90%, 100% { transform: translateX(0); } }
 @media (prefers-reduced-motion: reduce) { .mq.run .mq-in { animation: none; } }
+
+/* The screen title stays put while the page scrolls under it (owner, 2026-11-06). */
+.page > .lobby-header:first-child { position: sticky; top: 0; z-index: 5; margin: calc(-1 * (var(--safe-t) + 10px)) -16px 0; padding: calc(var(--safe-t) + 10px) 16px 10px;
+  background: rgba(8, 18, 31, .84); -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2); box-shadow: 0 1px 0 rgba(255, 255, 255, .05); }
