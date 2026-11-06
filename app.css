@@ -10,7 +10,7 @@
   --cta: linear-gradient(#F5434D, #BE1724);
   --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
   /* The floating tab bar: its lift off the bottom edge, and the room content leaves for it. */
-  --tb-h: 62px; --tb-bottom: clamp(8px, calc(12px - var(--safe-b)), 12px); --tb-space: calc(var(--tb-bottom) + var(--tb-h) + 12px);
+  --tb-h: 62px; --tb-bottom: max(12px, calc(var(--safe-b) - 20px)); --tb-space: calc(var(--tb-bottom) + var(--tb-h) + 12px);
   /* iOS motion: sheets and pushes settle fast and soft; springs overshoot a touch. */
   --ease: cubic-bezier(.32, .72, 0, 1); --spring: cubic-bezier(.34, 1.36, .5, 1);
   --font: "Twemoji Country Flags", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -51,6 +51,9 @@ input { font-family: inherit; }
 
 /* App shell */
 #root, .app { position: fixed; inset: 0; }
+/* iOS 26 home-screen app: the page is shorter than the screen (touch.js measures it), fill the screen anyway. */
+.ios-gap, .ios-gap body { height: var(--app-h); }
+.ios-gap #root, .ios-gap .app, .ios-gap .cover, .ios-gap .atmo, .ios-gap .entrance, .ios-gap .match-intro { bottom: auto; height: var(--app-h); }
 .app { background: radial-gradient(520px at 50% 0, #12243A, var(--bg)); overflow: hidden; }
 .tab-body, .tab-pane { position: absolute; inset: 0; }
 /* The scroll edge under the floating bar: content dims as it slides beneath it. */
