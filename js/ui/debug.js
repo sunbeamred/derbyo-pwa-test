@@ -24,7 +24,7 @@ export function DebugTools({ m }) {
       <div class="dbg-row">${b("Свернул", "away")}${b("Нет связи", "offline")}${b("Вернулся", "back")}</div>
       <div class="dbg-row">${b(d.idle ? "Бездействует ✓" : "Бездействует", "idle", {}, "", d.idle)}${b(d.unready ? "Не жмёт «Готов» ✓" : "Не жмёт «Готов»", "unready", {}, "", d.unready)}${b("Сдался", "resign")}</div>
       <h5>Я и время</h5>
-      <div class="dbg-row">${b("Мой таймер сворачивания → 0", "hide_zero", {}, "Сверни и вернись")}${b("«Ты здесь?»", "here_check")}</div>
+      <div class="dbg-row">${b("Мой таймер сворачивания → 0", "hide_zero", {}, "Сверни и вернись")}${b("Проверка активности", "here_check")}</div>
       <div class="dbg-row">${b("+15 с", "advance", { seconds: 15 })}${b("+60 с", "advance", { seconds: 60 })}${b("Зритель", "viewer")}</div>
       <h5>Окна-объяснения</h5>
       <div class="dbg-row wrap">${NOTICES.map(([code, title]) => b(title, "notice", { code }))}</div>

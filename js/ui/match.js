@@ -181,8 +181,8 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${/* One window at a time: «Ты здесь?» and the surrender question first, the explanation waits for them. */
       noticeFor(m) && !m.idleCheck && !confirmSurrender ? html`<${Explainer} notice=${noticeFor(m)} key=${noticeFor(m).id} />` : null}
     <${DebugTools} m=${m} />
-    ${m.idleCheck ? html`<${Alert} title="Ты здесь?" message="Уже второй ход без действий. Если не ответишь, соперник сможет уйти с победой."
-      onClose=${() => { m.imHere(); store.changed(); }} actions=${[{ title: "Я здесь", run: () => { m.imHere(); store.changed(); } }]} />` : null}
+    ${m.idleCheck ? html`<${Alert} title="Проверка активности" tone="warn" message="Второй ход без действий. Без подтверждения активности сопернику может быть присуждена победа."
+      onClose=${() => { m.imHere(); store.changed(); }} actions=${[{ title: "Продолжить игру", run: () => { m.imHere(); store.changed(); } }]} />` : null}
     ${confirmSurrender ? html`<${Alert} title=${`Сдаться в раунде ${m.round}?`} message=${`Раунд выиграет ${m.opponent.name}. Счёт станет ${m.score[0]}:${m.score[1] + 1}.`}
       onClose=${() => setConfirmSurrender(false)}
       actions=${[{ title: "Играть дальше", run: () => setConfirmSurrender(false) }, { title: "Сдаться", kind: "destructive", run: () => { setConfirmSurrender(false); m.surrender(); store.changed(); } }]} />` : null}
@@ -506,7 +506,7 @@ function RoundButton({ m, findNew, close }) {
 }
 
 const winReason = (r = "") => /^Соперник сдался/.test(r) ? "Соперник сдался" : /^Соперник завершил участие/.test(r) ? "Соперник покинул матч"
-  : /^Соперник не вернулся/.test(r) ? "Соперник не вернулся за 60 секунд" : /^Вышел из игры после того, как время вне игры/.test(r) ? "У соперника истекло время вне игры"
+  : /^Соперник не вернулся/.test(r) ? "Соперник не вернулся в игру за 60 секунд" : /^Вышел из игры после того, как время вне игры/.test(r) ? "У соперника истекло время вне игры"
   : /^Соперник не отвечает/.test(r) ? "Соперник не отвечал" : null;
 
 /** The round's result in a bubble under the board, in the winner's colour with their mark. */
@@ -520,7 +520,7 @@ function ResultBubble({ m }) {
   const ws = w === null ? null : m.seat(w);
   const tint = ws === 0 ? RED : ws === 1 ? MINT : GOLD;
   // Lost for two turns without a move: say so, or it reads as if the one who left had won by leaving.
-  const why = (m.idleLost && !m.watching ? (w === 1 ? "Ты пропустил два хода подряд — соперник ушёл с победой" : w === 0 ? "Соперник не отвечал — победа за тобой" : null) : null)
+  const why = (m.idleLost && !m.watching ? (w === 1 ? "Активность не подтверждена — победа в матче засчитана сопернику" : w === 0 ? "Соперник не подтвердил активность" : null) : null)
     // A round won not on the board: say how, or «Раунд твой» comes out of nowhere (the server's reasons).
     ?? (w === 0 && !m.watching ? winReason(m.g?.reason) : null);
   return html`<div class=${cx("result-bubble", why && "with-why")} style=${`--t:${tint}`}><img src=${img(w === null ? "whistle" : m.mark(w))} alt="" /><b>${title}${why ? html`<small>${why}</small>` : null}</b></div>`;

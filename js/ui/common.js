@@ -159,12 +159,12 @@ export const LobbyHeader = ({ title, back }) => html`<div class="lobby-header">
 
 /** A sheet for alerts and confirmations, in place of the system alert: it pops in, and fades before its action runs
  * (`stay` actions run at once and may keep it open). */
-export function Alert({ title, message, actions, onClose, children }) {
+export function Alert({ title, tone, message, actions, onClose, children }) {
   const [out, setOut] = useState(false);
   const after = (f) => () => { if (out) return; setOut(true); setTimeout(() => f?.(), 170); };
   return html`<div class=${cx("alert-wrap", out && "out")} onClick=${(e) => e.target === e.currentTarget && onClose && after(onClose)()}>
     <div class="alert" role="alertdialog">
-      <h3>${title}</h3>
+      <h3 class=${cx(tone && `tone-${tone}`)}>${title}</h3>
       ${message ? html`<p>${message}</p>` : null}
       ${children}
       <div class="alert-actions">

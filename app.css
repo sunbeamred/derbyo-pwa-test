@@ -198,6 +198,8 @@ input { font-family: inherit; }
   animation: pop-in .3s var(--spring); box-shadow: 0 20px 50px rgba(0, 0, 0, .5); }
 @keyframes pop-in { from { transform: scale(1.12); opacity: 0; } }
 .alert h3 { font-size: 17px; font-weight: 600; padding: 18px 16px 4px; }
+.alert h3.tone-loss { color: var(--red); }
+.alert h3.tone-warn { color: var(--gold); }
 .alert p { font-size: 13px; color: var(--soft); padding: 0 16px 14px; line-height: 1.35; }
 .alert-input { width: calc(100% - 32px); margin: 0 16px 14px; height: 40px; border-radius: 10px; border: 1px solid var(--navy-line); background: #08121F; color: var(--ink); font-size: 16px; padding: 0 12px; }
 .alert-actions { display: flex; border-top: 1px solid rgba(255, 255, 255, .1); }
