@@ -7,6 +7,7 @@ const TEXTS = {
   away: ["Время вне игры истекло", "Игра была свёрнута дольше допустимого. Раунд засчитан сопернику."],
   offline: ["Соединение потеряно", "Ты не вернулся в игру за 60 секунд. Раунд засчитан сопернику."],
   idle: ["Нет действий", "Два хода подряд без действий. Соперник покинул матч с победой."],
+  gone: ["Ты не вернулся в игру", "Ты не вернулся в игру в течение минуты после раунда. Победа в матче засчитана сопернику."],
   ready: ["Готовность не подтверждена", "Ты не подтвердил готовность в течение минуты. Победа в матче засчитана сопернику."],
   stopped: ["Матч остановлен", "Никто не продолжил игру за 3 минуты. Матч не засчитан, сыгранные раунды остаются в рейтинге."],
 };
@@ -17,7 +18,7 @@ const markSeen = (id) => { try { localStorage.setItem(SEEN_KEY, JSON.stringify([
 /** The notice for this player, or null: not for spectators or two on one phone, and each one only once. */
 export function noticeFor(m) {
   const n = m.endNotice;
-  if (!n || !TEXTS[n.code] || m.watching || m.hotseat) return null;
+  if (!n || !TEXTS[n.code] || m.watching || m.hotseat || m.stale) return null;
   if (n.seat !== null && n.seat !== m.serverSeat) return null;
   return seen().includes(n.id) ? null : n;
 }

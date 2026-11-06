@@ -65,7 +65,12 @@ export class OnlineMatch {
     };
     this.pulse = setInterval(presence, 15000);
     // Coming back, say it twice more: the minimise beacon (sendBeacon has no answer to check) may land a moment later.
-    this.onVisibility = () => { presence(); if (!document.hidden) for (const ms of [2000, 6000]) setTimeout(() => { if (!document.hidden) presence(); }, ms); };
+    // Coming back, the screen still holds the state from before minimising: explanation windows wait for a fresh one
+    // (or 4 s), so the one that is current now shows, not an older one that the server has since replaced.
+    this.onVisibility = () => {
+      if (document.hidden) { this.stale = true; clearTimeout(this.staleTimer); }
+      else if (this.stale) { this.shownAt = Date.now(); this.staleTimer = setTimeout(() => { this.stale = false; store.changed(); }, 4000); }
+      presence(); if (!document.hidden) for (const ms of [2000, 6000]) setTimeout(() => { if (!document.hidden) presence(); }, ms); };
     document.addEventListener("visibilitychange", this.onVisibility);
     this.onHide = () => { try { navigator.sendBeacon?.("/api/presence", new Blob([JSON.stringify({ status: "hidden", token: session.token })], { type: "application/json" })); } catch {} };
     addEventListener("pagehide", this.onHide);
@@ -117,6 +122,7 @@ export class OnlineMatch {
       st = JSON.parse(JSON.stringify(st).replaceAll("Скаут Боб", this.botName));
     }
     const before = this.g;
+    if (this.stale && this.shownAt && st.serverNow - (this.offset ?? 0) >= this.shownAt - 1000) { this.stale = false; clearTimeout(this.staleTimer); }
     this.state = st;
     this.offset = st.serverNow - Date.now();
     this.watching = st.role !== "player";
