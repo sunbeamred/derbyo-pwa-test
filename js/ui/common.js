@@ -2,7 +2,7 @@
 import { html, useState, useEffect, useLayoutEffect, useRef } from "../../vendor/preact-htm.js";
 import { BUILD } from "../update.js";
 
-export { html, useState, useEffect, useRef };
+export { html, useState, useEffect, useRef, useLayoutEffect };
 
 export const cx = (...a) => a.filter(Boolean).join(" ");
 // Pictures are WebP (a quarter of the PNG weight) and cached for a day: the build number makes a replaced picture load at once.

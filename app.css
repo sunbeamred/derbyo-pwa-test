@@ -559,7 +559,7 @@ input { font-family: inherit; }
 .lead { flex: none; width: 56px; }
 .row-head { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
 .col-head { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.col-title { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.2; min-height: 2.4em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.col-title { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.2; min-height: 2.4em; text-wrap: balance; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .word-lines { display: flex; flex-direction: column; align-items: center; gap: 1px; font-weight: 600; line-height: 1.2; white-space: nowrap; }
 .cicon { flex: none; width: var(--s); height: var(--s); object-fit: contain; }
 .cicon.flag { display: grid; place-items: center; font-size: calc(var(--s) * .8); line-height: 1; width: auto; position: relative; }

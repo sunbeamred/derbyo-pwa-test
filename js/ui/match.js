@@ -1,5 +1,5 @@
 // The match screen (port of MatchView.swift and Motion.swift).
-import { html, useState, useEffect, useRef, cx, img, Icon, Panel, useSheet, Alert, Toast, RatingTag, breakable, vibrate, flagView, useDoubleTap, LikeEcho, Marquee } from "./common.js";
+import { html, useState, useEffect, useLayoutEffect, useRef, cx, img, Icon, Panel, useSheet, Alert, Toast, RatingTag, breakable, vibrate, flagView, useDoubleTap, LikeEcho, Marquee } from "./common.js";
 import { byId } from "../data.js";
 import { photoOf } from "../net.js";
 import { store } from "../model.js";
@@ -368,7 +368,15 @@ function WordLines({ text }) {
   const words = text.split(" ").flatMap((w) => w.replace(/-(?=\S)/g, "-\n").split("\n"));
   const longest = Math.max(...words.map((w) => w.length));
   const size = Math.max(7.5, Math.min(12, 12 * 8.4 / Math.max(longest, 1)));
-  return html`<span class="word-lines" style=${`font-size:${size}px`}>${words.map((w) => html`<span>${w}</span>`)}</span>`;
+  // Measured, too: a long word in another language shrinks the label until it fits the column (never under 7 px).
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref.current, box = el?.parentElement?.clientWidth;
+    if (!el || !box) return;
+    el.style.fontSize = `${size}px`;
+    if (el.scrollWidth > box) el.style.fontSize = `${Math.max(7, (size * box) / el.scrollWidth - 0.2)}px`;
+  }, [text]);
+  return html`<span class="word-lines" ref=${ref} style=${`font-size:${size}px`}>${words.map((w) => html`<span>${w}</span>`)}</span>`;
 }
 
 function Board({ m, tap }) {
