@@ -295,7 +295,8 @@ export class OnlineMatch {
     // alone, or the number drops by those 5 seconds the moment the player comes back.
     const grace = (p) => !!g.hideBudget && !!p?.online && (p.status === "hidden" || p.status === "blurred") && !spent(p) ? HIDE_GRACE * 1000 : 0;
     const budget = (p, deadline) => deadline ? Math.max(0, Math.ceil((deadline - grace(p) - now) / 1000)) : spent(p) ? HIDE_GRACE : Math.round((p?.hideLeftMs ?? this.awayTotal * 1000) / 1000);
-    const total = (p, deadline) => deadline && p?.since ? Math.max(1, Math.round((deadline - grace(p) - p.since) / 1000)) : spent(p) ? HIDE_GRACE : this.awayTotal;
+    // Minimised with budget left: the gold ring goes on from where the green one stood, on the level's whole budget.
+    const total = (p, deadline) => grace(p) ? this.awayTotal : deadline && p?.since ? Math.max(1, Math.round((deadline - grace(p) - p.since) / 1000)) : spent(p) ? HIDE_GRACE : this.awayTotal;
     this.leftAwayBudget = budget(me, mineUntil);
     this.leftAwayTotal = total(me, mineUntil);
     this.oppAwayTotal = total(them, until);
