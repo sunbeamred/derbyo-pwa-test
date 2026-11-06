@@ -91,7 +91,7 @@ function App() {
   const afterPop = useRef(null);
   /** What to do once a cover's own back step has landed. */
   const afterCover = useRef(null);
-  live.current = { match, minimized, stack, searching, leaving, tab, matchLeaving };
+  live.current = { match, minimized, stack, searching, leaving, tab, matchLeaving, elsewhere };
 
   useEffect(() => store.on(redraw), []);
   // The profile tab reads the account again each time it opens (and when the app comes back on it): a match since
@@ -251,6 +251,13 @@ function App() {
   };
   const busyNow = () => { const b = live.current.minimized; return b && !b.watching && !b.closed; };
   const app = {
+    /** While a match is on (kept here or remembered by the server), a new game's screens do not open: the window
+     *  «Сначала заверши матч» comes instead (owner, 2026-11-06; the return bar lay over their «Играть»). */
+    blocked: () => {
+      if (busyNow()) { setBusy(true); return true; }
+      if (live.current.elsewhere) { setElsewhereAsk("busy"); return true; }
+      return false;
+    },
     open: (m) => open(watchClose(m)),
     quick: () => { if (busyNow()) setBusy(true); else openSearch(); },
     join: (name) => open(new Match(Opponent.human(name), false)),
@@ -462,8 +469,8 @@ function App() {
     ${leaveAsk ? html`<${Alert} title="Выйти из матча?" message=${`Раунд засчитается ${minimized?.opponent.name ?? "сопернику"}.`} onClose=${() => setLeaveAsk(false)}
       actions=${[{ title: "Остаться", run: () => setLeaveAsk(false) }, { title: "Выйти", kind: "destructive", run: dropNow }]} />` : null}
     ${busy ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setBusy(false)}
-      message=${`Ты ещё играешь с ${minimized?.opponent.name ?? "соперником"}. Доиграй или выйди из матча — потом можно в другую комнату.`}
-      actions=${[{ title: "Вернуться в матч", kind: "bold", run: () => { setBusy(false); ret(); } }, { title: "Отмена", run: () => setBusy(false) }]} />` : null}
+      message=${`Идёт матч с ${minimized?.opponent.name ?? "соперником"}. Вернись в него или сдайся — потом можно начать новый.`}
+      actions=${[{ title: "Вернуться в матч", kind: "bold", run: () => { setBusy(false); ret(); } }, { title: "Сдаться", kind: "destructive", stay: true, run: () => { setBusy(false); setLeaveAsk(true); } }, { title: "Отмена", run: () => setBusy(false) }]} />` : null}
     ${elsewhereAsk === "busy" && elsewhere ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setElsewhereAsk(null)}
       message=${`Идёт матч ${elsewhere.bot ? "с ботом" : `с ${elsewhere.opponent ?? "соперником"}`}. Вернись в него или сдайся — потом можно начать новый.`}
       actions=${[{ title: "Вернуться в матч", kind: "bold", run: comeBack }, { title: "Сдаться", kind: "destructive", run: () => setElsewhereAsk("leave"), stay: true }, { title: "Отмена", run: () => setElsewhereAsk(null) }]} />` : null}

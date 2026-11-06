@@ -71,6 +71,7 @@ export function OnlineLobby({ nav, app }) {
   // One phone needs the sandbox server (it seats «Игрок 2»); the site shows it as coming soon.
   const hotseat = !!account.profile && "showFlag" in account.profile;
   // Bot and one-phone games take the same settings as a room.
+  const go = (run) => () => { if (!app.blocked?.()) run(); };
   const practice = (kind) => nav.push("settings", { settings: newSettings(), kind,
     start: (s) => { nav.back(); return kind === "bot" ? app.bot(createBody(s)) : app.hotseat(createBody(s)); } });
   // A sandbox admin (tester1) watches any room unseen, a locked one too, without the password.
@@ -83,17 +84,17 @@ export function OnlineLobby({ nav, app }) {
     <${LobbyHeader} title="Футбольные крестики-нолики" back=${nav.back} />
     <section class="mode-group glass">
       <h4 class="mg-head"><i class="mg-dot on"></i>Онлайн<small>соперники с derbyo.online</small></h4>
-      <button class="primary-btn" onClick=${() => nav.push("quickPick")}><img src=${img("bolt")} alt="" />Быстрая игра</button>
+      <button class="primary-btn" onClick=${go(() => nav.push("quickPick"))}><img src=${img("bolt")} alt="" />Быстрая игра</button>
       <div class="two">
-        <button class="navy-btn tall" onClick=${() => nav.push("room")}><img src=${img("invite")} alt="" />Создать</button>
-        <button class="mint-btn tall press" onClick=${() => nav.push("code")}><img src=${img("arrow")} alt="" />По коду</button>
+        <button class="navy-btn tall" onClick=${go(() => nav.push("room"))}><img src=${img("invite")} alt="" />Создать</button>
+        <button class="mint-btn tall press" onClick=${go(() => nav.push("code"))}><img src=${img("arrow")} alt="" />По коду</button>
       </div>
-      ${hotseat ? html`<button class="navy-btn" onClick=${() => nav.push("room", { debug: true })}>🛠 Тест: соперник-кукла</button>` : null}
+      ${hotseat ? html`<button class="navy-btn" onClick=${go(() => nav.push("room", { debug: true }))}>🛠 Тест: соперник-кукла</button>` : null}
     </section>
     <section class="mode-group glass">
       <h4 class="mg-head"><i class="mg-dot"></i>Офлайн<small>без рейтинга</small></h4>
-      ${mode("bot", "С ботом", "Тренировка на настоящем поле", () => practice("bot"))}
-      ${mode(null, "На одном телефоне", hotseat ? "Игрок 1 против Игрока 2" : "Скоро", hotseat ? () => practice("hotseat") : null)}
+      ${mode("bot", "С ботом", "Тренировка на настоящем поле", go(() => practice("bot")))}
+      ${mode(null, "На одном телефоне", hotseat ? "Игрок 1 против Игрока 2" : "Скоро", hotseat ? go(() => practice("hotseat")) : null)}
     </section>
     <${Section} t="ОТКРЫТЫЕ КОМНАТЫ" />
     ${err ? html`<p class="hint-line small pad">${err}</p>`

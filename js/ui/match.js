@@ -181,7 +181,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${/* One window at a time: «Ты здесь?» and the surrender question first, the explanation waits for them. */
       noticeFor(m) && !m.idleCheck && !confirmSurrender ? html`<${Explainer} notice=${noticeFor(m)} key=${noticeFor(m).id} />` : null}
     <${DebugTools} m=${m} />
-    ${m.idleCheck ? html`<${Alert} title="Проверка активности" tone="warn" message="Второй ход без действий. Без подтверждения активности сопернику может быть присуждена победа."
+    ${m.idleCheck ? html`<${Alert} title="Проверка активности" tone="warn" message="Уже второй ход без действий. Без подтверждения активности сопернику может быть присуждена победа."
       onClose=${() => { m.imHere(); store.changed(); }} actions=${[{ title: "Продолжить игру", run: () => { m.imHere(); store.changed(); } }]} />` : null}
     ${confirmSurrender ? html`<${Alert} title=${`Сдаться в раунде ${m.round}?`} message=${`Раунд выиграет ${m.opponent.name}. Счёт станет ${m.score[0]}:${m.score[1] + 1}.`}
       onClose=${() => setConfirmSurrender(false)}
