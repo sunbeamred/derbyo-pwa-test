@@ -505,12 +505,20 @@ input { font-family: inherit; }
   background-image: linear-gradient(#FFF1C2, #F2C14E); background-clip: text; -webkit-background-clip: text; color: transparent;
   filter: drop-shadow(0 0 5px rgba(246, 212, 130, .7)) drop-shadow(0 0 12px rgba(246, 212, 130, .3)); }
 .colon { font-size: 22px; font-weight: 700; color: rgba(246, 212, 130, .45); margin-top: -4px; }
-.round-steps { display: flex; align-items: center; gap: 5px; }
+/* A fixed strip: bars share its width and shorten as rounds are added, dots from five (owner, 2026-11-06). */
+.round-steps { display: flex; align-items: center; justify-content: center; gap: 5px; width: 46px; }
 .round-steps b { font-size: 10px; color: #A4B9CB; font-variant-numeric: tabular-nums; }
 .step { width: 12px; height: 6px; border-radius: 3px; background: #354A5D; position: relative; }
 /* Four or five rounds keep the score box no wider than its digits, so the names keep their room. */
-.round-steps.many { gap: 3px; }
-.round-steps.many .step { width: 7px; }
+.round-steps .step { flex: 1 1 0; min-width: 6px; width: auto; }
+.round-steps.n1 .step { flex: 0 0 20px; }
+.round-steps.n3 { gap: 4px; }
+.round-steps.n4 { gap: 4px; }
+.round-steps.n5 { gap: 3px; }
+.round-steps.folded { gap: 2px; }
+.round-steps.n5 .step, .round-steps.folded .step { flex: 0 0 6px; height: 6px; border-radius: 50%; }
+.round-steps.n5 .step.live::after, .round-steps.folded .step.live::after { border-radius: 50%; }
+.round-steps.folded b { margin-right: 1px; font-size: 9px; }
 .step.x { background: #FF8998; }
 .step.o { background: #7EE5B8; }
 .step.d { background: #A4B9CB; }

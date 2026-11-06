@@ -206,7 +206,7 @@ function Scoreboard({ m, openProfile, openStands }) {
         flag=${m.myFlag} reaction=${m.myReaction} away=${m.leftAwayFor ?? null} left=${!!m.meLeft} onClick=${() => openProfile(0)} />
       <div class="scorebug" aria-label=${`Счёт ${m.score[0]}:${m.score[1]}, раунд ${m.round}`}>
         <div class="digits"><b class="digit">${m.score[0]}</b><span class="colon">:</span><b class="digit">${m.score[1]}</b></div>
-        <${RoundSteps} results=${m.roundResults.map((r) => (r === null ? null : m.seat(r)))} current=${m.round} live=${!m.roundOver} />
+        <${RoundSteps} results=${m.roundResults.map((r) => (r === null ? null : m.seat(r)))} current=${m.round} live=${!m.roundOver} base=${minRounds(m)} />
       </div>
       <${PlayerSide} name=${m.opponent.name} photo=${m.avatarOf?.(1)} mark=${m.mark(1)} red=${m.mySeat === 1} tokens=${m.oppTokens} active=${live(1)} mine=${false}
         isBot=${m.opponent.isBot} flag=${m.opponent.flag} reaction=${m.oppReaction} away=${m.oppAwayFor} left=${m.oppLeft} onClick=${() => openProfile(1)} />
@@ -305,16 +305,22 @@ function PlayerSide({ name, photo, flag, mark, red, tokens, active, mine, isBot,
   </button>`;
 }
 
-/** One bar per round, filled with the winner's colour, the live round outlined; long matches fold into "+N". */
-function RoundSteps({ results, current, live }) {
-  const total = Math.max(3, results.length + (live ? 1 : 0));
+/** The fewest rounds the match can take: the wins it needs (2 by default), or a fixed number of rounds. */
+const minRounds = (m) => { const s = m.state?.settings; return Math.max(1, s?.winsRequired ?? (s?.tiebreak ? 2 : s?.rounds) ?? 2); };
+
+/** One bar per round, filled with the winner's colour, the live round outlined (owner, 2026-11-06): as many as the
+ *  match needs at least, one more as each further round begins. The strip keeps its width, so the bars shorten
+ *  as rounds are added and become dots from the fifth; past five, the last four show after "+N". */
+function RoundSteps({ results, current, live, base = 2 }) {
+  const total = Math.max(base, results.length + (live ? 1 : 0), current || 0);
   const first = total > 5 ? total - 4 : 0;
+  const shown = total - first;
   const steps = [];
   for (let i = first; i < total; i++) {
     const r = i < results.length ? results[i] : undefined;
     steps.push(html`<i class=${cx("step", r === undefined ? "" : r === 0 ? "x" : r === 1 ? "o" : "d", i === current - 1 && live && "live")}></i>`);
   }
-  return html`<div class=${cx("round-steps", total - first > 3 && "many")}>${first > 0 ? html`<b>+${first}</b>` : null}${steps}</div>`;
+  return html`<div class=${cx("round-steps", `n${Math.min(shown, 5)}`, first > 0 && "folded")}>${first > 0 ? html`<b>+${first}</b>` : null}${steps}</div>`;
 }
 
 export function ConditionIcon({ icon, size = 34 }) {
