@@ -132,8 +132,8 @@ function ScoutChoices({ m, cell, clue, bought }) {
     <div class="scout-head"><img src=${img("scout")} alt="" /><b>Скаут</b><span class="cost small"><img src=${img("coin")} alt="" /><b>${m.tokens}</b></span></div>
     <p class="hint-line small">Подсказки видны обоим. Каждая покупается отдельно.</p>
     ${choice(Hints.profile, "Футбольные факты без имени")}
-    ${choice(Hints.letters, "Первые буквы и ещё одна в длинных словах")}
     ${choice(Hints.four, "Год рождения, годы карьеры и трофей")}
+    ${choice(Hints.letters, "Первые буквы и ещё одна в длинных словах")}
     <p class="hint-line tiny">Два самостоятельных верных захвата подряд: +1. Не более +2 за раунд.</p>
   </div>`;
 }
