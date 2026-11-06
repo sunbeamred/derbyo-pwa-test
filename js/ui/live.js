@@ -330,6 +330,9 @@ export function OnlineLocker({ nav, app, m }) {
   const st = m.state;
   const host = m.them;
   const settings = fromServer(st?.settings, st?.locked);
+  // The host of a room the server made for them (a friend's call) sets the rules here as in their own room, until the match starts.
+  const canEdit = !!st?.isHost && !st?.quick && !st?.game && (st?.round ?? 0) === 0;
+  const edit = (s) => m.settings(createBody(s)).catch(() => {});
   const flip = (k) => setOpen({ ...open, [k]: !open[k] });
   const meReady = !!m.me?.ready;
   // A friend's room: the caller has a minute to come in, counted down on their side of the duel.
@@ -343,9 +346,13 @@ export function OnlineLocker({ nav, app, m }) {
     <${Duel} leftRed=${m.mySeat === 0}
       left=${{ name: m.leftName, photo: m.avatarOf(0), flag: m.myFlag, rating: m.myRating, rank: m.myRank, ready: meReady, open: () => setProfile({ owner: 0 }) }}
       right=${host ? { name: host.name, bot: !!host.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!host.ready, gone: !host.online, note: awayNote, open: () => setProfile({ owner: 1 }) } : null} />
-    <${Collapsible} title="НАСТРОЙКИ МАТЧА" summary=${summary(settings)} open=${open.settings} toggle=${() => flip("settings")}>
+    ${canEdit ? html`<button class="settings-card press" onClick=${() => nav.push("settings", { settings, set: edit })}>
+      <img src=${img(presetOf(settings)?.icon ?? "settings")} alt="" />
+      <span><small>Настройки матча</small><b>${summary(settings)}</b>${extras(settings) ? html`<em>${extras(settings)}</em>` : null}</span>
+      <${Icon} name="right" size="13" weight="3" class="chev" />
+    </button>` : html`<${Collapsible} title="НАСТРОЙКИ МАТЧА" summary=${summary(settings)} open=${open.settings} toggle=${() => flip("settings")}>
       <div class="set-rows">${settingRows(settings).map(([k, v]) => html`<div><span>${k}</span><b>${v}</b></div>`)}</div>
-    <//>
+    <//>`}
     <${RoomTalk} m=${m} />
     <p class="hint-line small">Первый ход — ×. Подсказки и поле общие для всех подключившихся.</p>
   </div></div>
