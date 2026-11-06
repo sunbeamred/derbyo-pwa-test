@@ -233,7 +233,7 @@ function App() {
       setElsewhere(null);
       const m = watchClose(new OnlineMatch(s));
       for (let i = 0; i < 50 && !m.state; i++) await new Promise((ok) => setTimeout(ok, 100));
-      setTab(1);
+      setTab(1); setSearching(false); setSearchLeaving(false);
       if (s.role === "player" && !m.hasBoard) nav.locker(m); else open(m);
     } catch (e) { alert(e.message); findElsewhere(); }
   };
