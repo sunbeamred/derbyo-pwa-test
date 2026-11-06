@@ -138,7 +138,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
           : menuRow("Пауза", () => m.requestPause(), { enabled: !m.canLeaveFree })}
         ${m.turn === 0 && !m.paused ? menuRow("Передать ход", () => m.passOnPurpose()) : null}
         ${drawRows(true)}
-        ${m.canLeaveFree ? menuRow(`Выйти без штрафа · ${m.opponent.name} ${m.oppIdle ? "бездействует" : "не отвечает"}`, close)
+        ${m.canLeaveFree ? menuRow(`Выйти без штрафа · ${m.opponent.name} ${quietWord(m)}`, close)
           : menuRow("Сдаться в раунде", () => setConfirmSurrender(true), { destructive: true })}`}`}
   </div>`);
 
@@ -238,6 +238,10 @@ function LevelRow({ m, live }) {
 
 /** Under a player in the header: what the player is doing (in the game, minimised, offline…) and the ring of
  * their time-away budget, always there; it empties while they are away. */
+/** Why «Выйти без штрафа» is offered, after the opponent's name: two missed turns, the app closed or minimised
+ *  between rounds, or a pause / «Готов» left unanswered (owner, 2026-11-06). */
+const quietWord = (m) => m.oppIdle ? "бездействует" : m.freeLeave === "gone" ? (m.oppGoneKind === "offline" ? "— нет связи" : "свернул") : "не отвечает";
+
 // «нет связи»: a broken link, drawn so it looks the same on every phone (the ⛓️‍💥 emoji is missing on older ones).
 const LINK_BROKEN = html`<svg class="st-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5 5 11a2.1 2.1 0 0 1-3-3l1.5-1.5M9.5 6.5 11 5a2.1 2.1 0 0 1 3 3l-1.5 1.5M5.5 2v2M2 5.5h2M10.5 14v-2M14 10.5h-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
 
@@ -246,13 +250,16 @@ function SideTag({ m, owner }) {
   if (isBot) return html`<span class="side-st"><span class="st in">● в игре</span></span>`;
   const away = mine ? m.leftAwayFor ?? null : m.oppAwayFor;
   const gone = mine ? m.leftGoneKind : m.oppGoneKind;
-  const kind = (mine ? m.leftAwayKind : m.oppAwayKind) ?? gone;
+  // Between rounds a closed or minimised app is shown as itself, not as «не отвечает» (owner, 2026-11-06).
+  const goneFree = !mine && m.canLeaveFree && m.freeLeave === "gone";
+  const kind = (mine ? m.leftAwayKind : m.oppAwayKind) ?? gone ?? (goneFree ? "hidden" : null);
   const left = mine ? !!m.meLeft : m.oppLeft;
   const status = left ? html`<span class="st left">○ покинул матч</span>`
     // «не отвечает» only when the server says so (the same signal that offers «Выйти без штрафа»).
-    : !mine && m.canLeaveFree && away === null ? html`<span class="st idle">⏱ ${m.oppIdle ? "бездействует" : "не отвечает"}</span>`
+    // Two missed turns with the app open: «💤 спит»; a pause or «Готов» left unanswered: «⏱ не отвечает».
+    : !mine && m.canLeaveFree && away === null && !goneFree ? html`<span class="st idle">${m.oppIdle ? "💤 спит" : "⏱ не отвечает"}</span>`
     // A missed turn is not shown (owner, 2026-11-06): «бездействует» comes once it matters.
-    : away !== null || gone ? html`<span class="st away">${kind === "offline" ? html`${LINK_BROKEN} нет связи` : "◒ свернул"}</span>`
+    : away !== null || gone || goneFree ? html`<span class="st away">${kind === "offline" ? html`${LINK_BROKEN} нет связи` : "◒ свернул"}</span>`
     : html`<span class="st in">● в игре</span>`;
   // The budget: the server's seconds left (counting down while away), out of the level's total.
   const total = (mine ? (m.watching ? m.leftAwayTotal : m.myAwayTotal) : m.oppAwayTotal) ?? m.awayTotal ?? 45;
@@ -463,7 +470,7 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
         <${TurnDial} m=${m} size=${48} />
         ${m.canLeaveFree && !m.watching ? html`<button class="tray-label press" onClick=${m.paused || (m.online && !m.fromQuick) ? close : findNew}>
             <b style="color:#32E5A1">${m.paused || (m.online && !m.fromQuick) ? "Выйти без штрафа »" : "Новый соперник »"}</b>
-            <small>${opp} ${m.oppIdle ? "бездействует" : "не отвечает"}</small></button>`
+            <small>${opp} ${quietWord(m)}</small></button>`
         : pause ? html`<button class="tray-label press" onClick=${() => { pause.run(); store.changed(); }}>
             <b style=${`color:${pause.color}`}>${pause.title}</b><small>${pause.detail}</small></button>`
         : html`<span class="tray-label"><b style=${`color:${color}`}>${title}</b>${sub}</span>`}`}
