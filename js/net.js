@@ -109,6 +109,8 @@ export const social = {
   friend: (target, action) => api("/api/social/friend", { target, action }),
   // `contexto`: a Контекстно room code to call the friend into, instead of a new tic-tac-toe match.
   invite: (target, contexto) => api("/api/social/invite", contexto ? { target, contexto } : { target }),
+  /** A call into the room you made (owner, 2026-11-07): the friend takes its free seat. */
+  inviteRoom: (target, room) => api("/api/social/invite", { target, room }),
   invitation: (id, action) => api("/api/social/invitation", { id, action }),
 };
 /** «Где я»: the match this profile is in on the server, from any device: { code, live, bot, opponent } or null. */

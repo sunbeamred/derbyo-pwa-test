@@ -7,6 +7,7 @@ import { isStandalone } from "../install.js";
 import { BUILD } from "../update.js";
 import { ONLINE, siteStats, account } from "../net.js";
 import { ProfileSheet } from "./profile.js";
+import { FriendsStrip } from "./friends.js";
 import { ViewerList } from "./sheets.js";
 
 // MARK: settings (server/presets.mjs)
@@ -92,6 +93,7 @@ export function HomeView({ nav }) {
         <img src=${img("sound")} alt="" class=${sound ? "" : "off"} />${sound ? null : html`<i class="slash"></i>`}</button>
       ${!ONLINE || visitors >= 40 ? html`<span class="online-pill"><i></i>${ONLINE ? visitors : 41} онлайн</span>` : null}
     </div>
+    ${ONLINE ? html`<${FriendsStrip} />` : null}
     <${Section} t="ИГРЫ" />
     <div class="game-card">
       <img class="hero" src=${`img/hero.webp?v=${BUILD}`} alt="" />

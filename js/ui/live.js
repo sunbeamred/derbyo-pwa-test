@@ -5,6 +5,7 @@ import { PRESETS, LEVELS, QuickChoice, Section, RoomPassword, Collapsible, summa
 import { ViewerList } from "./sheets.js";
 import { ProfileSheet } from "./profile.js";
 import { Face } from "./account.js";
+import { RoomFriends } from "./friends.js";
 import { openRooms, quick, createRoom, debugRoom, account } from "../net.js";
 import { OnlineMatch } from "../online.js";
 
@@ -173,7 +174,10 @@ const Derby = () => html`<div class="queue-football" aria-hidden="true">
 </div>`;
 
 /** One player in the duel bubble: photo, name, flag with rating and place, readiness. */
-function DuelSide({ p, red, side }) {
+function DuelSide({ p, red, side, invite }) {
+  // The free seat of a room you made is the way to call a friend into it (owner, 2026-11-07).
+  if (!p && invite) return html`<button class=${cx("ds free invite press", side)} onClick=${invite}><span class="ds-av wait call"><${Icon} name="friendAdd" size="22" weight="2" /></span>
+    <b class="ds-name">Позвать друга</b><small class="ds-none">или поделись кодом</small></button>`;
   if (!p) return html`<div class=${cx("ds free", side)}><span class="ds-av wait"><i></i><${Icon} name="question" size="22" weight="2" /></span>
     <b class="ds-name">Ждём игрока</b><small class="ds-none">место свободно</small></div>`;
   return html`<button class=${cx("ds press", side)} onClick=${p.open} aria-label=${`${p.name}, открыть профиль`}>
@@ -186,11 +190,11 @@ function DuelSide({ p, red, side }) {
 }
 
 /** Both players in one bubble, face to face, with the VS emblem between them. */
-const Duel = ({ left, right, leftRed = true, children }) => html`<div class="duel glass">
+const Duel = ({ left, right, leftRed = true, invite, children }) => html`<div class="duel glass">
   <div class="duel-row">
     <${DuelSide} p=${left} red=${leftRed} side="l" />
     <span class="duel-vs" aria-hidden="true"><i>VS</i></span>
-    <${DuelSide} p=${right} red=${!leftRed} side="r" />
+    <${DuelSide} p=${right} red=${!leftRed} side="r" invite=${invite} />
   </div>${children}</div>`;
 
 /** The room's chat and stands as two tabs of one card. */
@@ -245,6 +249,7 @@ export function OnlineRoom({ nav, app, debug = false }) {
   const [settings, setSettings] = useState(newSettings());
   const [copied, setCopied] = useState(false);
   const [waiting, setWaiting] = useState(false);
+  const [calling, setCalling] = useState(false);
   const [m, err] = useRoom(() => (debug ? debugRoom() : createRoom(createBody(settings))).then((s) => new OnlineMatch(s)), app);
   // The tap shows «Готов» at once; from the next server state on, the server's word is what shows.
   useEffect(() => setWaiting(false), [m?.state]);
@@ -267,10 +272,10 @@ export function OnlineRoom({ nav, app, debug = false }) {
       <button class="cb-btn main press" disabled=${!m} onClick=${share} aria-label="Поделиться"><${Icon} name="share" size="18" /></button>
     </div>
     <p class="hint-line small pad">${err ?? (copied ? "Скопировано — отправь другу" : "Друг войдёт по коду из приложения или на derbyo.online. Третий и дальше — на трибуну.")}</p>
-    <${Duel} leftRed=${(m?.mySeat ?? 0) === 0}
+    <${Duel} leftRed=${(m?.mySeat ?? 0) === 0} invite=${m && !debug ? () => setCalling(true) : null}
       left=${{ name: m?.leftName ?? account.name, photo: m?.avatarOf(0) ?? account.profile?.avatar ?? null, flag: m?.myFlag, rating: m?.myRating ?? account.profile?.rating ?? null, rank: m?.myRank ?? null, ready: meReady, open: () => {} }}
       right=${friend ? { name: friend.name, bot: !!friend.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!friend.ready, open: () => {} } : null}>
-      ${!friend && m ? html`<button class="chip-btn duel-bot press" onClick=${() => m.addBot().catch(() => {})}><img src=${img("bot")} alt="" />Посадить бота</button>` : null}
+      ${!friend && m ? html`<button class="text-btn muted duel-bot press" onClick=${() => m.addBot().catch(() => {})}><img src=${img("bot")} alt="" />Посадить бота</button>` : null}
     <//>
     <button class="settings-card press" onClick=${() => nav.push("settings", { settings, set: setSettings })}>
       <img src=${img(p?.icon ?? "settings")} alt="" />
@@ -279,6 +284,7 @@ export function OnlineRoom({ nav, app, debug = false }) {
     </button>
     <${RoomTalk} m=${m} />
   </div></div>
+  ${calling && !friend ? html`<${Panel} onClose=${() => setCalling(false)}>${() => html`<${RoomFriends} code=${m?.code} share=${share} />`}<//>` : null}
   <${BottomBar}>${meReady || waiting ? html`<${ReadyWait} m=${m} who=${friend?.name ?? "второго игрока"} />`
     : html`<button class="primary-btn" disabled=${!m || !friend || !passwordOK(settings)} onClick=${() => { setWaiting(true); m.ready().catch(() => setWaiting(false)); }}>
     ${!passwordOK(settings) ? "Задай пароль от 4 символов" : !friend ? "Ждём второго игрока" : "Начать матч"}</button>`}<//>

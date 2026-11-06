@@ -368,11 +368,11 @@ function App() {
       const i = list.find((x) => x.direction === "incoming" && x.status === "pending" && !seen.has(x.id));
       if (i) { seen.add(i.id); setInvite(i); }
       // A call into a Контекстно room waits on its seat in the room, not as a bubble over the menu.
-      setCalls(list.filter((x) => x.direction === "outgoing" && x.game !== "contexto"));
+      setCalls(list.filter((x) => x.direction === "outgoing" && x.game !== "contexto" && x.game !== "room"));
     });
     invites.start();
     // The countdowns move every second while a call is open.
-    const t = setInterval(() => { if (invites.list.length) setCalls(invites.list.filter((x) => x.direction === "outgoing" && x.game !== "contexto" && x.expires > Date.now())); }, 1000);
+    const t = setInterval(() => { if (invites.list.length) setCalls(invites.list.filter((x) => x.direction === "outgoing" && x.game !== "contexto" && x.game !== "room" && x.expires > Date.now())); }, 1000);
     return () => { off(); invites.stop(); clearInterval(t); };
   }, [sandbox]);
   const route = (hash) => {
@@ -391,6 +391,11 @@ function App() {
     const onWatch = (e) => { setTab(1); app.joinRoom(e.detail, { role: "spectator" }); };
     const onReturn = () => { const m = live.current.minimized; if (!m) return; setMatch(m); setMinimized(null); setMatchLeaving(false); coverOpened(); };
     addEventListener("derbyo-watch", onWatch);
+    // A friend's call into their own room: its free seat, by its code, as «По коду» does.
+    const onJoinRoom = (e) => { setTab(1); app.joinRoom(e.detail, { role: "player" }); };
+    const onFriends = () => setTab(2);
+    addEventListener("derbyo-join-room", onJoinRoom);
+    addEventListener("derbyo-friends", onFriends);
     const onInstall = () => setInstall(true);
     addEventListener("derbyo-install", onInstall);
     const onFeedback = (e) => setFeedback(e.detail || {});
@@ -399,7 +404,7 @@ function App() {
     const onMessage = (e) => { if (e.data?.open) route(new URL(e.data.open).hash); };
     addEventListener("derbyo-session", onSession);
     navigator.serviceWorker?.addEventListener("message", onMessage);
-    return () => { removeEventListener("derbyo-session", onSession); removeEventListener("derbyo-watch", onWatch); removeEventListener("derbyo-install", onInstall); removeEventListener("derbyo-feedback", onFeedback); removeEventListener("derbyo-return", onReturn); navigator.serviceWorker?.removeEventListener("message", onMessage); };
+    return () => { removeEventListener("derbyo-session", onSession); removeEventListener("derbyo-watch", onWatch); removeEventListener("derbyo-join-room", onJoinRoom); removeEventListener("derbyo-friends", onFriends); removeEventListener("derbyo-install", onInstall); removeEventListener("derbyo-feedback", onFeedback); removeEventListener("derbyo-return", onReturn); navigator.serviceWorker?.removeEventListener("message", onMessage); };
   }, []);
   useEffect(() => {
     if (ONLINE && /^#(invite=|friends$)/.test(location.hash)) { const h = location.hash; history.replaceState(history.state, "", location.pathname + location.search); route(h); }
@@ -480,7 +485,7 @@ function App() {
     ${news && !install && !match ? html`<${WhatsNewSheet} close=${() => setNews(false)} />` : null}
     ${askPush && !install && !news && !match ? html`<${PushAskSheet} close=${() => setAskPush(false)} />` : null}
     ${invite && !match ? html`<div class="invite-toast glass" role="alert">
-      <img src=${img("invite")} alt="" /><span><b>${invite.nickname}</b><small>${invite.game === "contexto" ? "зовёт в Контекстно" : "зовёт сыграть"}</small></span>
+      <img src=${img("invite")} alt="" /><span><b>${invite.nickname}</b><small>${invite.game === "contexto" ? "зовёт в Контекстно" : invite.game === "room" ? "зовёт в свою комнату" : "зовёт сыграть"}</small></span>
       <button class="chip-btn press accept" onClick=${() => { const i = invite; setInvite(null); takeInvite(i).catch((e) => alert(e.message)); }}>Играть</button>
       <button class="round-no press" aria-label="Скрыть" onClick=${() => setInvite(null)}><${Icon} name="x" size="14" weight="2.5" /></button></div>` : null}
     ${feedback ? html`<${FeedbackSheet} context=${feedback} close=${() => setFeedback(null)} />` : null}
