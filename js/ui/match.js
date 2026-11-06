@@ -258,6 +258,7 @@ function SideTag({ m, owner }) {
     // «не отвечает» only when the server says so (the same signal that offers «Выйти без штрафа»).
     // Two missed turns with the app open: «💤 спит»; a pause or «Готов» left unanswered: «⏱ не отвечает».
     : !mine && m.canLeaveFree && away === null && !goneFree ? html`<span class="st idle">${m.oppIdle ? "💤 спит" : "⏱ не отвечает"}</span>`
+    : !mine && m.oppSleeping && away === null && !gone ? html`<span class="st idle">💤 спит</span>`
     // A missed turn is not shown (owner, 2026-11-06): «бездействует» comes once it matters.
     : away !== null || gone || goneFree ? html`<span class="st away">${kind === "offline" ? html`${LINK_BROKEN} нет связи` : "◒ свернул"}</span>`
     : html`<span class="st in">● в игре</span>`;

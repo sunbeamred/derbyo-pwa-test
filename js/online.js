@@ -26,6 +26,8 @@ export function criterion(c) {
   return { key: c.id, title: c.type === "p" ? POSITION[c.key] ?? title : title, icon, note: c.note ?? null };
 }
 
+// «💤 спит» after this much of the opponent's own turn time with nothing done (owner, 2026-11-07).
+const SLEEP_MS = 75_000;
 // The server's HIDE_GRACE: after the time-away budget, an absence this long loses the round.
 const HIDE_GRACE = 5;
 
@@ -280,6 +282,18 @@ export class OnlineMatch {
     if (this.paused && this.resume?.[this.mySeat] && !this.resume?.[1 - this.mySeat]) { this.resumeSince ??= now; this.resumeWait = Math.round((now - this.resumeSince) / 1000); }
     else { this.resumeSince = null; this.resumeWait = null; }
     const them = this.them, me = this.me;
+    // «💤 спит» (owner, 2026-11-07): the opponent's own turn time with nothing done, my turns not counted. A lapsed
+    // turn of theirs (the server's missed run) counts whole; any move of theirs ends the run, and so the count.
+    const opp = 1 - this.mySeat, turnMs = (g.seconds || 0) * 1000;
+    if (g.stage !== "play" || g.paused || this.watching) { this.oppIdleMs = 0; this.oppTurnSince = null; }
+    else {
+      const theirs = g.turn === opp, picking = theirs && g.selected !== null && g.selected !== undefined;
+      if (theirs && !g.deadline) this.oppTurnSince ??= now; else if (!theirs) this.oppTurnSince = null;
+      const started = g.deadline && turnMs ? g.deadline - turnMs : this.oppTurnSince;
+      const lapsed = (g.missed?.[opp] || 0) * turnMs;
+      this.oppIdleMs = picking ? 0 : lapsed + (theirs && started ? Math.max(0, now - started) : 0);
+    }
+    this.oppSleeping = !this.hotseat && this.oppIdleMs >= SLEEP_MS;
     const until = them?.awayDeadline ?? them?.returnDeadline;
     this.oppAwayFor = them && (until || !them.online || them.status === "hidden") && !this.roundOver ? Math.max(0, Math.round((now - (them.since ?? now)) / 1000)) : null;
     // Why a side is away, as the site says it: the tab hidden, another window, or the connection lost.
