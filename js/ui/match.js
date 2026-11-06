@@ -344,12 +344,30 @@ export function ConditionIcon({ icon, size = 34 }) {
   }
 }
 
+// Surnames on the cards (owner, 2026-11-06): Messi, Donnarumma, Aubameyang; the search, the profile and «Не подходит»
+// keep the full name. Particles stay with the surname (van Dijk, De Bruyne, dos Santos), one-word names stay whole
+// (Ronaldinho), an East Asian name gives its first word (Son Heung-min → Son), and two equal surnames on one board
+// get the initial (C. Ronaldo, R. Ronaldo).
+const PARTICLES = new Set(["van", "von", "de", "der", "den", "da", "das", "do", "dos", "di", "del", "della", "le", "la", "du", "el", "al", "ten", "ter", "bin", "ibn", "mac", "st."]);
+export function surname(name = "") {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name.trim();
+  if (/-[a-z]/.test(parts.at(-1))) return parts[0];
+  let i = parts.length - 1;
+  while (i > 1 && PARTICLES.has(parts[i - 1].toLowerCase())) i--;
+  return parts.slice(i).join(" ");
+}
+const cardNames = (names) => {
+  const short = names.map((n) => (n ? surname(n) : null));
+  return short.map((s, i) => s && short.filter((x) => x === s).length > 1 && names[i].trim().split(/\s+/).length > 1 ? `${names[i].trim()[0]}. ${s}` : s);
+};
+
 /** A row label in the narrow left column: one word per line, shrunk together to fit. */
 function WordLines({ text }) {
   // A hyphenated name breaks after the hyphen (Saint-|Germain), so one long word does not shrink the whole label.
   const words = text.split(" ").flatMap((w) => w.replace(/-(?=\S)/g, "-\n").split("\n"));
   const longest = Math.max(...words.map((w) => w.length));
-  const size = Math.max(9, Math.min(12, 12 * 8.4 / Math.max(longest, 1)));
+  const size = Math.max(7.5, Math.min(12, 12 * 8.4 / Math.max(longest, 1)));
   return html`<span class="word-lines" style=${`font-size:${size}px`}>${words.map((w) => html`<span>${w}</span>`)}</span>`;
 }
 
@@ -374,6 +392,7 @@ function Board({ m, tap }) {
     });
   }, [m.reward?.id]);
   const winning = [...Array(9).keys()].filter((i) => m.cells[i]?.winning);
+  const shortNames = cardNames([...Array(9).keys()].map((i) => { const c = m.cells[i]; return c ? (c.name ?? byId[c.playerId]?.name ?? null) : null; }));
   const locked = m.turn !== 0 || m.roundOver || m.paused || m.review || m.watching;
   return html`<div class="board" ref=${ref}>
     <div class="board-row head">
@@ -384,7 +403,7 @@ function Board({ m, tap }) {
       <span class="lead row-head"><${ConditionIcon} icon=${m.rows[r].icon} size=${38} /><${WordLines} text=${m.rows[r].title} /></span>
       ${[0, 1, 2].map((c) => {
         const i = r * 3 + c, cell = m.cells[i];
-        return html`<${Cell} key=${i} cell=${cell} cross=${cell ? m.seat(cell.owner) === 0 : false}
+        return html`<${Cell} key=${i} cell=${cell} short=${shortNames[i]} cross=${cell ? m.seat(cell.owner) === 0 : false}
           selected=${m.selected === i || (m.review?.owner === 0 && m.review?.cell === i)} locked=${locked}
           oppPick=${m.oppSelected === i || (m.review?.owner === 1 && m.review?.cell === i)} clued=${!!m.sharedClues[i]}
           recent=${m.recent === i} disputed=${m.review?.cell === i} plain=${m.watching} phase=${Math.max(0, winning.indexOf(i)) * 0.3}
@@ -396,7 +415,7 @@ function Board({ m, tap }) {
   </div>`;
 }
 
-function Cell({ cell, cross, selected, locked, oppPick, clued, recent, disputed, plain, phase, label, tap, respect = 0, canRespect = false, giveRespect }) {
+function Cell({ cell, short, cross, selected, locked, oppPick, clued, recent, disputed, plain, phase, label, tap, respect = 0, canRespect = false, giveRespect }) {
   const twice = useDoubleTap(() => canRespect && giveRespect());
   if (cell?.blocked) return html`<button class="cell free locked" aria-label=${`${label}: закрыта опекой`}><img class="cell-glyph lock" src=${img("lock")} alt="" /></button>`;
   const p = !cell ? null : cell.name ? { name: cell.name, photo: photoOf(cell) } : byId[cell.playerId];
@@ -407,7 +426,7 @@ function Cell({ cell, cross, selected, locked, oppPick, clued, recent, disputed,
       ${p.photo ? html`<img class="cell-photo" src=${p.photo} alt="" />` : null}
       <span class="cell-shade"></span>
       <img class="cell-mark" src=${img(cross ? "mark-x" : "mark-o")} alt="" />
-      <span class=${cx("cell-name", ((n) => n > 12 ? "xlong" : n > 9 && "long")(Math.max(...p.name.split(/\s+/).map((w) => w.length))))}>${p.name}</span>
+      <span class=${cx("cell-name", ((n) => n > 12 ? "xlong" : n > 9 && "long")(Math.max(...(short ?? p.name).split(/\s+/).map((w) => w.length))))}>${short ?? p.name}</span>
       ${cell.winning ? html`<span class="sheen"></span>` : null}
       ${recent ? html`<span class="echo"></span>` : null}
       ${respect ? html`<span class="respect-badge">🤝 ${respect}</span>` : null}

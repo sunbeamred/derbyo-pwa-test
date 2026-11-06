@@ -145,7 +145,7 @@ input { font-family: inherit; }
   background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .14); color: var(--ink); }
 .back-btn { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; }
 .lobby-header { display: flex; align-items: center; gap: 10px; }
-.lobby-header h1 { font-size: 19px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lobby-header h1 { min-width: 0; font-size: clamp(16px, 5vw, 19px); font-weight: 700; line-height: 1.15; text-wrap: balance; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .section { font-size: 11px; font-weight: 500; letter-spacing: 1px; color: var(--muted); padding-top: 8px; }
 .spinner { width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid rgba(7, 19, 30, .25); border-top-color: var(--on-red); animation: spin .8s linear infinite; flex: none; }
 .spinner.muted { border-color: rgba(168, 184, 202, .25); border-top-color: var(--muted); }
@@ -265,7 +265,7 @@ input { font-family: inherit; }
 .room-tile:disabled { opacity: 1; }
 .rt-top { display: flex; align-items: center; gap: 5px; min-width: 0; padding-left: 4px; }
 .rt-level { flex: none; width: 22px; height: 22px; object-fit: contain; }
-.rt-name { min-width: 0; font-size: 13.5px; font-weight: 800; color: var(--tint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rt-name { min-width: 0; font-size: clamp(11px, 3.5vw, 13.5px); font-weight: 800; color: var(--tint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rt-meta { flex: none; font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .rt-meta::before { content: "· "; }
 .rt-flex { flex: 1; }
@@ -679,7 +679,7 @@ input { font-family: inherit; }
 .round-btn:disabled { opacity: 1; }
 @keyframes swell { from { clip-path: inset(0 calc(100% - 58px) 0 0 round 29px); } to { clip-path: inset(0 0 0 0 round 29px); } }
 .rb-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; animation: fade-in .25s .18s both; }
-.rb-text b { font-size: min(15px, 3.9vw); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rb-text b { font-size: min(15px, 3.9vw); font-weight: 700; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .rb-text small { font-size: 11px; font-weight: 600; opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chev2 { flex: none; font-size: 22px; font-weight: 700; line-height: 1; margin-top: -3px; padding-right: 2px; }
 .menu { padding: 0 16px 6px; display: flex; flex-direction: column; gap: 8px; }
@@ -704,8 +704,8 @@ input { font-family: inherit; }
 .cond-pair > i { font-style: normal; font-size: 13px; font-weight: 600; color: var(--muted); }
 .cond-half { flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
 .cond-half .cicon { flex: none; }
-.cond-half b { min-width: 0; font-size: 14px; font-weight: 600; text-align: center; line-height: 1.15; overflow-wrap: anywhere; hyphens: auto;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cond-half b { min-width: 0; font-size: 13.5px; font-weight: 600; text-align: center; line-height: 1.15; overflow-wrap: normal; hyphens: manual; text-wrap: balance;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .answer-scroll { flex: 0 1 auto; min-height: 0; overflow-y: auto; padding: 0 16px 2px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
 .answer-row { flex: none; display: flex; gap: 8px; padding: 0 12px 10px; }
 .answer-row.locked { opacity: .45; pointer-events: none; }
@@ -1098,7 +1098,7 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 /* The coins sit centred between the photo and the score. */
 .pinfo .ptokens { position: static; transform: none; align-self: center; }
 /* Level row: each side's status and the ring of its time-away budget. */
-.side-st { display: inline-flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; font-size: 11.5px; font-weight: 800; }
+.side-st { display: inline-flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; font-size: clamp(9.5px, 3vw, 11.5px); font-weight: 800; }
 .side-st .st { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .away-ring { position: relative; flex: none; width: 22px; height: 22px; display: grid; place-items: center; }
 .away-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
