@@ -1,8 +1,8 @@
 // The «Играть» screens on the site's server: open rooms, the quick game's search, your room, joining by code,
 // someone's room before the start. Same look as the offline prototype's (lobby.js), real data underneath.
-import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel, RatingTag } from "./common.js";
+import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel, RatingTag, Alert } from "./common.js";
 import { PRESETS, LEVELS, QuickChoice, Section, RoomPassword, Collapsible, summary, settingRows, extras, passwordOK, newSettings, presetOf, presetsOf } from "./lobby.js";
-import { ViewerList } from "./sheets.js";
+import { ViewerList, ChatSheet, StandsSheet } from "./sheets.js";
 import { ProfileSheet } from "./profile.js";
 import { Face } from "./account.js";
 import { RoomFriends } from "./friends.js";
@@ -176,7 +176,7 @@ const Derby = () => html`<div class="queue-football" aria-hidden="true">
 /** One player in the duel bubble: photo, name, flag with rating and place, readiness. */
 function DuelSide({ p, red, side, invite }) {
   // The free seat of a room you made is the way to call a friend into it (owner, 2026-11-07).
-  if (!p && invite) return html`<button class=${cx("ds free invite press", side)} onClick=${invite}><span class="ds-av wait call"><${Icon} name="friendAdd" size="22" weight="2" /></span>
+  if (!p && invite) return html`<button class=${cx("ds free invite press", side)} onClick=${invite}><span class="ds-av wait call"><img src=${img("invite")} alt="" /></span>
     <b class="ds-name">Позвать друга</b><small class="ds-none">или поделись кодом</small></button>`;
   if (!p) return html`<div class=${cx("ds free", side)}><span class="ds-av wait"><i></i><${Icon} name="question" size="22" weight="2" /></span>
     <b class="ds-name">Ждём игрока</b><small class="ds-none">место свободно</small></div>`;
@@ -224,6 +224,22 @@ function RoomTalk({ m }) {
 }
 
 /** «Готов. Ждём …» with «Отменить», when the server can take readiness back (the sandbox can, older servers cannot). */
+/** The room's bottom as in the match (owner, 2026-11-07): the wide action on the left, the chat on the right. */
+function RoomBar({ m, children }) {
+  const [chat, setChat] = useState(false);
+  const [stands, setStands] = useState(false);
+  const [viewer, setViewer] = useState(null);
+  return html`<div class="room-bar">
+    <div class="room-act">${children}</div>
+    <div class="tray tools-tray glass"><button class="tool press" disabled=${!m} aria-label=${m?.unread ? `Чат, новых сообщений: ${m.unread}` : "Чат"}
+      onClick=${() => { if (m) m.unread = 0; setChat(true); }}><img src=${img("chat")} alt="" />${m?.unread ? html`<b class="badge">${m.unread}</b>` : null}</button></div>
+    ${chat && m ? html`<${Panel} onClose=${() => setChat(false)} class="chat-panel">${(leave) => html`<${ChatSheet} m=${m}
+      openStands=${() => { leave(); setStands(true); }} openViewer=${(v) => { leave(); setViewer(v); }} />`}<//>` : null}
+    ${stands && m ? html`<${Panel} onClose=${() => setStands(false)}>${(leave) => html`<${StandsSheet} m=${m} open=${(v) => { leave(); setViewer(v); }} />`}<//>` : null}
+    ${viewer && m ? html`<${Panel} onClose=${() => setViewer(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${1} viewer=${viewer} close=${leave} />`}<//>` : null}
+  </div>`;
+}
+
 const ReadyWait = ({ m, who }) => html`<div class="waiting-bar"><span class="spinner muted"></span>
   <span class="wb-t"><b>Готов. Ждём ${who}…</b><small>матч начнётся, когда оба готовы</small></span>
   ${m?.state && "freeLeave" in m.state ? html`<button class="navy-btn small wb-cancel" onClick=${() => m.unready().catch(() => {})}>Отменить</button>` : null}</div>`;
@@ -250,6 +266,9 @@ export function OnlineRoom({ nav, app, debug = false }) {
   const [copied, setCopied] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [calling, setCalling] = useState(false);
+  const [askClose, setAskClose] = useState(false);
+  const [oppMenu, setOppMenu] = useState(false);
+  const [oppProfile, setOppProfile] = useState(false);
   const [m, err] = useRoom(() => (debug ? debugRoom() : createRoom(createBody(settings))).then((s) => new OnlineMatch(s)), app);
   // The tap shows «Готов» at once; from the next server state on, the server's word is what shows.
   useEffect(() => setWaiting(false), [m?.state]);
@@ -265,7 +284,7 @@ export function OnlineRoom({ nav, app, debug = false }) {
   const ex = [extras(settings), settings.closed ? "🔒 по паролю" : ""].filter(Boolean).join(" · ");
   const p = presetOf(settings);
   return html`<div class="screen-with-bar"><div class="screen-scroll"><div class="page">
-    <${LobbyHeader} title="Комната" back=${nav.back} />
+    <${LobbyHeader} title="Комната" back=${() => (m && !m.closed ? setAskClose(true) : nav.back())} />
     <div class="code-bar glass">
       <span class="cb-t"><small class="cap">КОД КОМНАТЫ</small><b class="cb-code">${code}</b></span>
       <button class="cb-btn press" disabled=${!m} onClick=${copy} aria-label="Скопировать код"><${Icon} name=${copied ? "check" : "copy"} size="18" /></button>
@@ -274,20 +293,27 @@ export function OnlineRoom({ nav, app, debug = false }) {
     <p class="hint-line small pad">${err ?? (copied ? "Скопировано — отправь другу" : "Друг войдёт по коду из приложения или на derbyo.online. Третий и дальше — на трибуну.")}</p>
     <${Duel} leftRed=${(m?.mySeat ?? 0) === 0} invite=${m && !debug ? () => setCalling(true) : null}
       left=${{ name: m?.leftName ?? account.name, photo: m?.avatarOf(0) ?? account.profile?.avatar ?? null, flag: m?.myFlag, rating: m?.myRating ?? account.profile?.rating ?? null, rank: m?.myRank ?? null, ready: meReady, open: () => {} }}
-      right=${friend ? { name: friend.name, bot: !!friend.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!friend.ready, open: () => {} } : null}>
-      ${!friend && m ? html`<button class="text-btn muted duel-bot press" onClick=${() => m.addBot().catch(() => {})}><img src=${img("bot")} alt="" />Посадить бота</button>` : null}
+      right=${friend ? { name: friend.name, bot: !!friend.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!friend.ready, open: () => setOppMenu(true) } : null}>
+      ${!friend && m ? html`<button class="chip-btn duel-bot press" onClick=${() => m.addBot().catch(() => {})}><img src=${img("bot")} alt="" />Посадить бота</button>` : null}
     <//>
     <button class="settings-card press" onClick=${() => nav.push("settings", { settings, set: setSettings })}>
       <img src=${img(p?.icon ?? "settings")} alt="" />
       <span><small>Настройки матча</small><b>${summary(settings)}</b>${ex ? html`<em>${ex}</em>` : null}</span>
       <${Icon} name="right" size="13" weight="3" class="chev" />
     </button>
-    <${RoomTalk} m=${m} />
   </div></div>
   ${calling && !friend ? html`<${Panel} onClose=${() => setCalling(false)}>${() => html`<${RoomFriends} code=${m?.code} share=${share} />`}<//>` : null}
-  <${BottomBar}>${meReady || waiting ? html`<${ReadyWait} m=${m} who=${friend?.name ?? "второго игрока"} />`
+  ${askClose ? html`<${Alert} title="Закрыть комнату?" message=${friend && !friend.bot ? `${friend.name} выйдет из комнаты вместе с тобой.` : "Код комнаты перестанет работать."}
+    onClose=${() => setAskClose(false)} actions=${[{ title: "Остаться", run: () => setAskClose(false) },
+      { title: "Закрыть", kind: "destructive", run: () => { setAskClose(false); m.act("close_room").catch(() => {}).finally(() => nav.back()); } }]} />` : null}
+  ${oppMenu && friend ? html`<${Alert} title=${friend.name} onClose=${() => setOppMenu(false)} actions=${[
+      ...(friend.bot ? [] : [{ title: "Профиль", run: () => { setOppMenu(false); setOppProfile(true); } }]),
+      { title: friend.bot ? "Убрать бота" : "Удалить из комнаты", kind: "destructive", run: () => { setOppMenu(false); m.act(friend.bot ? "remove_bot" : "kick", { seat: 1 - m.mySeat }).catch(() => {}); } },
+      { title: "Отмена", run: () => setOppMenu(false) }]} />` : null}
+  ${oppProfile && friend ? html`<${Panel} onClose=${() => setOppProfile(false)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${1} close=${leave} />`}<//>` : null}
+  <${BottomBar}><${RoomBar} m=${m}>${meReady || waiting ? html`<${ReadyWait} m=${m} who=${friend?.name ?? "второго игрока"} />`
     : html`<button class="primary-btn" disabled=${!m || !friend || !passwordOK(settings)} onClick=${() => { setWaiting(true); m.ready().catch(() => setWaiting(false)); }}>
-    ${!passwordOK(settings) ? "Задай пароль от 4 символов" : !friend ? "Ждём второго игрока" : "Начать матч"}</button>`}<//>
+    ${!passwordOK(settings) ? "Задай пароль от 4 символов" : !friend ? "Ждём второго игрока" : "Начать матч"}</button>`}<//><//>
   </div>`;
 }
 
@@ -353,7 +379,10 @@ export function OnlineLocker({ nav, app, m }) {
     <div class="locker-title"><small class="cap gold">РАЗДЕВАЛКА</small><h2>${m.closed ? "Комната закрыта" : !host ? "Ждём второго игрока" : "Оба на месте. Пора играть."}</h2></div>
     <${Duel} leftRed=${m.mySeat === 0}
       left=${{ name: m.leftName, photo: m.avatarOf(0), flag: m.myFlag, rating: m.myRating, rank: m.myRank, ready: meReady, open: () => setProfile({ owner: 0 }) }}
-      right=${host ? { name: host.name, bot: !!host.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!host.ready, gone: !host.online, note: awayNote, open: () => setProfile({ owner: 1 }) } : null} />
+      right=${host ? { name: host.name, bot: !!host.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!host.ready, gone: !host.online, note: awayNote, open: () => setProfile({ owner: 1 }) } : null}>
+      ${!st?.isHost && !m.closed && !meReady ? html`<button class="chip-btn duel-bot press" onClick=${() => m.act("seat", { seat: null }).then(() => { handed.current = true; app.open(m); }).catch(() => {})}>
+        <img src=${img("eye")} alt="" />На трибуну</button>` : null}
+    <//>
     ${canEdit ? html`<button class="settings-card press" onClick=${() => nav.push("settings", { settings, set: edit })}>
       <img src=${img(presetOf(settings)?.icon ?? "settings")} alt="" />
       <span><small>Настройки матча</small><b>${summary(settings)}</b>${extras(settings) ? html`<em>${extras(settings)}</em>` : null}</span>
@@ -361,14 +390,13 @@ export function OnlineLocker({ nav, app, m }) {
     </button>` : html`<${Collapsible} title="НАСТРОЙКИ МАТЧА" summary=${summary(settings)} open=${open.settings} toggle=${() => flip("settings")}>
       <div class="set-rows">${settingRows(settings).map(([k, v]) => html`<div><span>${k}</span><b>${v}</b></div>`)}</div>
     <//>`}
-    <${RoomTalk} m=${m} />
     <p class="hint-line small">Первый ход — ×. Подсказки и поле общие для всех подключившихся.</p>
   </div></div>
-  <${BottomBar}>
+  <${BottomBar}><${RoomBar} m=${m}>
     ${m.closed ? html`<button class="primary-btn" onClick=${nav.back}>К списку комнат</button>`
       : meReady ? html`<${ReadyWait} m=${m} who=${host?.name ?? "соперника"} />`
-      : html`<button class="primary-btn" disabled=${!host} onClick=${() => m.ready().catch(() => {})}>${host ? "Я готов — начать матч" : "Ждём второго игрока"}</button>`}
-  <//>
+      : html`<button class="primary-btn" disabled=${!host} onClick=${() => m.ready().catch(() => {})}>${host ? "Начать матч" : "Ждём второго игрока"}</button>`}
+  <//><//>
   ${profile ? html`<${Panel} onClose=${() => setProfile(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${profile.owner} close=${leave} />`}<//>` : null}
   </div>`;
 }
