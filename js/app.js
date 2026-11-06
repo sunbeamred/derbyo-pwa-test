@@ -11,7 +11,7 @@ import { notifications } from "./push.js";
 import { invites, secondsLeft } from "./invites.js";
 import { updates } from "./update.js";
 import { TabBar } from "./ui/tabbar.js";
-import { ONLINE, account, createRoom, joinRoom, savedSession, social, sendFeedback, feedbackReplies, feedbackSeen, startVisitPing, setPlace, link } from "./net.js";
+import { ONLINE, account, createRoom, joinRoom, savedSession, myRoom, busyHook, social, sendFeedback, feedbackReplies, feedbackSeen, startVisitPing, setPlace, link } from "./net.js";
 import { OnlineMatch } from "./online.js";
 import { OnlineLobby, OnlineSearch, OnlineRoom, OnlineJoinCode, OnlineLocker } from "./ui/live.js";
 import { RatingTab, ProfileTab, takeInvite } from "./ui/account.js";
@@ -68,6 +68,9 @@ function App() {
   const [searching, setSearching] = useState(false);
   const [searchLeaving, setSearchLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** A match the server says this profile is in, with nothing kept on this phone (begun on another device). */
+  const [elsewhere, setElsewhere] = useState(null);
+  const [elsewhereAsk, setElsewhereAsk] = useState(null);
   const [install, setInstall] = useState(() => installState.shouldOffer());
   const [askPush, setAskPush] = useState(false);
   const [news, setNews] = useState(() => whatsNew.due());
@@ -103,10 +106,16 @@ function App() {
   // Online: who you are on the site, and a match you were in before the app was closed.
   useEffect(() => {
     if (!ONLINE) return;
-    account.load().catch(() => {});
     const s = savedSession.get();
     if (s?.token) setMinimized(watchClose(new OnlineMatch(s)));
+    account.load().catch(() => {}).then(() => findElsewhere());
+    busyHook.fn = () => findElsewhere(true);
+    const f = () => { if (!document.hidden) findElsewhere(); };
+    document.addEventListener("visibilitychange", f);
+    return () => document.removeEventListener("visibilitychange", f);
   }, []);
+  // A match closed here may have been the one the server knew: ask again a moment later.
+  useEffect(() => { if (ONLINE && !match && !minimized) { const t = setTimeout(() => findElsewhere(), 1500); return () => clearTimeout(t); } setElsewhere(null); }, [match, minimized]);
   // One clock for the match, open or minimised: it keeps running while you look at the tabs.
   useEffect(() => {
     const t = setInterval(() => { const m = live.current.match ?? live.current.minimized; if (m) { m.tick(); store.changed(); } }, 1000);
@@ -207,6 +216,39 @@ function App() {
   };
   /** A server match that ends (room closed, opened elsewhere) leaves the return bar. */
   function watchClose(m) { m.onClosed = () => { if (live.current.minimized === m) setMinimized(null); }; return m; }
+  /** «Где я» (owner, 2026-11-06): the server remembers the match; `ask` also opens «Сначала заверши матч». */
+  async function findElsewhere(ask = false) {
+    if (!ONLINE || live.current.match || live.current.minimized) return;
+    const r = await myRoom();
+    if (live.current.match || live.current.minimized) return;
+    setElsewhere(r);
+    if (ask && r) setElsewhereAsk("busy");
+  }
+  /** Back to the seat: the server gives it again to the same profile (resumed), from the stands' door. */
+  const comeBack = async () => {
+    const r = elsewhere; setElsewhereAsk(null);
+    if (!r) return;
+    try {
+      const s = await joinRoom(r.code, { role: "spectator" });
+      setElsewhere(null);
+      const m = watchClose(new OnlineMatch(s));
+      for (let i = 0; i < 50 && !m.state; i++) await new Promise((ok) => setTimeout(ok, 100));
+      setTab(1);
+      if (s.role === "player" && !m.hasBoard) nav.locker(m); else open(m);
+    } catch (e) { alert(e.message); findElsewhere(); }
+  };
+  /** «Сдаться» from outside: take the seat back for a moment and leave the match (the opponent wins it). */
+  const giveUp = async () => {
+    const r = elsewhere; setElsewhereAsk(null);
+    if (!r) return;
+    setElsewhere(null);
+    try {
+      const m = new OnlineMatch(await joinRoom(r.code, { role: "spectator" }));
+      for (let i = 0; i < 50 && !m.state; i++) await new Promise((ok) => setTimeout(ok, 100));
+      m.stop(true);
+    } catch (e) { alert(e.message); }
+    setTimeout(() => findElsewhere(), 800);
+  };
   const busyNow = () => { const b = live.current.minimized; return b && !b.watching && !b.closed; };
   const app = {
     open: (m) => open(watchClose(m)),
@@ -401,11 +443,12 @@ function App() {
     </main>
     <div class="edge-fade" aria-hidden="true"></div>
     ${minimized && !match && (!minimized.online || minimized.state) ? html`<${ReturnBar} m=${minimized} go=${ret} drop=${dropMinimized} />` : null}
-    ${update && !match ? html`<button class="return-bar update-bar glass-bar press" style=${`--i:${minimized ? 1 : 0}`} onClick=${() => updates.apply()}>
+    ${elsewhere && !match && !minimized ? html`<${ElsewhereBar} r=${elsewhere} go=${comeBack} drop=${() => setElsewhereAsk("leave")} />` : null}
+    ${update && !match ? html`<button class="return-bar update-bar glass-bar press" style=${`--i:${minimized || elsewhere ? 1 : 0}`} onClick=${() => updates.apply()}>
       <span class="rb-dot up"><img src=${img("sparkles")} alt="" /></span>
       <span class="rb-t"><small>Вышло обновление</small><b>${updates.text}</b></span>
       <span class="rb-go up">Обновить</span></button>` : null}
-    ${!match ? calls.map((c, n) => html`<${CallBar} c=${c} i=${(minimized ? 1 : 0) + (update ? 1 : 0) + n} key=${c.id} />`) : null}
+    ${!match ? calls.map((c, n) => html`<${CallBar} c=${c} i=${(minimized || elsewhere ? 1 : 0) + (update ? 1 : 0) + n} key=${c.id} />`) : null}
     <${TabBar} tab=${tab} pick=${pickTab} items=${[["Рейтинг", "trophy"], ["Играть", "bolt"], ["Профиль", "profile-v1", ONLINE ? ((account.ready && !account.registered) || !isStandalone() ? "!" : null) : 1]]} />
     ${searching ? html`<${Cover} class="search-cover" leaving=${searchLeaving}>${ONLINE ? html`<${OnlineSearch} done=${(r) => {
       coverClosed();
@@ -421,6 +464,11 @@ function App() {
     ${busy ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setBusy(false)}
       message=${`Ты ещё играешь с ${minimized?.opponent.name ?? "соперником"}. Доиграй или выйди из матча — потом можно в другую комнату.`}
       actions=${[{ title: "Вернуться в матч", kind: "bold", run: () => { setBusy(false); ret(); } }, { title: "Отмена", run: () => setBusy(false) }]} />` : null}
+    ${elsewhereAsk === "busy" && elsewhere ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setElsewhereAsk(null)}
+      message=${`Идёт матч ${elsewhere.bot ? "с ботом" : `с ${elsewhere.opponent ?? "соперником"}`}. Вернись в него или сдайся — потом можно начать новый.`}
+      actions=${[{ title: "Вернуться в матч", kind: "bold", run: comeBack }, { title: "Сдаться", kind: "destructive", run: () => setElsewhereAsk("leave"), stay: true }, { title: "Отмена", run: () => setElsewhereAsk(null) }]} />` : null}
+    ${elsewhereAsk === "leave" && elsewhere ? html`<${Alert} title="Покинуть матч?" message="Победа будет засчитана сопернику." onClose=${() => setElsewhereAsk(null)}
+      actions=${[{ title: "Остаться", run: () => setElsewhereAsk(null) }, { title: "Покинуть", kind: "destructive", run: giveUp }]} />` : null}
     ${install && !match ? html`<${InstallSheet} close=${() => { setInstall(false); if (whatsNew.due()) setNews(true); }} />` : null}
     ${news && !install && !match ? html`<${WhatsNewSheet} close=${() => setNews(false)} />` : null}
     ${askPush && !install && !news && !match ? html`<${PushAskSheet} close=${() => setAskPush(false)} />` : null}
@@ -550,6 +598,16 @@ const ReturnBar = ({ m, go, drop }) => html`<div class="return-bar glass-bar">
     <span class="rb-go">Вернуться</span>
   </button>
   <button class="round-no press" aria-label=${m.watching ? "Уйти с трибуны" : "Выйти из матча"} onClick=${drop}><${Icon} name="x" size="14" weight="2.5" /></button>
+</div>`;
+
+/** The match the server remembers for this profile, begun on another device: back to it, or give it up. */
+const ElsewhereBar = ({ r, go, drop }) => html`<div class="return-bar glass-bar">
+  <button class="rb-main press" onClick=${go}>
+    <span class="rb-dot"><i></i></span>
+    <span class="rb-t"><small>Матч идёт</small><b>${r.bot ? "Против бота" : r.opponent ?? "Соперник"}</b></span>
+    <span class="rb-go">Вернуться</span>
+  </button>
+  <button class="chip-btn rb-quit press" onClick=${drop}>Сдаться</button>
 </div>`;
 
 const Placeholder = ({ title, text, children }) => html`<div class="screen-scroll"><div class="page">

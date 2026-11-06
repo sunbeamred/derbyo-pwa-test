@@ -53,6 +53,8 @@ async function once(path, body, { token, post }) {
   try { data = await r.json(); } catch {}
   clearTimeout(timer);
   if (r.status === 429) throw new ApiError(429, { error: data?.error || "Слишком часто. Подожди немного.", code: "RATE" });
+  // The profile still sits in a match (maybe started on another device): the app shows it with «Вернуться / Сдаться».
+  if (data?.code === "PROFILE_BUSY") queueMicrotask(() => busyHook.fn?.());
   if (!r.ok || data?.ok === false) throw new ApiError(r.status, data);
   return data;
 }
@@ -109,6 +111,9 @@ export const social = {
   invite: (target, contexto) => api("/api/social/invite", contexto ? { target, contexto } : { target }),
   invitation: (id, action) => api("/api/social/invitation", { id, action }),
 };
+/** «Где я»: the match this profile is in on the server, from any device: { code, live, bot, opponent } or null. */
+export const myRoom = () => api("/api/rooms/mine").then((r) => r.room ?? null).catch(() => null);
+export const busyHook = { fn: null };
 export const openRooms = () => api("/api/rooms").then((r) => r.rooms);
 export const siteStats = () => api("/api/stats");
 

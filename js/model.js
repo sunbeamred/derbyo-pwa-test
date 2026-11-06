@@ -19,8 +19,8 @@ export const Opponent = {
 
 export const Hints = {
   profile: { id: "profile", cost: 1, title: "Профиль" },
-  letters: { id: "letters", cost: 2, title: "Буквы" },
-  four: { id: "four", cost: 4, title: "Биография" },
+  four: { id: "four", cost: 2, title: "Биография" },
+  letters: { id: "letters", cost: 3, title: "Буквы" },
 };
 
 /** What the scout has opened on one cell; every hint on a cell points at the same hidden answer. */
@@ -385,7 +385,7 @@ export class Match {
     if (!live()) return;
     const purse = who === 1 ? this.oppTokens : this.tokens;
     if (target !== null && !this.sharedClues[target] && purse >= 1 && Math.random() < (has("demoOppHint") ? 1 : 0.3)) {
-      const hint = purse >= 2 && Math.random() < 0.5 ? Hints.letters : Hints.profile;
+      const hint = purse >= 3 && Math.random() < 0.5 ? Hints.letters : Hints.profile;
       if (this.openHint(hint, target)) {
         if (who === 1) this.oppTokens -= hint.cost; else this.tokens -= hint.cost;
         this.show(`${this.name(who)} взял подсказку «${hint.title}» · ${hint.cost} жет.`, false); store.changed();

@@ -424,6 +424,7 @@ input { font-family: inherit; }
 .pw-field input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--ink); font-size: 16px; }
 
 /* Return bar and install */
+.rb-quit { flex: none; color: #FF9AA8; }
 .return-bar { position: absolute; left: 16px; right: 16px; bottom: calc(var(--tb-bottom) + var(--tb-h) + 10px + var(--i, 0) * 68px); z-index: 6; display: flex; align-items: center; gap: 12px;
   padding: 8px 8px 8px 10px; border-radius: 26px; animation: rise .5s var(--spring); }
 /* With the return bar up, screens leave room for it too. */
