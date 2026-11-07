@@ -1,5 +1,5 @@
 // Friends where you play (owner, 2026-11-07): «Позвать друга» from the room you made, and the friends online
-// over the games on «Играть». The full list (requests, search) stays in the profile.
+// on the tic-tac-toe screen (moved from «Играть», owner 2026-11-07: its actions are tic-tac-toe ones). The full list (requests, search) stays in the profile.
 import { html, useState, useEffect, cx, img, Icon } from "./common.js";
 import { social, account } from "../net.js";
 import { invites, secondsLeft } from "../invites.js";
@@ -73,7 +73,7 @@ export function RoomFriends({ code, share }) {
   </div>`;
 }
 
-/** Friends online over the games on «Играть»: a tap offers a match, the stands, or the full list in the profile. Hidden with nobody on. */
+/** Friends online on the tic-tac-toe screen (moved from «Играть», owner 2026-11-07: its actions are tic-tac-toe ones): a tap offers a match, the stands, or the full list in the profile. Hidden with nobody on. */
 export function FriendsStrip() {
   const st = useFriends();
   const calls = useCalls();

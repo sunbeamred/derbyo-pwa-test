@@ -5,7 +5,7 @@ import { PRESETS, LEVELS, QuickChoice, Section, RoomPassword, Collapsible, summa
 import { ViewerList, ChatSheet, StandsSheet } from "./sheets.js";
 import { ProfileSheet } from "./profile.js";
 import { Face } from "./account.js";
-import { RoomFriends } from "./friends.js";
+import { RoomFriends, FriendsStrip } from "./friends.js";
 import { openRooms, quick, createRoom, debugRoom, account } from "../net.js";
 import { OnlineMatch } from "../online.js";
 
@@ -83,6 +83,7 @@ export function OnlineLobby({ nav, app }) {
     ${run ? html`<${Icon} name="right" size="13" weight="3" class="chev" />` : null}</button>`;
   return html`<div class="screen-scroll"><div class="page">
     <${LobbyHeader} title="Футбольные крестики-нолики" back=${nav.back} />
+    <${FriendsStrip} />
     <section class="mode-group glass">
       <h4 class="mg-head"><i class="mg-dot on"></i>Онлайн<small>соперники с derbyo.online</small></h4>
       <button class="primary-btn" onClick=${go(() => nav.push("quickPick"))}><img src=${img("bolt")} alt="" />Быстрая игра</button>
