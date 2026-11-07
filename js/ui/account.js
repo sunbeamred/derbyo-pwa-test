@@ -86,24 +86,23 @@ function flagPalette(cloth) {
   if (!out.length && all.length) out.push(all[0]);
   return out.map(([r, g, b]) => `rgb(${r},${g},${b})`);
 }
-/** Four effects round the flag (owner, 2026-11-08): the champion's ring in the flag's colours (via onPalette),
- * a spotlight from above with dust floating in it (confetti tried and dropped by the owner), and depth: on scrolling the flag moves slower than the rows and fades. */
+/** Round the flag (owner, 2026-11-08): the champion's ring in the flag's colours (via onPalette) and depth: on
+ * scrolling the flag moves slower than the rows and fades. Confetti and a spotlight with dust were tried and dropped. */
 function WaveFlag({ code, visible, onPalette }) {
-  const ref = useRef(null), fxRef = useRef(null), boxRef = useRef(null);
+  const ref = useRef(null), boxRef = useRef(null);
   const [ok, setOk] = useState(false);
   useEffect(() => {
-    const canvas = ref.current, fx = fxRef.current, box = boxRef.current;
+    const canvas = ref.current, box = boxRef.current;
     if (!canvas || !code || !visible) return;
-    let raf = 0, alive = true, cloth = null, last = 0, dust = [], scrollY = 0;
+    let raf = 0, alive = true, cloth = null, last = 0, scrollY = 0;
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const dpr = Math.min(3, devicePixelRatio || 1);
     // Depth: half speed and a fade over the first 320 px of scrolling.
     const scroller = box.closest(".screen-scroll");
     const onScroll = () => { scrollY = scroller.scrollTop; if (still) depth(); };
     const depth = () => { const y = Math.max(0, scrollY); box.style.transform = `translate3d(-50%, ${(y * 0.5).toFixed(1)}px, 0) scale(${(1 + y / 2400).toFixed(4)})`; box.style.opacity = Math.max(0, 1 - y / 320).toFixed(3); };
     scroller?.addEventListener("scroll", onScroll, { passive: true });
     const waveAt = (x, t) => { const u = x / cloth.width; return { ph: u * 9.5 - t * 0.0021, reach: 0.15 + 0.85 * u }; };
-    const draw = (t, dt) => {
+    const draw = (t) => {
       const g = canvas.getContext("2d"), W = canvas.width, H = canvas.height, cw = cloth.width, ch = cloth.height;
       g.clearRect(0, 0, W, H);
       const amp = ch * 0.055, top = (H - ch) / 2, step = Math.max(1, Math.round(W / 260));
@@ -115,40 +114,25 @@ function WaveFlag({ code, visible, onPalette }) {
         g.fillStyle = light > 0 ? `rgba(255,255,255,${(light * 0.16).toFixed(3)})` : `rgba(0,0,0,${(-light * 0.38).toFixed(3)})`;
         g.fillRect(x, top + dy, step, ch);
       }
-      // Dust on its own sharp canvas above the frosted cloth.
-      const f = fx.getContext("2d"), FW = fx.width, FH = fx.height;
-      f.clearRect(0, 0, FW, FH);
-      const k = dt / 16.7;
-      for (const p of dust) {
-        p.x += p.vx * k; p.y += p.vy * k; p.tw += 0.03 * k;
-        if (p.y < 0 || p.x < FW * 0.25 || p.x > FW * 0.75) Object.assign(p, newDust(FW, FH, false));
-        f.globalAlpha = 0.25 + 0.55 * Math.abs(Math.sin(p.tw));
-        f.fillStyle = "#FFF4D6"; f.beginPath(); f.arc(p.x, p.y, p.r, 0, 6.283); f.fill();
-      }
-      f.globalAlpha = 1;
     };
-    const newDust = (W, H, anywhere) => ({ x: W * (0.32 + Math.random() * 0.36), y: anywhere ? Math.random() * H : H * (0.7 + Math.random() * 0.3),
-      vx: (Math.random() - 0.5) * 0.25 * dpr, vy: -(0.12 + Math.random() * 0.3) * dpr, r: (0.7 + Math.random() * 1.3) * dpr, tw: Math.random() * 6.28 });
-    const loop = (t) => { if (!alive) return; if (t - last > 30) { const dt = Math.min(100, t - (last || t - 33)); last = t; draw(t, dt); depth(); } raf = requestAnimationFrame(loop); };
+    const loop = (t) => { if (!alive) return; if (t - last > 30) { last = t; draw(t); depth(); } raf = requestAnimationFrame(loop); };
     (async () => {
       const r = box.getBoundingClientRect();
       cloth = await flagCloth(code, r.width);  // frosted anyway: screen points are enough, and lighter to redraw
       if (!alive) return;
       if (!cloth) { setOk(false); onPalette?.(null); return; }
       canvas.width = cloth.width; canvas.height = Math.round(cloth.height * 1.16);
-      fx.width = Math.round(canvas.width * dpr); fx.height = Math.round(canvas.height * dpr);
       onPalette?.(flagPalette(cloth));
-      dust = [...Array(26)].map(() => newDust(fx.width, fx.height, true));
       setOk(true);
       onScroll(); depth();
-      if (still) draw(0, 0); else raf = requestAnimationFrame(loop);
+      if (still) draw(0); else raf = requestAnimationFrame(loop);
     })();
     return () => { alive = false; cancelAnimationFrame(raf); scroller?.removeEventListener("scroll", onScroll); };
   }, [code, visible]);
   useEffect(() => { if (!code) onPalette?.(null); }, [code]);
   if (!code) return null;
   return html`<div class=${cx("wave-flag", ok && "on")} ref=${boxRef} aria-hidden="true">
-    <canvas class="wf-cloth" ref=${ref}></canvas><span class="wf-glass"></span><span class="wf-beam"></span><canvas class="wf-fx" ref=${fxRef}></canvas></div>`;
+    <canvas class="wf-cloth" ref=${ref}></canvas><span class="wf-glass"></span></div>`;
 }
 
 const scoreText = (e, period) => (period === "week" ? (e.points > 0 ? "+" : "") + e.points : e.rating);
