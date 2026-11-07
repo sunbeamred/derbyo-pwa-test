@@ -1700,5 +1700,5 @@ body.ctx-full .app { --tb-space: max(22px, calc(var(--safe-b) - 10px)) !importan
 .duel-wrap > .eye-badge { z-index: 2; }
 .room-bar .round-tool { align-self: center; }
 /* Three answers and more stand one under another, as on iOS (owner, 2026-11-07: the host's menu). */
-.alert-actions.stack { flex-direction: column; }
-.alert-actions.stack .alert-btn + .alert-btn { border-left: 0; border-top: 1px solid rgba(255, 255, 255, .1); }
+.alert-actions.col { flex-direction: column; }
+.alert-actions.col .alert-btn + .alert-btn { border-left: 0; border-top: 1px solid rgba(255, 255, 255, .1); }

@@ -206,7 +206,7 @@ export function Alert({ title, tone, message, actions, onClose, children }) {
       <h3 class=${cx(tone && `tone-${tone}`)}>${title}</h3>
       ${message ? html`<p>${message}</p>` : null}
       ${children}
-      <div class=${cx("alert-actions", actions.length > 2 && "stack")}>
+      <div class=${cx("alert-actions", actions.length > 2 && "col")}>
         ${actions.map((a) => html`<button class=${cx("alert-btn", a.kind)} disabled=${!!a.disabled} onClick=${a.stay ? a.run : after(a.run)}>${a.title}</button>`)}
       </div>
     </div>
