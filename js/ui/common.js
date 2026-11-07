@@ -171,6 +171,24 @@ export function useSheet(open) {
 }
 
 /** A fixed bar at the bottom of a scrolling screen, on a solid backing that fades in at its top edge. */
+/** A room screen hides the app's tab bar, as a match does (owner, 2026-11-07). Counted: settings over a room keep it hidden. */
+let fullScreens = 0;
+export function useFullScreen(on = true) {
+  useEffect(() => {
+    if (!on) return;
+    fullScreens++; document.body.classList.add("ctx-full");
+    return () => { if (--fullScreens <= 0) { fullScreens = 0; document.body.classList.remove("ctx-full"); } };
+  }, [on]);
+}
+
+/** The screen on top of the play stack may stop the system back (gesture, Android button) to ask first.
+ *  `ask()` returns true when it took the step over (and shows its own question). */
+export const leaveGuard = { screen: null, ask: null };
+export function useLeaveGuard(screen, ask) {
+  leaveGuard.screen = screen; leaveGuard.ask = ask;
+  useEffect(() => () => { if (leaveGuard.screen === screen) { leaveGuard.screen = null; leaveGuard.ask = null; } }, []);
+}
+
 export const BottomBar = ({ children }) => html`<div class="bottom-bar">${children}</div>`;
 
 export const LobbyHeader = ({ title, back }) => html`<div class="lobby-header">

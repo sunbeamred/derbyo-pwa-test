@@ -1693,3 +1693,9 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .room-bar .tool:disabled { opacity: .5; }
 .ds.invite .ds-av.call { background: rgba(255, 255, 255, .035); box-shadow: inset 0 0 0 1.5px rgba(50, 229, 161, .45); animation: ctx-seat-call 2s ease-in-out infinite; }
 .ds.invite .ds-av.call img { width: 30px; height: 30px; object-fit: contain; }
+
+/* Rooms without the tab bar (owner, 2026-11-07): the bottom sits where the match's does; the stands eye on the duel card's top edge. */
+body.ctx-full .app { --tb-space: max(22px, calc(var(--safe-b) - 10px)) !important; }
+.duel-wrap { position: relative; }
+.duel-wrap > .eye-badge { z-index: 2; }
+.room-bar .round-tool { align-self: center; }

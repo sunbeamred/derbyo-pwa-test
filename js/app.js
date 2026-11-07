@@ -1,7 +1,7 @@
 // The app shell (port of DerbyoApp.swift): tabs, the play tab's screen stack, the match and search covers,
 // the bar that returns to a minimised match, and the offer to install on the home screen.
 import { html, render, useState, useEffect, useReducer, useRef } from "../vendor/preact-htm.js";
-import { cx, img, Icon, Alert, Panel, Marquee } from "./ui/common.js";
+import { cx, img, Icon, Alert, Panel, Marquee, leaveGuard } from "./ui/common.js";
 import { has } from "./data.js";
 import { Match, Opponent, store } from "./model.js";
 import { MatchScreen } from "./ui/match.js";
@@ -152,6 +152,8 @@ function App() {
       const cover = !!history.state?.cover;
       if (l.match && !cover) { minimize(); return; }
       if (l.searching && !cover) { closeSearch(); return; }
+      // A room asks before it is left («Закрыть комнату?»): the step back is put back and the screen shows its question.
+      if (!cover && guarded(l)) { history.pushState({ d: l.stack.length }, ""); instantPop.current = false; return; }
       // Safari's own edge swipe has already slid the old page away.
       const swiped = instantPop.current || Date.now() - edgeTouchAt < 1200;
       instantPop.current = false;
@@ -534,7 +536,9 @@ function useEdgeSwipe(ref, live, done) {
       if (!g) return;
       const s = g; g = null;
       if (!s.on) return;
-      const go = s.dx > s.w * 0.4 || (s.v > 0.35 && s.dx > 20);
+      let go = s.dx > s.w * 0.4 || (s.v > 0.35 && s.dx > 20);
+      // A room that asks first slides back into place and shows its question.
+      if (go && guarded(live.current)) go = false;
       const ease = `transform ${go ? 0.26 : 0.32}s cubic-bezier(.2,.8,.3,1), filter .3s`;
       s.top.style.transition = ease; s.under.style.transition = ease;
       paint(s, go ? 1 : 0);
@@ -551,6 +555,11 @@ function useEdgeSwipe(ref, live, done) {
     el.addEventListener("touchcancel", end);
     return () => { el.removeEventListener("touchstart", start); el.removeEventListener("touchmove", move); el.removeEventListener("touchend", end); el.removeEventListener("touchcancel", end); };
   }, []);
+}
+/** The top screen's own question before leaving, if it has one now. */
+function guarded(l) {
+  const top = l.stack?.at(-1);
+  return !!(top && leaveGuard.ask && leaveGuard.screen === top.name && leaveGuard.ask());
 }
 function paint(g, f) {
   g.top.style.transform = `translate3d(${f * 100}%,0,0)`;
