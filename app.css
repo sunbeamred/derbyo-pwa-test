@@ -1616,6 +1616,8 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
    readable. js moves the whole box for depth on scrolling (translate + opacity). */
 /* The flag is wider than the screen: clip it, or the page scrolls sideways (owner, 2026-11-08). */
 .rating-page { position: relative; isolation: isolate; overflow-x: hidden; overflow-x: clip; }
+/* The top three sit lower on the rating so more of the flag shows above them (owner, 2026-11-08). */
+.rating-page .top3 { margin-top: 64px; }
 .flag-test { position: absolute; z-index: 2; right: 16px; top: calc(var(--safe-t) + 18px); padding: 7px 12px; border-radius: 99px; font-size: 14px; font-weight: 700;
   color: var(--ink); background: rgba(13, 25, 39, .72); border: 1px solid var(--line); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 .wave-flag { position: absolute; z-index: -1; left: 50%; top: calc(var(--safe-t) - 4px); width: min(112%, 520px); transform: translateX(-50%); pointer-events: none;
