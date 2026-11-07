@@ -208,7 +208,7 @@ export function ChatSheet({ m, openStands, openViewer, reactions = true }) {
             <button class="red" onClick=${() => { setMenuFor(null); m.block(x.spectator ? x.who : null); store.changed(); }}>Заблокировать</button></span>` : null}
         <//>`)}
     </div>
-    ${reactions ? html`<div class="reactions">${["👏", "🔥", "😅", "😎", "🤝"].map((e) => html`<button class="press" onClick=${() => { m.react(e); store.changed(); }} aria-label=${`Отправить ${e}`}>${e}</button>`)}</div>` : null}
+    ${reactions && !m.watching ? html`<div class="reactions">${["👏", "🔥", "😅", "😎", "🤝"].map((e) => html`<button class="press" onClick=${() => { m.react(e); store.changed(); }} aria-label=${`Отправить ${e}`}>${e}</button>`)}</div>` : null}
     <form class="answer-row" onSubmit=${send} action="#">
       <span class="field chat-field">
         <input value=${text} onInput=${(e) => setText(e.target.value)} placeholder="Напиши сообщение" enterkeyhint="send" autocomplete="off" />

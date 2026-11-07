@@ -172,8 +172,8 @@ export class OnlineMatch {
     // Each viewer's card (rating, games, profile id) for their profile; «you» on the stands is found by id, not by name.
     this.viewerCards = Object.fromEntries((st.viewers ?? []).map((v) => [v.name, v.card ?? null]));
     this.standsMe = (st.viewers ?? []).find((v) => v.id === st.selfId)?.name ?? null;
-    this.chat = (st.chat ?? []).map((c) => ({ id: c.id, who: c.senderId === st.selfId ? "Ты" : c.name, text: c.text, kind: "text", spectator: c.role === "spectator", likes: c.likeCount ?? 0, liked: !!c.liked }));
-    for (const c of st.chat ?? []) if (!this.seenChat.has(c.id)) { this.seenChat.add(c.id); if (!this.firstState && c.senderId !== st.selfId) this.unread++; }
+    this.chat = (st.chat ?? []).map((c) => ({ id: c.id, who: c.mine ?? c.senderId === st.selfId ? "Ты" : c.name, text: c.text, kind: "text", spectator: c.role === "spectator", likes: c.likeCount ?? 0, liked: !!c.liked }));
+    for (const c of st.chat ?? []) if (!this.seenChat.has(c.id)) { this.seenChat.add(c.id); if (!this.firstState && !(c.mine ?? c.senderId === st.selfId)) this.unread++; }
     this.oppLeft = !them && st.round > 0;
     this.matchOver = !!st.seriesComplete;
     // A match won because the other side did not go on between rounds (the server's walkover, room event «abandoned»
@@ -501,6 +501,8 @@ export class OnlineMatch {
     else this.show("Реванш начинает создатель комнаты — ждём его", true);
   }
   react(e) {
+    // From the stands a reaction has no avatar to rise over (owner, 2026-11-07): the buttons are hidden there too.
+    if (this.watching) return;
     this.myReaction = { e, n: uuid(), local: true };
     if (Array.isArray(this.state?.reactions)) this.act("reaction", { emoji: e }).catch(() => {}); else this.send(e);
   }

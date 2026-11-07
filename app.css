@@ -545,11 +545,12 @@ input { font-family: inherit; }
 .reaction-echo { position: absolute; top: 50%; width: 34px; height: 34px; margin-top: -25px; display: grid; place-items: center; pointer-events: none; }
 .pside.mine .reaction-echo { left: 18px; }
 .pside.theirs .reaction-echo { right: 18px; }
-.reaction-echo b { font-size: 30px; animation: echo-pop 3s cubic-bezier(.2, .6, .4, 1) forwards; }
+.reaction-echo b { font-size: 30px; animation: echo-pop 5s ease-out forwards; }
 .reaction-echo i { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(246, 212, 130, .6); animation: echo-ring .9s ease-out forwards; opacity: 0; }
 .reaction-echo i + i { animation-delay: .12s; }
 /* The emoji pops in, then for about three seconds drifts up and fades out. */
-@keyframes echo-pop { 0% { transform: scale(.4); opacity: 0; } 8% { transform: scale(1.2); opacity: 1; } 14% { transform: scale(1); opacity: 1; } 100% { transform: translateY(-70px) scale(.9); opacity: 0; } }
+/* Owner, 2026-11-07: the reaction stays 5 s — pop by .24 s, settle by .42 s, hold to 2.2 s, then rise and fade. */
+@keyframes echo-pop { 0% { transform: scale(.4); opacity: 0; } 4.8% { transform: scale(1.2); opacity: 1; } 8.4% { transform: scale(1); opacity: 1; } 44% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-70px) scale(.9); opacity: 0; } }
 @keyframes echo-ring { 0% { transform: scale(.7); opacity: .7; filter: blur(0); } 100% { transform: scale(2.8); opacity: 0; filter: blur(9px); } }
 
 /* Board */
@@ -866,7 +867,7 @@ input { font-family: inherit; }
 /* Atmosphere and entrance */
 .atmo { position: fixed; inset: 0; pointer-events: none; z-index: 40; overflow: hidden; }
 .atmo-mark, .atmo-coin { position: absolute; left: 0; top: 0; translate: -50% -50%; opacity: 0; will-change: transform, opacity; }
-.atmo-mark { width: max(130px, 22vw); filter: blur(7px); animation: drift 3.1s ease-out var(--d) forwards; }
+.atmo-mark { width: max(90px, 19vw); filter: blur(7px); animation: drift 3.1s ease-out var(--d) forwards; }
 @keyframes drift { 0% { transform: translate(var(--x), var(--y)) rotate(-25deg); opacity: 0; }
   65% { transform: translate(calc(var(--x) + 29vw), calc(var(--y) - 50vh)) rotate(140deg); opacity: .32; }
   100% { transform: translate(calc(var(--x) + 32vw), calc(var(--y) - 55vh)) rotate(155deg); opacity: 0; } }

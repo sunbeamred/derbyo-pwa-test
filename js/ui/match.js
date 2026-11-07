@@ -297,7 +297,7 @@ function PlayerSide({ name, photo, flag, mark, red, tokens, active, mine, isBot,
   useEffect(() => {
     if (!reaction) return;
     setEcho(reaction);
-    const t = setTimeout(() => setEcho(null), 3000);
+    const t = setTimeout(() => setEcho(null), 5000);
     return () => clearTimeout(t);
   }, [reaction?.n]);
   const gone = away !== null || left;
@@ -582,7 +582,7 @@ const RewardNotice = ({ reward }) => html`<div class="reward"><b>${reward.title}
 function FinishAtmosphere({ winner }) {
   return html`<div class="atmo" aria-hidden="true">${[...Array(8).keys()].map((i) => {
     const mark = winner === null ? (i % 2 ? "mark-o" : "mark-x") : winner === 1 ? "mark-o" : "mark-x";
-    return html`<img class="atmo-mark" src=${img(mark)} alt="" style=${`--x:${-20 + (i % 4) * 32}vw;--y:${25 + Math.floor(i / 4) * 55}vh;--d:${0.07 * i}s;--f:${2 + 0.04 * i}s`} />`;
+    return html`<img class="atmo-mark" src=${img(mark)} alt="" style=${`--x:${-14 + (i % 4) * 34 + (Math.floor(i / 4) % 2 ? 17 : 0)}vw;--y:${30 + Math.floor(i / 4) * 36}vh;--d:${(0.12 * i).toFixed(2)}s;--f:${2 + 0.04 * i}s`} />`;
   })}</div>`;
 }
 
