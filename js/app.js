@@ -115,7 +115,8 @@ function App() {
     return () => document.removeEventListener("visibilitychange", f);
   }, []);
   // A match closed here may have been the one the server knew: ask again a moment later.
-  useEffect(() => { if (ONLINE && !match && !minimized) { const t = setTimeout(() => findElsewhere(), 1500); return () => clearTimeout(t); } setElsewhere(null); }, [match, minimized]);
+  // Looked up again when a room screen closes too: the bar must not keep a room just left or closed.
+  useEffect(() => { if (ONLINE && !match && !minimized) { const t = setTimeout(() => findElsewhere(), 1500); return () => clearTimeout(t); } setElsewhere(null); }, [match, minimized, stack.length]);
   // One clock for the match, open or minimised: it keeps running while you look at the tabs.
   useEffect(() => {
     const t = setInterval(() => { const m = live.current.match ?? live.current.minimized; if (m) { m.tick(); store.changed(); } }, 1000);
@@ -223,8 +224,10 @@ function App() {
   /** «Где я» (owner, 2026-11-06): the server remembers the match; `ask` also opens «Сначала заверши матч». */
   async function findElsewhere(ask = false) {
     if (!ONLINE || live.current.match || live.current.minimized) return;
+    const inRoom = () => ["room", "locker", "settings"].includes(live.current.stack.at(-1)?.name);
+    if (inRoom()) { setElsewhere(null); return; }
     const r = await myRoom();
-    if (live.current.match || live.current.minimized) return;
+    if (live.current.match || live.current.minimized || inRoom()) return;
     setElsewhere(r);
     if (ask && r) setElsewhereAsk("busy");
   }
