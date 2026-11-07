@@ -1,8 +1,8 @@
 // Shared pieces (Theme.swift and the small views the screens share).
-import { html, useState, useEffect, useRef } from "../../vendor/preact-htm.js";
+import { html, useState, useEffect, useLayoutEffect, useRef } from "../../vendor/preact-htm.js";
 import { BUILD } from "../update.js";
 
-export { html, useState, useEffect, useRef };
+export { html, useState, useEffect, useRef, useLayoutEffect };
 
 export const cx = (...a) => a.filter(Boolean).join(" ");
 // Pictures are WebP (a quarter of the PNG weight) and cached for a day: the build number makes a replaced picture load at once.
@@ -88,6 +88,27 @@ export const CloseButton = ({ onClick }) =>
   html`<button class="close-btn press" onClick=${onClick} aria-label="Закрыть"><${Icon} name="x" size="15" weight="2.8" /></button>`;
 
 /** Nicknames like damir_andromeda may wrap after "_", "-" or ".". */
+/** A name that may not fit one line (owner, 2026-11-06): it glides to its end and back, slowly, only when it does
+ *  not fit; with reduced motion it keeps the ellipsis. Not for the match header (it would distract). */
+export function Marquee({ text, class: c }) {
+  const box = useRef(null), inner = useRef(null);
+  const [shift, setShift] = useState(0);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const b = box.current, i = inner.current;
+      if (!b || !i) return;
+      const over = i.scrollWidth - b.clientWidth;
+      setShift(over > 2 && !matchMedia("(prefers-reduced-motion: reduce)").matches ? Math.ceil(over) + 2 : 0);
+    };
+    measure();
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(measure) : null;
+    ro?.observe(box.current);
+    return () => ro?.disconnect();
+  }, [text]);
+  const style = shift ? `--mq:-${shift}px;--mq-t:${(4 + shift / 18).toFixed(1)}s` : "";
+  return html`<span class=${cx("mq", shift && "run", c)} ref=${box}><span class="mq-in" ref=${inner} style=${style}>${text}</span></span>`;
+}
+
 export const breakable = (n) => n.replaceAll("_", "_​").replaceAll("-", "-​").replaceAll(".", ".​");
 
 /** A panel that slides up from the bottom edge: a dim layer behind it closes it, so does a downward drag
@@ -150,6 +171,24 @@ export function useSheet(open) {
 }
 
 /** A fixed bar at the bottom of a scrolling screen, on a solid backing that fades in at its top edge. */
+/** A room screen hides the app's tab bar, as a match does (owner, 2026-11-07). Counted: settings over a room keep it hidden. */
+let fullScreens = 0;
+export function useFullScreen(on = true) {
+  useEffect(() => {
+    if (!on) return;
+    fullScreens++; document.body.classList.add("ctx-full");
+    return () => { if (--fullScreens <= 0) { fullScreens = 0; document.body.classList.remove("ctx-full"); } };
+  }, [on]);
+}
+
+/** The screen on top of the play stack may stop the system back (gesture, Android button) to ask first.
+ *  `ask()` returns true when it took the step over (and shows its own question). */
+export const leaveGuard = { screen: null, ask: null };
+export function useLeaveGuard(screen, ask) {
+  leaveGuard.screen = screen; leaveGuard.ask = ask;
+  useEffect(() => () => { if (leaveGuard.screen === screen) { leaveGuard.screen = null; leaveGuard.ask = null; } }, []);
+}
+
 export const BottomBar = ({ children }) => html`<div class="bottom-bar">${children}</div>`;
 
 export const LobbyHeader = ({ title, back }) => html`<div class="lobby-header">
@@ -159,16 +198,16 @@ export const LobbyHeader = ({ title, back }) => html`<div class="lobby-header">
 
 /** A sheet for alerts and confirmations, in place of the system alert: it pops in, and fades before its action runs
  * (`stay` actions run at once and may keep it open). */
-export function Alert({ title, message, actions, onClose, children }) {
+export function Alert({ title, tone, message, actions, onClose, children }) {
   const [out, setOut] = useState(false);
   const after = (f) => () => { if (out) return; setOut(true); setTimeout(() => f?.(), 170); };
   return html`<div class=${cx("alert-wrap", out && "out")} onClick=${(e) => e.target === e.currentTarget && onClose && after(onClose)()}>
     <div class="alert" role="alertdialog">
-      <h3>${title}</h3>
+      <h3 class=${cx(tone && `tone-${tone}`)}>${title}</h3>
       ${message ? html`<p>${message}</p>` : null}
       ${children}
-      <div class="alert-actions">
-        ${actions.map((a) => html`<button class=${cx("alert-btn", a.kind)} onClick=${a.stay ? a.run : after(a.run)}>${a.title}</button>`)}
+      <div class=${cx("alert-actions", actions.length > 2 && "col")}>
+        ${actions.map((a) => html`<button class=${cx("alert-btn", a.kind)} disabled=${!!a.disabled} onClick=${a.stay ? a.run : after(a.run)}>${a.title}</button>`)}
       </div>
     </div>
   </div>`;

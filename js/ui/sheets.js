@@ -172,7 +172,7 @@ function ChatLine({ m, x, hold, children }) {
   </div>`;
 }
 
-export function ChatSheet({ m, openStands, openViewer }) {
+export function ChatSheet({ m, openStands, openViewer, reactions = true }) {
   const [text, setText] = useState("");
   const [menuFor, setMenuFor] = useState(null);
   const list = useRef();
@@ -208,7 +208,7 @@ export function ChatSheet({ m, openStands, openViewer }) {
             <button class="red" onClick=${() => { setMenuFor(null); m.block(x.spectator ? x.who : null); store.changed(); }}>Заблокировать</button></span>` : null}
         <//>`)}
     </div>
-    <div class="reactions">${["👏", "🔥", "😅", "😎", "🤝"].map((e) => html`<button class="press" onClick=${() => { m.react(e); store.changed(); }} aria-label=${`Отправить ${e}`}>${e}</button>`)}</div>
+    ${reactions ? html`<div class="reactions">${["👏", "🔥", "😅", "😎", "🤝"].map((e) => html`<button class="press" onClick=${() => { m.react(e); store.changed(); }} aria-label=${`Отправить ${e}`}>${e}</button>`)}</div>` : null}
     <form class="answer-row" onSubmit=${send} action="#">
       <span class="field chat-field">
         <input value=${text} onInput=${(e) => setText(e.target.value)} placeholder="Напиши сообщение" enterkeyhint="send" autocomplete="off" />
@@ -245,7 +245,7 @@ export function ReviewDecision({ m, review }) {
 export function StandsSheet({ m, open }) {
   return html`<div class="stands">
     <div class="sheet-head"><h2>Трибуна</h2><small>${m.viewers.length} / ${MAX_VIEWERS}</small></div>
-    <${ViewerList} viewers=${m.viewers} me=${m.myName} relations=${m.viewerRelations} open=${open} />
+    <${ViewerList} viewers=${m.viewers} me=${m.standsMe ?? m.myName} relations=${m.viewerRelations} open=${open} />
     <p class="hint-line small">Нажми на зрителя — откроется профиль. Зрители видят поле и пишут в чат, но не ходят.</p>
   </div>`;
 }

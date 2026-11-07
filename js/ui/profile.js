@@ -11,7 +11,7 @@ function OnlineFriend({ m, owner, viewer, name, close }) {
   const [confirmBlock, setConfirmBlock] = useState(false);
   useEffect(() => {
     let live = true;
-    const id = viewer ? null : (owner === 0 ? m.me : m.them)?.card?.profileId;
+    const id = viewer ? m.viewerProfile(viewer).profileId : (owner === 0 ? m.me : m.them)?.card?.profileId;
     const find = id ? playerProfile(id) : siteSocial.search(name).then((list) => list.find((x) => x.nickname.toLowerCase() === name.toLowerCase()) ?? null);
     find.then((p) => live && setPerson(p ?? null)).catch(() => live && setPerson(null));
     return () => { live = false; };
@@ -46,7 +46,7 @@ export function ProfileSheet({ m, owner, viewer = null, close }) {
   const bot = !viewer && (owner === 1 ? m.opponent.isBot : m.watching && !!m.me?.bot);
   const red = m.seat(owner) === 0;
   // A spectator's own name is the account's, not the seat name the match shows on the left.
-  const me = viewer === m.myName || (m.online && !!viewer && viewer === account.name);
+  const me = viewer === m.myName || (m.online && !!viewer && (viewer === m.standsMe || viewer === account.name));
   const social = !m.online && (viewer ? !me : owner === 1 && !bot);
   // Online: friends need your own account; not for yourself, a bot or the other phone's «Игрок 2».
   const onlineSocial = m.online && !m.hotseat && !!account.profile?.registered && (viewer ? !me : other && !bot && (owner === 0 ? m.me : m.them)?.card?.profileId !== account.profile?.id);

@@ -418,4 +418,5 @@ export async function takeInvite(i, action = "go") {
   invites.taken(i.id);
   if (r.session) dispatchEvent(new CustomEvent("derbyo-session", { detail: r.session }));
   if (r.contexto) dispatchEvent(new CustomEvent("derbyo-contexto", { detail: { code: r.contexto } }));
+  if (r.room) dispatchEvent(new CustomEvent("derbyo-join-room", { detail: r.room }));
 }

@@ -53,6 +53,8 @@ async function once(path, body, { token, post }) {
   try { data = await r.json(); } catch {}
   clearTimeout(timer);
   if (r.status === 429) throw new ApiError(429, { error: data?.error || "Слишком часто. Подожди немного.", code: "RATE" });
+  // The profile still sits in a match (maybe started on another device): the app shows it with «Вернуться / Сдаться».
+  if (data?.code === "PROFILE_BUSY") queueMicrotask(() => busyHook.fn?.());
   if (!r.ok || data?.ok === false) throw new ApiError(r.status, data);
   return data;
 }
@@ -107,8 +109,13 @@ export const social = {
   friend: (target, action) => api("/api/social/friend", { target, action }),
   // `contexto`: a Контекстно room code to call the friend into, instead of a new tic-tac-toe match.
   invite: (target, contexto) => api("/api/social/invite", contexto ? { target, contexto } : { target }),
+  /** A call into the room you made (owner, 2026-11-07): the friend takes its free seat. */
+  inviteRoom: (target, room) => api("/api/social/invite", { target, room }),
   invitation: (id, action) => api("/api/social/invitation", { id, action }),
 };
+/** «Где я»: the match this profile is in on the server, from any device: { code, live, bot, opponent } or null. */
+export const myRoom = () => api("/api/rooms/mine").then((r) => r.room ?? null).catch(() => null);
+export const busyHook = { fn: null };
 export const openRooms = () => api("/api/rooms").then((r) => r.rooms);
 export const siteStats = () => api("/api/stats");
 
@@ -133,6 +140,8 @@ async function admit(path, body) {
   }
 }
 export const createRoom = (settings) => admit("/api/create", { name: account.name, ...settings }).then(adopt);
+/** Sandbox: a test room against a puppet that looks like a person, with the engineering menu. */
+export const debugRoom = () => admit("/api/debug/room", { name: account.name, preset: "amateur" }).then(adopt);
 export const joinRoom = (code, { password, role = "player" } = {}) => admit("/api/join", { code, name: account.name, password, role }).then(adopt);
 
 /** The quick game's search: a ticket polled every second until the server pairs it. */
@@ -157,6 +166,35 @@ export const quick = {
   cancel: (ticket) => { keepTicket(null); return api("/api/quick/cancel", { ticket }).catch(() => null); },
 };
 
+/** Sandbox only (owner, 2026-11-07): connection diagnostics during a match — gaps between frames, drops and how long the
+ * way back took, the turn timer stuck at zero, the app hidden or shown — sent every 20 s to /api/diag, which prints them
+ * to the sandbox log. To find why an iPhone lags on the same Wi-Fi as an Android. Off on the real site. */
+export const diag = (() => {
+  const on = /sandbox/.test(location.hostname);
+  const id = Math.random().toString(36).slice(2, 8), start = Date.now();
+  const standalone = matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
+  let events = [], timer = null;
+  const flush = () => {
+    if (!on || !events.length) return;
+    const batch = events; events = [];
+    api("/api/diag", { id, standalone, at: new Date().toISOString(), events: batch }).catch(() => {});
+  };
+  return {
+    note(k, data = {}) {
+      if (!on) return;
+      events.push({ t: Math.round((Date.now() - start) / 100) / 10, k, ...data });
+      if (events.length > 150) events.splice(0, events.length - 150);
+      if (!timer) timer = setInterval(flush, 20000);
+    },
+    flush,
+  };
+})();
+if (diag) {
+  document.addEventListener("visibilitychange", () => { diag.note(document.hidden ? "hidden" : "shown"); if (document.hidden) diag.flush(); });
+  addEventListener("online", () => diag.note("net-online"));
+  addEventListener("offline", () => diag.note("net-offline"));
+}
+
 /** Is the match stream live? "ok", or "reconnecting" while it is being restored; the match screen shows a strip. */
 export const link = {
   state: "ok",
@@ -168,10 +206,10 @@ export const link = {
  * comes back at once, then with a growing pause (1 s → 15 s, with jitter, longer on a 429). Coming back to the app, the
  * network returning or the page being shown again reconnects straight away. Stops on `replaced` or `closed`. */
 export function openStream(token, onFrame) {
-  let stopped = false, ctl = null, watchdog = null, failures = 0, nap = null, heard = Date.now();
-  const kick = () => { heard = Date.now(); clearTimeout(watchdog); watchdog = setTimeout(() => ctl?.abort(), 30000); };
+  let stopped = false, ctl = null, watchdog = null, failures = 0, nap = null, heard = Date.now(), why = "", dropAt = 0, opened = 0;
+  const kick = () => { heard = Date.now(); clearTimeout(watchdog); watchdog = setTimeout(() => { why = "watchdog"; ctl?.abort(); }, 30000); };
   // Back from the background a socket may be dead without knowing it: nothing heard for 15 s means start again.
-  const wake = () => { if (stopped) return; if (nap) nap(); else if (link.state !== "ok" || Date.now() - heard > 15000) ctl?.abort(); };
+  const wake = () => { if (stopped) return; if (nap) nap(); else if (link.state !== "ok" || Date.now() - heard > 15000) { why = "wake"; ctl?.abort(); } };
   const onVisible = () => { if (!document.hidden) wake(); };
   addEventListener("online", wake); addEventListener("pageshow", wake); document.addEventListener("visibilitychange", onVisible);
   const run = async () => {
@@ -183,8 +221,10 @@ export function openStream(token, onFrame) {
         // The client marker tells the server this player sees the match intro (the first turn waits for it).
         const headers = { Authorization: `Bearer ${token}`, "X-Derbyo-Presence": document.hidden ? "hidden" : "active", "X-Derbyo-Client": "app" };
         if (generation) headers["X-Derbyo-Generation"] = generation;
+        why = ""; opened = Date.now();
         const r = await fetch("/api/events", { headers, signal: ctl.signal, cache: "no-store" });
         status = r.status;
+        diag.note("open", { status, ms: Date.now() - opened, ...(dropAt ? { down: Date.now() - dropAt } : {}) }); dropAt = 0;
         if ([401, 404, 410].includes(r.status)) { onFrame({ type: "closed", message: "Комната закрыта" }); return; }
         if (!r.ok || !r.body) throw new Error(String(r.status));
         kick();
@@ -192,7 +232,8 @@ export function openStream(token, onFrame) {
         let buf = "";
         for (;;) {
           const { value, done } = await reader.read();
-          if (done) break;
+          if (done) { why ||= "ended"; break; }
+          { const gap = Date.now() - heard; if (gap > 3000) diag.note("gap", { ms: gap, bytes: value?.length ?? 0 }); }
           kick();
           if (failures || link.state !== "ok") { failures = 0; link.set("ok"); }
           buf += dec.decode(value, { stream: true });
@@ -206,8 +247,9 @@ export function openStream(token, onFrame) {
             onFrame(f);
           }
         }
-      } catch {}
+      } catch (e) { why ||= e?.name === "AbortError" ? "abort" : "error:" + String(e?.message || e).slice(0, 60); }
       clearTimeout(watchdog);
+      if (!stopped) { dropAt = Date.now(); diag.note("drop", { why, silent: Date.now() - heard, lived: opened ? Date.now() - opened : 0, status }); }
       if (stopped) break;
       failures++;
       if (failures > 1) link.set("reconnecting");

@@ -1,11 +1,12 @@
 // The «Играть» screens on the site's server: open rooms, the quick game's search, your room, joining by code,
 // someone's room before the start. Same look as the offline prototype's (lobby.js), real data underneath.
-import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel, RatingTag } from "./common.js";
+import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel, RatingTag, Alert, useFullScreen, useLeaveGuard } from "./common.js";
 import { PRESETS, LEVELS, QuickChoice, Section, RoomPassword, Collapsible, summary, settingRows, extras, passwordOK, newSettings, presetOf, presetsOf } from "./lobby.js";
-import { ViewerList } from "./sheets.js";
+import { ViewerList, ChatSheet, StandsSheet } from "./sheets.js";
 import { ProfileSheet } from "./profile.js";
 import { Face } from "./account.js";
-import { openRooms, quick, createRoom, account } from "../net.js";
+import { RoomFriends, FriendsStrip } from "./friends.js";
+import { openRooms, quick, createRoom, debugRoom, account } from "../net.js";
 import { OnlineMatch } from "../online.js";
 
 /** The settings screen's choices as the site's create/settings body. */
@@ -71,6 +72,7 @@ export function OnlineLobby({ nav, app }) {
   // One phone needs the sandbox server (it seats «Игрок 2»); the site shows it as coming soon.
   const hotseat = !!account.profile && "showFlag" in account.profile;
   // Bot and one-phone games take the same settings as a room.
+  const go = (run) => () => { if (!app.blocked?.()) run(); };
   const practice = (kind) => nav.push("settings", { settings: newSettings(), kind,
     start: (s) => { nav.back(); return kind === "bot" ? app.bot(createBody(s)) : app.hotseat(createBody(s)); } });
   // A sandbox admin (tester1) watches any room unseen, a locked one too, without the password.
@@ -81,18 +83,20 @@ export function OnlineLobby({ nav, app }) {
     ${run ? html`<${Icon} name="right" size="13" weight="3" class="chev" />` : null}</button>`;
   return html`<div class="screen-scroll"><div class="page">
     <${LobbyHeader} title="Футбольные крестики-нолики" back=${nav.back} />
+    <${FriendsStrip} />
     <section class="mode-group glass">
       <h4 class="mg-head"><i class="mg-dot on"></i>Онлайн<small>соперники с derbyo.online</small></h4>
-      <button class="primary-btn" onClick=${() => nav.push("quickPick")}><img src=${img("bolt")} alt="" />Быстрая игра</button>
+      <button class="primary-btn" onClick=${go(() => nav.push("quickPick"))}><img src=${img("bolt")} alt="" />Быстрая игра</button>
       <div class="two">
-        <button class="navy-btn tall" onClick=${() => nav.push("room")}><img src=${img("invite")} alt="" />Создать</button>
-        <button class="mint-btn tall press" onClick=${() => nav.push("code")}><img src=${img("arrow")} alt="" />По коду</button>
+        <button class="navy-btn tall" onClick=${go(() => nav.push("room"))}><img src=${img("invite")} alt="" />Создать</button>
+        <button class="mint-btn tall press" onClick=${go(() => nav.push("code"))}><img src=${img("arrow")} alt="" />По коду</button>
       </div>
+      ${hotseat ? html`<button class="navy-btn" onClick=${go(() => nav.push("room", { debug: true }))}>🛠 Тест: соперник-кукла</button>` : null}
     </section>
     <section class="mode-group glass">
       <h4 class="mg-head"><i class="mg-dot"></i>Офлайн<small>без рейтинга</small></h4>
-      ${mode("bot", "С ботом", "Тренировка на настоящем поле", () => practice("bot"))}
-      ${mode(null, "На одном телефоне", hotseat ? "Игрок 1 против Игрока 2" : "Скоро", hotseat ? () => practice("hotseat") : null)}
+      ${mode("bot", "С ботом", "Тренировка на настоящем поле", go(() => practice("bot")))}
+      ${mode(null, "На одном телефоне", hotseat ? "Игрок 1 против Игрока 2" : "Скоро", hotseat ? go(() => practice("hotseat")) : null)}
     </section>
     <${Section} t="ОТКРЫТЫЕ КОМНАТЫ" />
     ${err ? html`<p class="hint-line small pad">${err}</p>`
@@ -171,7 +175,10 @@ const Derby = () => html`<div class="queue-football" aria-hidden="true">
 </div>`;
 
 /** One player in the duel bubble: photo, name, flag with rating and place, readiness. */
-function DuelSide({ p, red, side }) {
+function DuelSide({ p, red, side, invite }) {
+  // The free seat of a room you made is the way to call a friend into it (owner, 2026-11-07).
+  if (!p && invite) return html`<button class=${cx("ds free invite press", side)} onClick=${invite}><span class="ds-av wait call"><img src=${img("invite")} alt="" /></span>
+    <b class="ds-name">Позвать друга</b><small class="ds-none">или поделись кодом</small></button>`;
   if (!p) return html`<div class=${cx("ds free", side)}><span class="ds-av wait"><i></i><${Icon} name="question" size="22" weight="2" /></span>
     <b class="ds-name">Ждём игрока</b><small class="ds-none">место свободно</small></div>`;
   return html`<button class=${cx("ds press", side)} onClick=${p.open} aria-label=${`${p.name}, открыть профиль`}>
@@ -184,12 +191,13 @@ function DuelSide({ p, red, side }) {
 }
 
 /** Both players in one bubble, face to face, with the VS emblem between them. */
-const Duel = ({ left, right, leftRed = true, children }) => html`<div class="duel glass">
+const Duel = ({ left, right, leftRed = true, invite, viewers, children }) => html`<div class="duel-wrap"><div class="duel glass">
   <div class="duel-row">
     <${DuelSide} p=${left} red=${leftRed} side="l" />
     <span class="duel-vs" aria-hidden="true"><i>VS</i></span>
-    <${DuelSide} p=${right} red=${!leftRed} side="r" />
-  </div>${children}</div>`;
+    <${DuelSide} p=${right} red=${!leftRed} side="r" invite=${invite} />
+  </div>${children}</div>
+  ${viewers?.n ? html`<button class="eye-badge press" onClick=${viewers.open} aria-label=${`Трибуна: ${viewers.n}`}><${Icon} name="eye" size="11" /><b>${viewers.n}</b></button>` : null}</div>`;
 
 /** The room's chat and stands as two tabs of one card. */
 function RoomTalk({ m }) {
@@ -218,9 +226,36 @@ function RoomTalk({ m }) {
 }
 
 /** «Готов. Ждём …» with «Отменить», when the server can take readiness back (the sandbox can, older servers cannot). */
+/** The room's bottom as in the match (owner, 2026-11-07): the wide action on the left, the chat on the right. */
+/** The room's stands: the eye on the duel card and the chat both open it. */
+function useStands(m) {
+  const [stands, setStands] = useState(false);
+  const [viewer, setViewer] = useState(null);
+  return {
+    open: () => setStands(true), view: setViewer, eye: m?.viewers?.length ? { n: m.viewers.length, open: () => setStands(true) } : null,
+    sheets: html`${stands && m ? html`<${Panel} onClose=${() => setStands(false)}>${(leave) => html`<${StandsSheet} m=${m} open=${(v) => { leave(); setViewer(v); }} />`}<//>` : null}
+    ${viewer && m ? html`<${Panel} onClose=${() => setViewer(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${1} viewer=${viewer} close=${leave} />`}<//>` : null}`,
+  };
+}
+
+/** The room's bottom, as in the match: the wide action, the chat, and the way out (as in Контекстно). */
+function RoomBar({ m, stands, leave, children }) {
+  const [chat, setChat] = useState(false);
+  return html`<div class="room-bar">
+    <div class="room-act">${children}</div>
+    <div class="tray tools-tray glass"><button class="tool press" disabled=${!m} aria-label=${m?.unread ? `Чат, новых сообщений: ${m.unread}` : "Чат"}
+      onClick=${() => { if (m) m.unread = 0; setChat(true); }}><img src=${img("chat")} alt="" />${m?.unread ? html`<b class="badge">${m.unread}</b>` : null}</button></div>
+    <button class="round-tool press" aria-label="Выйти из комнаты" onClick=${leave}><img src=${img("logout")} alt="" /></button>
+    ${chat && m ? html`<${Panel} onClose=${() => setChat(false)} class="chat-panel">${(close) => html`<${ChatSheet} m=${m} reactions=${false}
+      openStands=${() => { close(); stands.open(); }} openViewer=${(v) => { close(); stands.view(v); }} />`}<//>` : null}
+    ${stands.sheets}
+  </div>`;
+}
+
+// Short, one line each (owner, 2026-11-07: next to the chat and the exit it wrapped word by word).
 const ReadyWait = ({ m, who }) => html`<div class="waiting-bar"><span class="spinner muted"></span>
-  <span class="wb-t"><b>Готов. Ждём ${who}…</b><small>матч начнётся, когда оба готовы</small></span>
-  ${m?.state && "freeLeave" in m.state ? html`<button class="navy-btn small wb-cancel" onClick=${() => m.unready().catch(() => {})}>Отменить</button>` : null}</div>`;
+  <span class="wb-t"><b>Ждём ${who}</b><small>Ты готов</small></span>
+  ${m?.state && "freeLeave" in m.state ? html`<button class="wb-x press" aria-label="Отменить готовность" onClick=${() => m.unready().catch(() => {})}><${Icon} name="x" size="16" weight="2.4" /></button>` : null}</div>`;
 
 /** Hooks a screen to a room's live match; a room left behind (back, not into the match) is left on the server. */
 function useRoom(make, app) {
@@ -239,11 +274,22 @@ function useRoom(make, app) {
 }
 
 /** «Создать»: your room on the server. The code is real; a friend joins it from the app or the site. */
-export function OnlineRoom({ nav, app }) {
-  const [settings, setSettings] = useState(newSettings());
+export function OnlineRoom({ nav, app, debug = false, given = null }) {
+  // `given`: the room already open on the server (back from the bar), with its own rules.
+  const [settings, setSettings] = useState(() => (given?.state ? fromServer(given.state.settings, given.state.locked) : newSettings()));
   const [copied, setCopied] = useState(false);
   const [waiting, setWaiting] = useState(false);
-  const [m, err] = useRoom(() => createRoom(createBody(settings)).then((s) => new OnlineMatch(s)), app);
+  const [calling, setCalling] = useState(false);
+  const [askClose, setAskClose] = useState(false);
+  const [oppMenu, setOppMenu] = useState(false);
+  const [oppProfile, setOppProfile] = useState(false);
+  const [m, err] = useRoom(() => (given ? Promise.resolve(given) : (debug ? debugRoom() : createRoom(createBody(settings))).then((s) => new OnlineMatch(s))), app);
+  const stands = useStands(m);
+  const bye = useRef(false);
+  useFullScreen();
+  // Any way out of an open room asks first: the arrow, the exit button, the back gesture or button.
+  const ask = () => { if (!m || m.closed || m.hasBoard || bye.current) return false; setAskClose(true); return true; };
+  useLeaveGuard("room", ask);
   // The tap shows «Готов» at once; from the next server state on, the server's word is what shows.
   useEffect(() => setWaiting(false), [m?.state]);
   const first = useRef(true);
@@ -258,16 +304,16 @@ export function OnlineRoom({ nav, app }) {
   const ex = [extras(settings), settings.closed ? "🔒 по паролю" : ""].filter(Boolean).join(" · ");
   const p = presetOf(settings);
   return html`<div class="screen-with-bar"><div class="screen-scroll"><div class="page">
-    <${LobbyHeader} title="Комната" back=${nav.back} />
+    <${LobbyHeader} title="Комната" back=${() => ask() || nav.back()} />
     <div class="code-bar glass">
       <span class="cb-t"><small class="cap">КОД КОМНАТЫ</small><b class="cb-code">${code}</b></span>
       <button class="cb-btn press" disabled=${!m} onClick=${copy} aria-label="Скопировать код"><${Icon} name=${copied ? "check" : "copy"} size="18" /></button>
       <button class="cb-btn main press" disabled=${!m} onClick=${share} aria-label="Поделиться"><${Icon} name="share" size="18" /></button>
     </div>
     <p class="hint-line small pad">${err ?? (copied ? "Скопировано — отправь другу" : "Друг войдёт по коду из приложения или на derbyo.online. Третий и дальше — на трибуну.")}</p>
-    <${Duel} leftRed=${(m?.mySeat ?? 0) === 0}
+    <${Duel} leftRed=${(m?.mySeat ?? 0) === 0} viewers=${stands.eye} invite=${m && !debug ? () => setCalling(true) : null}
       left=${{ name: m?.leftName ?? account.name, photo: m?.avatarOf(0) ?? account.profile?.avatar ?? null, flag: m?.myFlag, rating: m?.myRating ?? account.profile?.rating ?? null, rank: m?.myRank ?? null, ready: meReady, open: () => {} }}
-      right=${friend ? { name: friend.name, bot: !!friend.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!friend.ready, open: () => {} } : null}>
+      right=${friend ? { name: friend.name, bot: !!friend.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!friend.ready, open: () => setOppMenu(true) } : null}>
       ${!friend && m ? html`<button class="chip-btn duel-bot press" onClick=${() => m.addBot().catch(() => {})}><img src=${img("bot")} alt="" />Посадить бота</button>` : null}
     <//>
     <button class="settings-card press" onClick=${() => nav.push("settings", { settings, set: setSettings })}>
@@ -275,11 +321,20 @@ export function OnlineRoom({ nav, app }) {
       <span><small>Настройки матча</small><b>${summary(settings)}</b>${ex ? html`<em>${ex}</em>` : null}</span>
       <${Icon} name="right" size="13" weight="3" class="chev" />
     </button>
-    <${RoomTalk} m=${m} />
   </div></div>
-  <${BottomBar}>${meReady || waiting ? html`<${ReadyWait} m=${m} who=${friend?.name ?? "второго игрока"} />`
+  ${calling && !friend ? html`<${Panel} onClose=${() => setCalling(false)}>${() => html`<${RoomFriends} code=${m?.code} share=${share} />`}<//>` : null}
+  ${askClose ? html`<${Alert} title="Закрыть комнату?" message=${friend && !friend.bot ? `${friend.name} выйдет из комнаты вместе с тобой.` : "Код комнаты перестанет работать."}
+    onClose=${() => setAskClose(false)} actions=${[{ title: "Остаться", run: () => setAskClose(false) },
+      { title: "Закрыть", kind: "destructive", run: () => { setAskClose(false); bye.current = true; m.act("close_room").catch(() => {}).finally(() => nav.back()); } }]} />` : null}
+  ${oppMenu && friend ? html`<${Alert} title=${friend.name} onClose=${() => setOppMenu(false)} actions=${[
+      ...(friend.bot ? [] : [{ title: "Профиль", run: () => { setOppMenu(false); setOppProfile(true); } }]),
+      ...(friend.bot ? [] : [{ title: "На трибуну", run: () => { setOppMenu(false); m.act("to_stands", { seat: 1 - m.mySeat }).catch(() => {}); } }]),
+      { title: friend.bot ? "Убрать бота" : "Исключить из комнаты", kind: "destructive", run: () => { setOppMenu(false); m.act(friend.bot ? "remove_bot" : "kick", { seat: 1 - m.mySeat }).catch(() => {}); } },
+      { title: "Отмена", run: () => setOppMenu(false) }]} />` : null}
+  ${oppProfile && friend ? html`<${Panel} onClose=${() => setOppProfile(false)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${1} close=${leave} />`}<//>` : null}
+  <${BottomBar}><${RoomBar} m=${m} stands=${stands} leave=${() => ask() || nav.back()}>${meReady || waiting ? html`<${ReadyWait} m=${m} who=${friend?.name ?? "второго игрока"} />`
     : html`<button class="primary-btn" disabled=${!m || !friend || !passwordOK(settings)} onClick=${() => { setWaiting(true); m.ready().catch(() => setWaiting(false)); }}>
-    ${!passwordOK(settings) ? "Задай пароль от 4 символов" : !friend ? "Ждём второго игрока" : "Начать матч"}</button>`}<//>
+    ${!passwordOK(settings) ? "Задай пароль от 4 символов" : !friend ? "Ждём второго игрока" : "Начать матч"}</button>`}<//><//>
   </div>`;
 }
 
@@ -334,18 +389,36 @@ export function OnlineLocker({ nav, app, m }) {
   const canEdit = !!st?.isHost && !st?.quick && !st?.game && (st?.round ?? 0) === 0;
   const edit = (s) => m.settings(createBody(s)).catch(() => {});
   const flip = (k) => setOpen({ ...open, [k]: !open[k] });
-  const meReady = !!m.me?.ready;
+  // Before the match a spectator stays here too, with the seats and the chat (owner, 2026-11-07), not on a bare wait screen.
+  const watching = !!m.watching;
+  const freeSeat = st?.players ? st.players.findIndex((x) => !x) : -1;
+  const meReady = !watching && !!m.me?.ready;
   // A friend's room: the caller has a minute to come in, counted down on their side of the duel.
   const deadline = st?.inviteDeadline ?? null, waitLeft = deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : null;
   const [, tick] = useState(0);
   useEffect(() => { if (!deadline || host?.online) return; const t = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(t); }, [deadline, host?.online]);
+  const stands = useStands(m);
+  const [asking, setAsking] = useState(false);
+  const bye = useRef(false);
+  useFullScreen();
+  // A player asks before leaving (the host of a room made for them closes it); the stands just go.
+  const ask = () => { if (watching || m.closed || m.hasBoard || bye.current) return false; setAsking(true); return true; };
+  useLeaveGuard("locker", ask);
+  const out = (then) => { setAsking(false); bye.current = true; then().catch(() => {}).finally(() => nav.back()); };
   const awayNote = deadline && !host?.online ? (waitLeft > 0 ? `зайдёт · ${waitLeft} с` : "не зашёл") : "не в сети";
   return html`<div class="screen-with-bar"><div class="screen-scroll"><div class="page">
-    <${LobbyHeader} title=${`Комната ${m.code}`} back=${nav.back} />
-    <div class="locker-title"><small class="cap gold">РАЗДЕВАЛКА</small><h2>${m.closed ? "Комната закрыта" : !host ? "Ждём второго игрока" : "Оба на месте. Пора играть."}</h2></div>
-    <${Duel} leftRed=${m.mySeat === 0}
+    <${LobbyHeader} title=${`Комната ${m.code}`} back=${() => ask() || nav.back()} />
+    <div class="locker-title"><small class="cap gold">РАЗДЕВАЛКА</small><h2>${m.kicked ? "Тебя исключили из комнаты" : m.closed ? "Комната закрыта" : watching ? "Ты на трибуне" : !host ? "Ждём второго игрока" : "Оба на месте. Пора играть."}</h2>
+      ${m.kicked ? html`<p class="hint-line small">Создатель исключил тебя из комнаты. Вернуться в неё нельзя, пока она открыта.</p>` : null}</div>
+    <${Duel} leftRed=${m.mySeat === 0} viewers=${stands.eye}
       left=${{ name: m.leftName, photo: m.avatarOf(0), flag: m.myFlag, rating: m.myRating, rank: m.myRank, ready: meReady, open: () => setProfile({ owner: 0 }) }}
-      right=${host ? { name: host.name, bot: !!host.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!host.ready, gone: !host.online, note: awayNote, open: () => setProfile({ owner: 1 }) } : null} />
+      right=${host ? { name: host.name, bot: !!host.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!host.ready, gone: !host.online, note: awayNote, open: () => setProfile({ owner: 1 }) } : null}>
+      ${m.closed ? null
+        : watching ? (freeSeat >= 0 ? html`<button class="chip-btn duel-bot press" onClick=${() => m.act("seat", { seat: freeSeat }).catch(() => {})}>
+          <img src=${img("bolt")} alt="" />Сесть играть</button>` : null)
+        : !st?.isHost && !meReady ? html`<button class="chip-btn duel-bot press" onClick=${() => m.act("seat", { seat: null }).catch(() => {})}>
+          <img src=${img("eye")} alt="" />На трибуну</button>` : null}
+    <//>
     ${canEdit ? html`<button class="settings-card press" onClick=${() => nav.push("settings", { settings, set: edit })}>
       <img src=${img(presetOf(settings)?.icon ?? "settings")} alt="" />
       <span><small>Настройки матча</small><b>${summary(settings)}</b>${extras(settings) ? html`<em>${extras(settings)}</em>` : null}</span>
@@ -353,14 +426,18 @@ export function OnlineLocker({ nav, app, m }) {
     </button>` : html`<${Collapsible} title="НАСТРОЙКИ МАТЧА" summary=${summary(settings)} open=${open.settings} toggle=${() => flip("settings")}>
       <div class="set-rows">${settingRows(settings).map(([k, v]) => html`<div><span>${k}</span><b>${v}</b></div>`)}</div>
     <//>`}
-    <${RoomTalk} m=${m} />
     <p class="hint-line small">Первый ход — ×. Подсказки и поле общие для всех подключившихся.</p>
   </div></div>
-  <${BottomBar}>
+  <${BottomBar}><${RoomBar} m=${m} stands=${stands} leave=${() => ask() || nav.back()}>
     ${m.closed ? html`<button class="primary-btn" onClick=${nav.back}>К списку комнат</button>`
+      : watching ? html`<button class="primary-btn" disabled>Ждём начала матча</button>`
       : meReady ? html`<${ReadyWait} m=${m} who=${host?.name ?? "соперника"} />`
-      : html`<button class="primary-btn" disabled=${!host} onClick=${() => m.ready().catch(() => {})}>${host ? "Я готов — начать матч" : "Ждём второго игрока"}</button>`}
-  <//>
+      : html`<button class="primary-btn" disabled=${!host} onClick=${() => m.ready().catch(() => {})}>${host ? "Начать матч" : "Ждём второго игрока"}</button>`}
+  <//><//>
   ${profile ? html`<${Panel} onClose=${() => setProfile(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${profile.owner} close=${leave} />`}<//>` : null}
+  ${asking ? (st?.isHost ? html`<${Alert} title="Закрыть комнату?" message=${host && !host.bot ? `${host.name} выйдет из комнаты вместе с тобой.` : "Код комнаты перестанет работать."}
+      onClose=${() => setAsking(false)} actions=${[{ title: "Остаться", run: () => setAsking(false) }, { title: "Закрыть", kind: "destructive", run: () => out(() => m.act("close_room")) }]} />`
+    : html`<${Alert} title="Выйти из комнаты?" message="Вернуться можно по коду, пока комната открыта." onClose=${() => setAsking(false)}
+      actions=${[{ title: "Остаться", run: () => setAsking(false) }, { title: "Выйти", kind: "destructive", run: () => out(async () => {}) }]} />`) : null}
   </div>`;
 }

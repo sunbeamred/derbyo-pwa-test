@@ -1,7 +1,7 @@
 // The app shell (port of DerbyoApp.swift): tabs, the play tab's screen stack, the match and search covers,
 // the bar that returns to a minimised match, and the offer to install on the home screen.
 import { html, render, useState, useEffect, useReducer, useRef } from "../vendor/preact-htm.js";
-import { cx, img, Icon, Alert, Panel } from "./ui/common.js";
+import { cx, img, Icon, Alert, Panel, Marquee, leaveGuard } from "./ui/common.js";
 import { has } from "./data.js";
 import { Match, Opponent, store } from "./model.js";
 import { MatchScreen } from "./ui/match.js";
@@ -11,7 +11,7 @@ import { notifications } from "./push.js";
 import { invites, secondsLeft } from "./invites.js";
 import { updates } from "./update.js";
 import { TabBar } from "./ui/tabbar.js";
-import { ONLINE, account, createRoom, joinRoom, savedSession, social, sendFeedback, feedbackReplies, feedbackSeen, startVisitPing, setPlace, link } from "./net.js";
+import { ONLINE, account, createRoom, joinRoom, savedSession, myRoom, busyHook, social, sendFeedback, feedbackReplies, feedbackSeen, startVisitPing, setPlace, link } from "./net.js";
 import { OnlineMatch } from "./online.js";
 import { OnlineLobby, OnlineSearch, OnlineRoom, OnlineJoinCode, OnlineLocker } from "./ui/live.js";
 import { RatingTab, ProfileTab, takeInvite } from "./ui/account.js";
@@ -68,6 +68,9 @@ function App() {
   const [searching, setSearching] = useState(false);
   const [searchLeaving, setSearchLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** A match the server says this profile is in, with nothing kept on this phone (begun on another device). */
+  const [elsewhere, setElsewhere] = useState(null);
+  const [elsewhereAsk, setElsewhereAsk] = useState(null);
   const [install, setInstall] = useState(() => installState.shouldOffer());
   const [askPush, setAskPush] = useState(false);
   const [news, setNews] = useState(() => whatsNew.due());
@@ -88,7 +91,7 @@ function App() {
   const afterPop = useRef(null);
   /** What to do once a cover's own back step has landed. */
   const afterCover = useRef(null);
-  live.current = { match, minimized, stack, searching, leaving, tab, matchLeaving };
+  live.current = { match, minimized, stack, searching, leaving, tab, matchLeaving, elsewhere };
 
   useEffect(() => store.on(redraw), []);
   // The profile tab reads the account again each time it opens (and when the app comes back on it): a match since
@@ -103,10 +106,17 @@ function App() {
   // Online: who you are on the site, and a match you were in before the app was closed.
   useEffect(() => {
     if (!ONLINE) return;
-    account.load().catch(() => {});
     const s = savedSession.get();
     if (s?.token) setMinimized(watchClose(new OnlineMatch(s)));
+    account.load().catch(() => {}).then(() => findElsewhere());
+    busyHook.fn = () => findElsewhere(true);
+    const f = () => { if (!document.hidden) findElsewhere(); };
+    document.addEventListener("visibilitychange", f);
+    return () => document.removeEventListener("visibilitychange", f);
   }, []);
+  // A match closed here may have been the one the server knew: ask again a moment later.
+  // Looked up again when a room screen closes too: the bar must not keep a room just left or closed.
+  useEffect(() => { if (ONLINE && !match && !minimized) { const t = setTimeout(() => findElsewhere(), 1500); return () => clearTimeout(t); } setElsewhere(null); }, [match, minimized, stack.length]);
   // One clock for the match, open or minimised: it keeps running while you look at the tabs.
   useEffect(() => {
     const t = setInterval(() => { const m = live.current.match ?? live.current.minimized; if (m) { m.tick(); store.changed(); } }, 1000);
@@ -143,6 +153,8 @@ function App() {
       const cover = !!history.state?.cover;
       if (l.match && !cover) { minimize(); return; }
       if (l.searching && !cover) { closeSearch(); return; }
+      // A room asks before it is left («Закрыть комнату?»): the step back is put back and the screen shows its question.
+      if (!cover && guarded(l)) { history.pushState({ d: l.stack.length }, ""); instantPop.current = false; return; }
       // Safari's own edge swipe has already slid the old page away.
       const swiped = instantPop.current || Date.now() - edgeTouchAt < 1200;
       instantPop.current = false;
@@ -169,8 +181,10 @@ function App() {
     /** A room's locker; with the rooms list under it when it was opened from elsewhere (a link, an invite), so «назад» lands there. */
     locker: (m) => {
       if (live.current.leaving) return;
+      // Your own room, back from the bar (owner, 2026-11-07): its full screen (invite, bot, settings), not the locker.
+      const own = !!m.state?.isHost && !m.state?.quick && !m.watching;
       const s = live.current.stack, add = s.some((x) => x.name === "lobby") ? [] : [{ name: "lobby", props: {}, key: ++keys, at: 0 }];
-      add.push({ name: "locker", props: { m }, key: ++keys, at: Date.now() });
+      add.push({ name: own ? "room" : "locker", props: own ? { given: m } : { m }, key: ++keys, at: Date.now() });
       add.forEach((_, i) => history.pushState({ d: s.length + i + 1 }, ""));
       setStack([...s, ...add]);
     },
@@ -207,8 +221,50 @@ function App() {
   };
   /** A server match that ends (room closed, opened elsewhere) leaves the return bar. */
   function watchClose(m) { m.onClosed = () => { if (live.current.minimized === m) setMinimized(null); }; return m; }
+  /** «Где я» (owner, 2026-11-06): the server remembers the match; `ask` also opens «Сначала заверши матч». */
+  async function findElsewhere(ask = false) {
+    if (!ONLINE || live.current.match || live.current.minimized) return;
+    const inRoom = () => ["room", "locker", "settings"].includes(live.current.stack.at(-1)?.name);
+    if (inRoom()) { setElsewhere(null); return; }
+    const r = await myRoom();
+    if (live.current.match || live.current.minimized || inRoom()) return;
+    setElsewhere(r);
+    if (ask && r) setElsewhereAsk("busy");
+  }
+  /** Back to the seat: the server gives it again to the same profile (resumed), from the stands' door. */
+  const comeBack = async () => {
+    const r = elsewhere; setElsewhereAsk(null);
+    if (!r) return;
+    try {
+      const s = await joinRoom(r.code, { role: "spectator" });
+      setElsewhere(null);
+      const m = watchClose(new OnlineMatch(s));
+      for (let i = 0; i < 50 && !m.state; i++) await new Promise((ok) => setTimeout(ok, 100));
+      setTab(1); setSearching(false); setSearchLeaving(false);
+      if (s.role === "player" && !m.hasBoard) nav.locker(m); else open(m);
+    } catch (e) { alert(e.message); findElsewhere(); }
+  };
+  /** «Сдаться» from outside: take the seat back for a moment and leave the match (the opponent wins it). */
+  const giveUp = async () => {
+    const r = elsewhere; setElsewhereAsk(null);
+    if (!r) return;
+    setElsewhere(null);
+    try {
+      const m = new OnlineMatch(await joinRoom(r.code, { role: "spectator" }));
+      for (let i = 0; i < 50 && !m.state; i++) await new Promise((ok) => setTimeout(ok, 100));
+      m.stop(true);
+    } catch (e) { alert(e.message); }
+    setTimeout(() => findElsewhere(), 800);
+  };
   const busyNow = () => { const b = live.current.minimized; return b && !b.watching && !b.closed; };
   const app = {
+    /** While a match is on (kept here or remembered by the server), a new game's screens do not open: the window
+     *  «Сначала заверши матч» comes instead (owner, 2026-11-06; the return bar lay over their «Играть»). */
+    blocked: () => {
+      if (busyNow()) { setBusy(true); return true; }
+      if (live.current.elsewhere) { setElsewhereAsk("busy"); return true; }
+      return false;
+    },
     open: (m) => open(watchClose(m)),
     quick: () => { if (busyNow()) setBusy(true); else openSearch(); },
     join: (name) => open(new Match(Opponent.human(name), false)),
@@ -239,9 +295,10 @@ function App() {
       try {
         const s = await joinRoom(code, { role, password });
         const m = watchClose(new OnlineMatch(s));
-        if (s.role === "player" && !s.seatTaken) {
+        // Before the match, a seat or the stands: the room screen (its seats and chat), not the bare wait screen.
+        if (!s.seatTaken || s.role !== "player") {
           for (let i = 0; i < 50 && !m.state; i++) await new Promise((r) => setTimeout(r, 100));
-          if (!m.hasBoard) { nav.locker(m); return true; }
+          if (!m.hasBoard && !m.closed) { nav.locker(m); return true; }
         }
         open(m);
         return true;
@@ -260,7 +317,12 @@ function App() {
       if (!m.hasBoard) nav.locker(m); else open(m);
     },
   };
-  const ret = () => { setMatch(minimized); setMinimized(null); setMatchLeaving(false); coverOpened(); };
+  /** Back from the bar: a room whose match has not begun opens its room screen, not the bare wait screen. */
+  const ret = () => {
+    const m = live.current.minimized;
+    if (m && !m.hasBoard && !m.closed && m.state) { setMinimized(null); setTab(1); nav.locker(m); return; }
+    setMatch(minimized); setMinimized(null); setMatchLeaving(false); coverOpened();
+  };
   /** The × on the return bar: the stands or a finished match go at once; a round in play asks first (it counts as lost). */
   const [leaveAsk, setLeaveAsk] = useState(false);
   const dropNow = () => { const m = live.current.minimized; setLeaveAsk(false); if (!m) return; m.stop(); setMinimized(null); };
@@ -319,11 +381,11 @@ function App() {
       const i = list.find((x) => x.direction === "incoming" && x.status === "pending" && !seen.has(x.id));
       if (i) { seen.add(i.id); setInvite(i); }
       // A call into a Контекстно room waits on its seat in the room, not as a bubble over the menu.
-      setCalls(list.filter((x) => x.direction === "outgoing" && x.game !== "contexto"));
+      setCalls(list.filter((x) => x.direction === "outgoing" && x.game !== "contexto" && x.game !== "room"));
     });
     invites.start();
     // The countdowns move every second while a call is open.
-    const t = setInterval(() => { if (invites.list.length) setCalls(invites.list.filter((x) => x.direction === "outgoing" && x.game !== "contexto" && x.expires > Date.now())); }, 1000);
+    const t = setInterval(() => { if (invites.list.length) setCalls(invites.list.filter((x) => x.direction === "outgoing" && x.game !== "contexto" && x.game !== "room" && x.expires > Date.now())); }, 1000);
     return () => { off(); invites.stop(); clearInterval(t); };
   }, [sandbox]);
   const route = (hash) => {
@@ -340,8 +402,13 @@ function App() {
   useEffect(() => {
     const onSession = (e) => app.session(e.detail);
     const onWatch = (e) => { setTab(1); app.joinRoom(e.detail, { role: "spectator" }); };
-    const onReturn = () => { const m = live.current.minimized; if (!m) return; setMatch(m); setMinimized(null); setMatchLeaving(false); coverOpened(); };
+    const onReturn = () => { if (live.current.minimized) ret(); };
     addEventListener("derbyo-watch", onWatch);
+    // A friend's call into their own room: its free seat, by its code, as «По коду» does.
+    const onJoinRoom = (e) => { setTab(1); app.joinRoom(e.detail, { role: "player" }); };
+    const onFriends = () => setTab(2);
+    addEventListener("derbyo-join-room", onJoinRoom);
+    addEventListener("derbyo-friends", onFriends);
     const onInstall = () => setInstall(true);
     addEventListener("derbyo-install", onInstall);
     const onFeedback = (e) => setFeedback(e.detail || {});
@@ -350,7 +417,7 @@ function App() {
     const onMessage = (e) => { if (e.data?.open) route(new URL(e.data.open).hash); };
     addEventListener("derbyo-session", onSession);
     navigator.serviceWorker?.addEventListener("message", onMessage);
-    return () => { removeEventListener("derbyo-session", onSession); removeEventListener("derbyo-watch", onWatch); removeEventListener("derbyo-install", onInstall); removeEventListener("derbyo-feedback", onFeedback); removeEventListener("derbyo-return", onReturn); navigator.serviceWorker?.removeEventListener("message", onMessage); };
+    return () => { removeEventListener("derbyo-session", onSession); removeEventListener("derbyo-watch", onWatch); removeEventListener("derbyo-join-room", onJoinRoom); removeEventListener("derbyo-friends", onFriends); removeEventListener("derbyo-install", onInstall); removeEventListener("derbyo-feedback", onFeedback); removeEventListener("derbyo-return", onReturn); navigator.serviceWorker?.removeEventListener("message", onMessage); };
   }, []);
   useEffect(() => {
     if (ONLINE && /^#(invite=|friends$)/.test(location.hash)) { const h = location.hash; history.replaceState(history.state, "", location.pathname + location.search); route(h); }
@@ -401,11 +468,12 @@ function App() {
     </main>
     <div class="edge-fade" aria-hidden="true"></div>
     ${minimized && !match && (!minimized.online || minimized.state) ? html`<${ReturnBar} m=${minimized} go=${ret} drop=${dropMinimized} />` : null}
-    ${update && !match ? html`<button class="return-bar update-bar glass-bar press" style=${`--i:${minimized ? 1 : 0}`} onClick=${() => updates.apply()}>
+    ${elsewhere && !match && !minimized ? html`<${ElsewhereBar} r=${elsewhere} go=${comeBack} drop=${() => setElsewhereAsk("leave")} />` : null}
+    ${update && !match ? html`<button class="return-bar update-bar glass-bar press" style=${`--i:${minimized || elsewhere ? 1 : 0}`} onClick=${() => updates.apply()}>
       <span class="rb-dot up"><img src=${img("sparkles")} alt="" /></span>
       <span class="rb-t"><small>Вышло обновление</small><b>${updates.text}</b></span>
       <span class="rb-go up">Обновить</span></button>` : null}
-    ${!match ? calls.map((c, n) => html`<${CallBar} c=${c} i=${(minimized ? 1 : 0) + (update ? 1 : 0) + n} key=${c.id} />`) : null}
+    ${!match ? calls.map((c, n) => html`<${CallBar} c=${c} i=${(minimized || elsewhere ? 1 : 0) + (update ? 1 : 0) + n} key=${c.id} />`) : null}
     <${TabBar} tab=${tab} pick=${pickTab} items=${[["Рейтинг", "trophy"], ["Играть", "bolt"], ["Профиль", "profile-v1", ONLINE ? ((account.ready && !account.registered) || !isStandalone() ? "!" : null) : 1]]} />
     ${searching ? html`<${Cover} class="search-cover" leaving=${searchLeaving}>${ONLINE ? html`<${OnlineSearch} done=${(r) => {
       coverClosed();
@@ -418,14 +486,27 @@ function App() {
       findNew=${() => { close(); setTimeout(openSearch, COVER_MS); }} /><//>` : null}
     ${leaveAsk ? html`<${Alert} title="Выйти из матча?" message=${`Раунд засчитается ${minimized?.opponent.name ?? "сопернику"}.`} onClose=${() => setLeaveAsk(false)}
       actions=${[{ title: "Остаться", run: () => setLeaveAsk(false) }, { title: "Выйти", kind: "destructive", run: dropNow }]} />` : null}
-    ${busy ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setBusy(false)}
-      message=${`Ты ещё играешь с ${minimized?.opponent.name ?? "соперником"}. Доиграй или выйди из матча — потом можно в другую комнату.`}
-      actions=${[{ title: "Вернуться в матч", kind: "bold", run: () => { setBusy(false); ret(); } }, { title: "Отмена", run: () => setBusy(false) }]} />` : null}
+    ${busy && minimized && !minimized.hasBoard && !minimized.round ? html`<${Alert} title="Ты в комнате" onClose=${() => setBusy(false)}
+      message=${`Сначала выйди из комнаты ${minimized.code} — потом можно начать новую игру.`}
+      actions=${[{ title: "Вернуться в комнату", kind: "bold", run: () => { setBusy(false); ret(); } }, { title: "Выйти из комнаты", kind: "destructive", run: () => { setBusy(false); dropNow(); } }, { title: "Отмена", run: () => setBusy(false) }]} />`
+    : busy ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setBusy(false)}
+      message=${`Идёт матч с ${minimized?.opponent.name ?? "соперником"}. Вернись в него или сдайся — потом можно начать новый.`}
+      actions=${[{ title: "Вернуться в матч", kind: "bold", run: () => { setBusy(false); ret(); } }, { title: "Сдаться", kind: "destructive", stay: true, run: () => { setBusy(false); setLeaveAsk(true); } }, { title: "Отмена", run: () => setBusy(false) }]} />` : null}
+    ${elsewhereAsk === "busy" && elsewhere && !elsewhere.live && !elsewhere.opponent ? html`<${Alert} title="Ты в комнате" onClose=${() => setElsewhereAsk(null)}
+      message=${`Сначала выйди из комнаты ${elsewhere.code} — потом можно начать новую игру.`}
+      actions=${[{ title: "Вернуться в комнату", kind: "bold", run: comeBack }, { title: "Выйти из комнаты", kind: "destructive", run: giveUp }, { title: "Отмена", run: () => setElsewhereAsk(null) }]} />`
+    : elsewhereAsk === "busy" && elsewhere ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setElsewhereAsk(null)}
+      message=${`Идёт матч ${elsewhere.bot ? "с ботом" : `с ${elsewhere.opponent ?? "соперником"}`}. Вернись в него или сдайся — потом можно начать новый.`}
+      actions=${[{ title: "Вернуться в матч", kind: "bold", run: comeBack }, { title: "Сдаться", kind: "destructive", run: () => setElsewhereAsk("leave"), stay: true }, { title: "Отмена", run: () => setElsewhereAsk(null) }]} />` : null}
+    ${elsewhereAsk === "leave" && elsewhere && !elsewhere.live && !elsewhere.opponent ? html`<${Alert} title="Выйти из комнаты?" onClose=${() => setElsewhereAsk(null)}
+      actions=${[{ title: "Остаться", run: () => setElsewhereAsk(null) }, { title: "Выйти", kind: "destructive", run: giveUp }]} />`
+    : elsewhereAsk === "leave" && elsewhere ? html`<${Alert} title="Покинуть матч?" message="Победа будет засчитана сопернику." onClose=${() => setElsewhereAsk(null)}
+      actions=${[{ title: "Остаться", run: () => setElsewhereAsk(null) }, { title: "Покинуть", kind: "destructive", run: giveUp }]} />` : null}
     ${install && !match ? html`<${InstallSheet} close=${() => { setInstall(false); if (whatsNew.due()) setNews(true); }} />` : null}
     ${news && !install && !match ? html`<${WhatsNewSheet} close=${() => setNews(false)} />` : null}
     ${askPush && !install && !news && !match ? html`<${PushAskSheet} close=${() => setAskPush(false)} />` : null}
     ${invite && !match ? html`<div class="invite-toast glass" role="alert">
-      <img src=${img("invite")} alt="" /><span><b>${invite.nickname}</b><small>${invite.game === "contexto" ? "зовёт в Контекстно" : "зовёт сыграть"}</small></span>
+      <img src=${img("invite")} alt="" /><span><b>${invite.nickname}</b><small>${invite.game === "contexto" ? "зовёт в Контекстно" : invite.game === "room" ? "зовёт в свою комнату" : "зовёт сыграть"}</small></span>
       <button class="chip-btn press accept" onClick=${() => { const i = invite; setInvite(null); takeInvite(i).catch((e) => alert(e.message)); }}>Играть</button>
       <button class="round-no press" aria-label="Скрыть" onClick=${() => setInvite(null)}><${Icon} name="x" size="14" weight="2.5" /></button></div>` : null}
     ${feedback ? html`<${FeedbackSheet} context=${feedback} close=${() => setFeedback(null)} />` : null}
@@ -473,7 +554,9 @@ function useEdgeSwipe(ref, live, done) {
       if (!g) return;
       const s = g; g = null;
       if (!s.on) return;
-      const go = s.dx > s.w * 0.4 || (s.v > 0.35 && s.dx > 20);
+      let go = s.dx > s.w * 0.4 || (s.v > 0.35 && s.dx > 20);
+      // A room that asks first slides back into place and shows its question.
+      if (go && guarded(live.current)) go = false;
       const ease = `transform ${go ? 0.26 : 0.32}s cubic-bezier(.2,.8,.3,1), filter .3s`;
       s.top.style.transition = ease; s.under.style.transition = ease;
       paint(s, go ? 1 : 0);
@@ -490,6 +573,11 @@ function useEdgeSwipe(ref, live, done) {
     el.addEventListener("touchcancel", end);
     return () => { el.removeEventListener("touchstart", start); el.removeEventListener("touchmove", move); el.removeEventListener("touchend", end); el.removeEventListener("touchcancel", end); };
   }, []);
+}
+/** The top screen's own question before leaving, if it has one now. */
+function guarded(l) {
+  const top = l.stack?.at(-1);
+  return !!(top && leaveGuard.ask && leaveGuard.screen === top.name && leaveGuard.ask());
 }
 function paint(g, f) {
   g.top.style.transform = `translate3d(${f * 100}%,0,0)`;
@@ -545,11 +633,22 @@ function CallBar({ c, i }) {
 const ReturnBar = ({ m, go, drop }) => html`<div class="return-bar glass-bar">
   <button class="rb-main press" onClick=${go}>
     <span class="rb-dot"><i></i></span>
-    <span class="rb-t"><small>${m.watching ? "Ты на трибуне" : "Матч идёт"}</small>
-      <b>${m.watching ? m.leftName + " — " : ""}${m.opponent.name} · ${m.score[0]}:${m.score[1]} · раунд ${m.round}</b></span>
+    <span class="rb-t"><small>${m.watching ? "Ты на трибуне" : !m.hasBoard && !m.round ? "Ты в комнате" : "Матч идёт"}</small>
+      <b><${Marquee} text=${!m.hasBoard && !m.round ? (m.them ? `${m.watching ? m.leftName + " — " : ""}${m.opponent.name} · ждём начала` : `Комната ${m.code} · ждём второго игрока`)
+        : `${m.watching ? m.leftName + " — " : ""}${m.opponent.name} · ${m.score[0]}:${m.score[1]} · раунд ${m.round}`} /></b></span>
     <span class="rb-go">Вернуться</span>
   </button>
   <button class="round-no press" aria-label=${m.watching ? "Уйти с трибуны" : "Выйти из матча"} onClick=${drop}><${Icon} name="x" size="14" weight="2.5" /></button>
+</div>`;
+
+/** The match the server remembers for this profile, begun on another device: back to it, or give it up. */
+const ElsewhereBar = ({ r, go, drop }) => html`<div class="return-bar glass-bar">
+  <button class="rb-main press" onClick=${go}>
+    <span class="rb-dot"><i></i></span>
+    <span class="rb-t"><small>${!r.live && !r.opponent ? "Ты в комнате" : "Матч идёт"}</small><b><${Marquee} text=${r.bot ? "Против бота" : r.opponent ?? "Ждём второго игрока"} /></b></span>
+    <span class="rb-go">Вернуться</span>
+  </button>
+  <button class="chip-btn rb-quit press" onClick=${drop}>${!r.live && !r.opponent ? "Выйти" : "Сдаться"}</button>
 </div>`;
 
 const Placeholder = ({ title, text, children }) => html`<div class="screen-scroll"><div class="page">

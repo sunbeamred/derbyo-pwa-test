@@ -1,10 +1,12 @@
 // The match screen (port of MatchView.swift and Motion.swift).
-import { html, useState, useEffect, useRef, cx, img, Icon, Panel, useSheet, Alert, Toast, RatingTag, breakable, vibrate, flagView, useDoubleTap, LikeEcho } from "./common.js";
+import { html, useState, useEffect, useLayoutEffect, useRef, cx, img, Icon, Panel, useSheet, Alert, Toast, RatingTag, breakable, vibrate, flagView, useDoubleTap, LikeEcho, Marquee } from "./common.js";
 import { byId } from "../data.js";
 import { photoOf } from "../net.js";
 import { store } from "../model.js";
 import { Sound } from "../sound.js";
 import { AnswerSheet, ChatSheet, ReviewDecision, StandsSheet } from "./sheets.js";
+import { Explainer, noticeFor } from "./explain.js";
+import { DebugTools } from "./debug.js";
 import { ProfileSheet } from "./profile.js";
 
 const RED = "#FF5364", MINT = "#32E5A1", GOLD = "#F6D482", MUTED = "#A8B8CA";
@@ -23,6 +25,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   const [standsOpen, setStandsOpen] = useState(false);
   const [viewer, setViewer] = useState(null);
   const [confirmSurrender, setConfirmSurrender] = useState(false);
+  const [drawHint, setDrawHint] = useState(null);
   const [shownToast, setShownToast] = useState(null);
   const [entering, setEntering] = useState(true);
   const [finishing, setFinishing] = useState(0);
@@ -95,15 +98,30 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   const slotLine = m.watching ? "Ты на трибуне: ходить нельзя, болеть в чате можно" : m.turn === 0 ? "Выбери клетку и назови футболиста" : "Ход соперника. Присмотри клетку на свой ход";
 
   let leaveMenu = null;
-  const menuRow = (title, run, { destructive = false, enabled = true } = {}) => html`
-    <button class=${cx("navy-btn menu-row", destructive && "destructive")} disabled=${!enabled}
-      onClick=${() => { if (Date.now() - menuOpenedAt.current < 500) return; leaveMenu?.(); run(); store.changed(); }}>${title}</button>`;
+  const menuRow = (title, run, { destructive = false, draw = false, fresh = false, enabled = true } = {}) => html`
+    <button class=${cx("navy-btn menu-row", destructive && "destructive", draw && "draw")} disabled=${!enabled}
+      onClick=${() => { if (Date.now() - menuOpenedAt.current < 500) return; leaveMenu?.(); run(); store.changed(); }}>${title}${fresh ? html`<b class="badge warn row-badge">!</b>` : null}</button>`;
+  // Draws: the row is always there; grey until it opens, and a tap on a grey row says why without any time.
+  const drawRow = (title, open, mine, run, why) => mine ? menuRow(`${title} · ждём ${m.opponent.name}`, () => {}, { enabled: false })
+    // Open: our gold, and the first time also the «!» from the menu button, so it is clear where that came from.
+    : open ? menuRow(title, run, { draw: true, fresh: m.freshDraw })
+    : html`<button class="navy-btn menu-row off" onClick=${() => setDrawHint(why)}>${title}</button>${drawHint === why ? html`<p class="menu-hint">${why}</p>` : null}`;
+  const drawRows = (round) => m.drawsAllowed ? html`
+    ${round ? drawRow("Ничья в раунде", m.roundDrawOpen, m.roundDrawOffer === "mine", () => m.offerRoundDraw(), "Откроется, если раунд затянется") : null}
+    ${drawRow("Ничья в матче", m.canOfferDraw, m.drawOffer === "mine", () => m.offerDraw(), `Откроется после ${m.matchDrawAfter} раундов`)}` : null;
+  const theirDraw = m.roundDrawOffer === "theirs" ? { what: "в раунде", answer: (yes) => m.answerRoundDraw(yes) }
+    : m.drawOffer === "theirs" ? { what: "в матче", answer: (yes) => m.answerDraw(yes) } : null;
   const invite = async () => {
     const text = `Сыграем в DERBYO? Комната ${m.code}: https://derbyo.online/#join=${m.code.replace(" ", "")}`;
     try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); m.show("Приглашение скопировано", true); store.changed(); } } catch {}
   };
   const menu = (leave) => (leaveMenu = leave, html`<div class="menu">
     <h2>Матч</h2>
+    ${theirDraw && !m.watching ? html`<div class="raise-offer menu-offer">
+        <span>${m.opponent.name} предлагает ничью ${theirDraw.what}</span>
+        <button class="navy-btn small" onClick=${() => { leave(); theirDraw.answer(false); store.changed(); }}>Играть</button>
+        <button class="draw-yes press" onClick=${() => { leave(); theirDraw.answer(true); store.changed(); }}>Ничья</button>
+      </div>` : null}
     ${m.watching ? html`
       ${menuRow(Sound.enabled ? "Выключить звук" : "Включить звук", () => (Sound.enabled = !Sound.enabled))}
       ${menuRow("Свернуть", minimize)}
@@ -112,19 +130,20 @@ export function MatchScreen({ m, close, findNew, minimize }) {
       ${!m.matchOver ? menuRow("Свернуть матч", minimize) : null}
       ${menuRow(`Пригласить · код ${m.code}`, invite)}
       ${menuRow("Обратная связь", () => dispatchEvent(new CustomEvent("derbyo-feedback", { detail: { room: m.code?.replace(/\s/g, ""), role: "player" } })))}
-      ${m.roundOver ? menuRow(m.canLeaveFree ? "Выйти без штрафа" : m.matchOver ? "На главную" : "Выйти из матча", close) : html`
+      ${m.roundOver ? html`${!m.matchOver ? drawRows(false) : null}${menuRow(m.canLeaveFree ? "Выйти без штрафа" : m.matchOver ? "На главную" : "Выйти из матча", close)}` : html`
         ${menuRow(Sound.enabled ? "Выключить звук" : "Включить звук", () => (Sound.enabled = !Sound.enabled))}
         ${m.paused ? menuRow(m.resumeWait === null ? "Продолжить" : `Ждём ${m.opponent.name}…`, () => m.requestResume())
           : m.oppPauseAskLeft !== null ? menuRow("Принять паузу", () => m.acceptPause())
           : m.pauseAskLeft !== null ? null
           : menuRow("Пауза", () => m.requestPause(), { enabled: !m.canLeaveFree })}
         ${m.turn === 0 && !m.paused ? menuRow("Передать ход", () => m.passOnPurpose()) : null}
-        ${m.canLeaveFree ? menuRow(`Выйти без штрафа · ${m.opponent.name} не отвечает`, close)
+        ${drawRows(true)}
+        ${m.canLeaveFree ? menuRow(`Выйти без штрафа · ${m.opponent.name} ${quietWord(m)}`, close)
           : menuRow("Сдаться в раунде", () => setConfirmSurrender(true), { destructive: true })}`}`}
   </div>`);
 
   if (!m.hasBoard || m.closed) return html`<div class="match"><div class="match-wait">
-    <span class="spinner muted big"></span><b>${m.closed ?? "Выходим на поле…"}</b>
+    ${m.closed ? null : html`<span class="spinner muted big"></span>`}<b>${m.closed ?? "Выходим на поле…"}</b>
     <small>${m.closed ? "" : !m.state ? "Соединяемся с сервером" : m.opponent?.present ? `Ждём, пока ${m.opponent.name} выйдет на поле` : "Ждём соперника"}</small>
     <button class="navy-btn" onClick=${close}>${m.closed ? "Закрыть" : "Выйти"}</button></div></div>`;
   return html`<div class="match">
@@ -132,21 +151,11 @@ export function MatchScreen({ m, close, findNew, minimize }) {
       <${Scoreboard} m=${m} openProfile=${setProfileOf} openStands=${() => setStandsOpen(true)} />
       <${Board} m=${m} tap=${tapCell} />
       <div class="slot">
-        ${notes.length ? html`<div class=${cx("notes", ((m.offerRaise && !m.watching) || m.roundOver || m.drawOffer === "theirs") && "hidden")}>
+        ${notes.length ? html`<div class=${cx("notes", ((m.offerRaise && !m.watching) || m.roundOver) && "hidden")}>
           ${notes.map((c) => html`<div><b>${(c.label ?? c.title) + ": "}</b><span>${c.note}</span></div>`)}</div>` : null}
-        ${m.drawOffer === "theirs" ? html`<div class="raise-offer glass">
-            <span>${m.opponent.name} предлагает ничью в матче</span>
-            <button class="navy-btn small" onClick=${() => m.answerDraw(false)}>Играть</button>
-            <button class="gold-pill press" onClick=${() => m.answerDraw(true)}>Ничья</button>
-          </div>`
-        : m.offerRaise && !m.watching ? html`<div class="raise-offer glass">
+        ${m.offerRaise && !m.watching ? html`<div class="raise-offer glass">
             <span>Снова ничья. Следующий раунд — «${m.raisedLevel}»?</span>
-            ${m.canOfferDraw ? html`<button class="navy-btn small wide" onClick=${() => m.offerDraw()}>Предложить ничью</button>` : null}
             <button class="gold-pill press" onClick=${() => m.raiseLevel(true)}>Сложнее</button>
-          </div>`
-        : m.canOfferDraw && m.roundOver ? html`<div class="raise-offer glass">
-            <span>Три ничьи подряд. Закончить матч вничью?</span>
-            <button class="gold-pill press" onClick=${() => m.offerDraw()}>Предложить</button>
           </div>`
         : m.myOffer ? html`<div class="raise-offer glass"><span>${m.myOffer}</span></div>`
         : m.roundOver ? html`<${ResultBubble} m=${m} key=${m.finishSignal} />`
@@ -157,7 +166,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
         </div>
       </div>
       <${BottomTray} m=${m} findNew=${findNew} close=${close}
-        openChat=${() => { m.unread = 0; setChatOpen(true); }} openMenu=${() => { menuOpenedAt.current = Date.now(); setMenuOpen(true); }} />
+        openChat=${() => { m.unread = 0; setChatOpen(true); }} openMenu=${() => { menuOpenedAt.current = Date.now(); m.menuOpened?.(); setDrawHint(null); setMenuOpen(true); }} />
     </div>
     ${finishing && !reduceMotion() ? html`<${FinishAtmosphere} winner=${m.roundWinner === null ? null : m.seat(m.roundWinner)} key=${finishing} />` : null}
     ${coins && !reduceMotion() ? html`<${CoinAtmosphere} key=${coins} done=${() => setCoins(0)} />` : null}
@@ -169,6 +178,11 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${viewer ? html`<${Panel} onClose=${() => setViewer(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${1} viewer=${viewer} close=${leave} />`}<//>` : null}
     ${profileOf !== null ? html`<${Panel} onClose=${() => setProfileOf(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${profileOf} close=${leave} />`}<//>` : null}
     ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}>${menu}<//>` : null}
+    ${/* One window at a time: «Ты здесь?» and the surrender question first, the explanation waits for them. */
+      noticeFor(m) && !m.idleCheck && !confirmSurrender ? html`<${Explainer} notice=${noticeFor(m)} key=${noticeFor(m).id} />` : null}
+    <${DebugTools} m=${m} />
+    ${m.idleCheck ? html`<${Alert} title="Проверка активности" tone="warn" message="Уже второй ход без действий. Без подтверждения активности сопернику может быть присуждена победа."
+      onClose=${() => { m.imHere(); store.changed(); }} actions=${[{ title: "Продолжить игру", run: () => { m.imHere(); store.changed(); } }]} />` : null}
     ${confirmSurrender ? html`<${Alert} title=${`Сдаться в раунде ${m.round}?`} message=${`Раунд выиграет ${m.opponent.name}. Счёт станет ${m.score[0]}:${m.score[1] + 1}.`}
       onClose=${() => setConfirmSurrender(false)}
       actions=${[{ title: "Играть дальше", run: () => setConfirmSurrender(false) }, { title: "Сдаться", kind: "destructive", run: () => { setConfirmSurrender(false); m.surrender(); store.changed(); } }]} />` : null}
@@ -192,7 +206,7 @@ function Scoreboard({ m, openProfile, openStands }) {
         flag=${m.myFlag} reaction=${m.myReaction} away=${m.leftAwayFor ?? null} left=${!!m.meLeft} onClick=${() => openProfile(0)} />
       <div class="scorebug" aria-label=${`Счёт ${m.score[0]}:${m.score[1]}, раунд ${m.round}`}>
         <div class="digits"><b class="digit">${m.score[0]}</b><span class="colon">:</span><b class="digit">${m.score[1]}</b></div>
-        <${RoundSteps} results=${m.roundResults.map((r) => (r === null ? null : m.seat(r)))} current=${m.round} live=${!m.roundOver} />
+        <${RoundSteps} results=${m.roundResults.map((r) => (r === null ? null : m.seat(r)))} current=${m.round} live=${!m.roundOver} base=${minRounds(m)} />
       </div>
       <${PlayerSide} name=${m.opponent.name} photo=${m.avatarOf?.(1)} mark=${m.mark(1)} red=${m.mySeat === 1} tokens=${m.oppTokens} active=${live(1)} mine=${false}
         isBot=${m.opponent.isBot} flag=${m.opponent.flag} reaction=${m.oppReaction} away=${m.oppAwayFor} left=${m.oppLeft} onClick=${() => openProfile(1)} />
@@ -224,19 +238,34 @@ function LevelRow({ m, live }) {
 
 /** Under a player in the header: what the player is doing (in the game, minimised, offline…) and the ring of
  * their time-away budget, always there; it empties while they are away. */
+/** Why «Выйти без штрафа» is offered, after the opponent's name: two missed turns, the app closed or minimised
+ *  between rounds, or a pause / «Готов» left unanswered (owner, 2026-11-06). */
+const quietWord = (m) => m.oppIdle ? "бездействует" : m.freeLeave === "gone" ? (m.oppGoneKind === "offline" ? "— нет связи" : "свернул") : "не отвечает";
+
+// Status icons (owner, 2026-11-07): Tabler outline (MIT), drawn so they look the same on every phone, instead of emoji
+// and symbols that were faint or missing: wifi-off «нет связи», zzz «спит», eye-off «свернул», hourglass-empty «не отвечает».
+const ico = (paths, w = 2.4) => html`<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=${w} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths.map((d) => html`<path d=${d} />`)}</svg>`;
+const ST_OFFLINE = ico(["M12 18l.01 0", "M9.172 15.172a4 4 0 0 1 5.656 0", "M6.343 12.343a7.963 7.963 0 0 1 3.864 -2.14m4.163 .155a7.965 7.965 0 0 1 3.287 2", "M3.515 9.515a12 12 0 0 1 3.544 -2.455m3.101 -.92a12 12 0 0 1 10.325 3.374", "M3 3l18 18"]);
+const ST_SLEEP = ico(["M4 12h6l-6 8h6", "M14 4h6l-6 8h6"], 2.6);
+const ST_HIDDEN = ico(["M10.585 10.587a2 2 0 0 0 2.829 2.828", "M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87", "M3 3l18 18"]);
+const ST_WAIT = ico(["M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z", "M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z"]);
+
 function SideTag({ m, owner }) {
   const mine = owner === 0, isBot = !mine && m.opponent.isBot;
   if (isBot) return html`<span class="side-st"><span class="st in">● в игре</span></span>`;
   const away = mine ? m.leftAwayFor ?? null : m.oppAwayFor;
   const gone = mine ? m.leftGoneKind : m.oppGoneKind;
-  const kind = (mine ? m.leftAwayKind : m.oppAwayKind) ?? gone;
+  // Between rounds a closed or minimised app is shown as itself, not as «не отвечает» (owner, 2026-11-06).
+  const goneFree = !mine && m.canLeaveFree && m.freeLeave === "gone";
+  const kind = (mine ? m.leftAwayKind : m.oppAwayKind) ?? gone ?? (goneFree ? "hidden" : null);
   const left = mine ? !!m.meLeft : m.oppLeft;
-  const missed = mine ? 0 : m.oppMissed || 0;
   const status = left ? html`<span class="st left">○ покинул матч</span>`
     // «не отвечает» only when the server says so (the same signal that offers «Выйти без штрафа»).
-    : !mine && m.canLeaveFree && away === null ? html`<span class="st idle">⏱ не отвечает</span>`
-    : missed > 0 && away === null ? html`<span class="st missed">⏱ пропуск</span>`
-    : away !== null || gone ? html`<span class="st away">◒ ${kind === "offline" ? "нет связи" : kind === "blurred" ? "в другом окне" : "свернул"}</span>`
+    // Two missed turns with the app open: «спит»; a pause or «Готов» left unanswered: «не отвечает».
+    : !mine && m.canLeaveFree && away === null && !goneFree ? html`<span class="st idle">${m.oppIdle ? html`${ST_SLEEP} спит` : html`${ST_WAIT} не отвечает`}</span>`
+    : !mine && m.oppSleeping && away === null && !gone ? html`<span class="st idle">${ST_SLEEP} спит</span>`
+    // A missed turn is not shown (owner, 2026-11-06): «бездействует» comes once it matters.
+    : away !== null || gone || goneFree ? html`<span class="st away">${kind === "offline" ? html`${ST_OFFLINE} нет связи` : html`${ST_HIDDEN} свернул`}</span>`
     : html`<span class="st in">● в игре</span>`;
   // The budget: the server's seconds left (counting down while away), out of the level's total.
   const total = (mine ? (m.watching ? m.leftAwayTotal : m.myAwayTotal) : m.oppAwayTotal) ?? m.awayTotal ?? 45;
@@ -289,16 +318,22 @@ function PlayerSide({ name, photo, flag, mark, red, tokens, active, mine, isBot,
   </button>`;
 }
 
-/** One bar per round, filled with the winner's colour, the live round outlined; long matches fold into "+N". */
-function RoundSteps({ results, current, live }) {
-  const total = Math.max(3, results.length + (live ? 1 : 0));
+/** The fewest rounds the match can take: the wins it needs (2 by default), or a fixed number of rounds. */
+const minRounds = (m) => { const s = m.state?.settings; return Math.max(1, s?.winsRequired ?? (s?.tiebreak ? 2 : s?.rounds) ?? 2); };
+
+/** One bar per round, filled with the winner's colour, the live round outlined (owner, 2026-11-06): as many as the
+ *  match needs at least, one more as each further round begins. The strip keeps its width, so the bars shorten
+ *  as rounds are added and become dots from the fifth; past five, the last four show after "+N". */
+function RoundSteps({ results, current, live, base = 2 }) {
+  const total = Math.max(base, results.length + (live ? 1 : 0), current || 0);
   const first = total > 5 ? total - 4 : 0;
+  const shown = total - first;
   const steps = [];
   for (let i = first; i < total; i++) {
     const r = i < results.length ? results[i] : undefined;
     steps.push(html`<i class=${cx("step", r === undefined ? "" : r === 0 ? "x" : r === 1 ? "o" : "d", i === current - 1 && live && "live")}></i>`);
   }
-  return html`<div class=${cx("round-steps", total - first > 3 && "many")}>${first > 0 ? html`<b>+${first}</b>` : null}${steps}</div>`;
+  return html`<div class=${cx("round-steps", `n${Math.min(shown, 5)}`, first > 0 && "folded")}>${first > 0 ? html`<b>+${first}</b>` : null}${steps}</div>`;
 }
 
 export function ConditionIcon({ icon, size = 34 }) {
@@ -315,13 +350,39 @@ export function ConditionIcon({ icon, size = 34 }) {
   }
 }
 
+// Surnames on the cards (owner, 2026-11-06): Messi, Donnarumma, Aubameyang; the search, the profile and «Не подходит»
+// keep the full name. Particles stay with the surname (van Dijk, De Bruyne, dos Santos), one-word names stay whole
+// (Ronaldinho), an East Asian name gives its first word (Son Heung-min → Son), and two equal surnames on one board
+// get the initial (C. Ronaldo, R. Ronaldo).
+const PARTICLES = new Set(["van", "von", "de", "der", "den", "da", "das", "do", "dos", "di", "del", "della", "le", "la", "du", "el", "al", "ten", "ter", "bin", "ibn", "mac", "st."]);
+export function surname(name = "") {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name.trim();
+  if (/-[a-z]/.test(parts.at(-1))) return parts[0];
+  let i = parts.length - 1;
+  while (i > 1 && PARTICLES.has(parts[i - 1].toLowerCase())) i--;
+  return parts.slice(i).join(" ");
+}
+const cardNames = (names) => {
+  const short = names.map((n) => (n ? surname(n) : null));
+  return short.map((s, i) => s && short.filter((x) => x === s).length > 1 && names[i].trim().split(/\s+/).length > 1 ? `${names[i].trim()[0]}. ${s}` : s);
+};
+
 /** A row label in the narrow left column: one word per line, shrunk together to fit. */
 function WordLines({ text }) {
   // A hyphenated name breaks after the hyphen (Saint-|Germain), so one long word does not shrink the whole label.
   const words = text.split(" ").flatMap((w) => w.replace(/-(?=\S)/g, "-\n").split("\n"));
   const longest = Math.max(...words.map((w) => w.length));
-  const size = Math.max(9, Math.min(12, 12 * 8.4 / Math.max(longest, 1)));
-  return html`<span class="word-lines" style=${`font-size:${size}px`}>${words.map((w) => html`<span>${w}</span>`)}</span>`;
+  const size = Math.max(7.5, Math.min(12, 12 * 8.4 / Math.max(longest, 1)));
+  // Measured, too: a long word in another language shrinks the label until it fits the column (never under 7 px).
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref.current, box = el?.parentElement?.clientWidth;
+    if (!el || !box) return;
+    el.style.fontSize = `${size}px`;
+    if (el.scrollWidth > box) el.style.fontSize = `${Math.max(7, (size * box) / el.scrollWidth - 0.2)}px`;
+  }, [text]);
+  return html`<span class="word-lines" ref=${ref} style=${`font-size:${size}px`}>${words.map((w) => html`<span>${w}</span>`)}</span>`;
 }
 
 function Board({ m, tap }) {
@@ -345,6 +406,7 @@ function Board({ m, tap }) {
     });
   }, [m.reward?.id]);
   const winning = [...Array(9).keys()].filter((i) => m.cells[i]?.winning);
+  const shortNames = cardNames([...Array(9).keys()].map((i) => { const c = m.cells[i]; return c ? (c.name ?? byId[c.playerId]?.name ?? null) : null; }));
   const locked = m.turn !== 0 || m.roundOver || m.paused || m.review || m.watching;
   return html`<div class="board" ref=${ref}>
     <div class="board-row head">
@@ -355,7 +417,7 @@ function Board({ m, tap }) {
       <span class="lead row-head"><${ConditionIcon} icon=${m.rows[r].icon} size=${38} /><${WordLines} text=${m.rows[r].title} /></span>
       ${[0, 1, 2].map((c) => {
         const i = r * 3 + c, cell = m.cells[i];
-        return html`<${Cell} key=${i} cell=${cell} cross=${cell ? m.seat(cell.owner) === 0 : false}
+        return html`<${Cell} key=${i} cell=${cell} short=${shortNames[i]} cross=${cell ? m.seat(cell.owner) === 0 : false}
           selected=${m.selected === i || (m.review?.owner === 0 && m.review?.cell === i)} locked=${locked}
           oppPick=${m.oppSelected === i || (m.review?.owner === 1 && m.review?.cell === i)} clued=${!!m.sharedClues[i]}
           recent=${m.recent === i} disputed=${m.review?.cell === i} plain=${m.watching} phase=${Math.max(0, winning.indexOf(i)) * 0.3}
@@ -367,7 +429,7 @@ function Board({ m, tap }) {
   </div>`;
 }
 
-function Cell({ cell, cross, selected, locked, oppPick, clued, recent, disputed, plain, phase, label, tap, respect = 0, canRespect = false, giveRespect }) {
+function Cell({ cell, short, cross, selected, locked, oppPick, clued, recent, disputed, plain, phase, label, tap, respect = 0, canRespect = false, giveRespect }) {
   const twice = useDoubleTap(() => canRespect && giveRespect());
   if (cell?.blocked) return html`<button class="cell free locked" aria-label=${`${label}: закрыта опекой`}><img class="cell-glyph lock" src=${img("lock")} alt="" /></button>`;
   const p = !cell ? null : cell.name ? { name: cell.name, photo: photoOf(cell) } : byId[cell.playerId];
@@ -378,7 +440,7 @@ function Cell({ cell, cross, selected, locked, oppPick, clued, recent, disputed,
       ${p.photo ? html`<img class="cell-photo" src=${p.photo} alt="" />` : null}
       <span class="cell-shade"></span>
       <img class="cell-mark" src=${img(cross ? "mark-x" : "mark-o")} alt="" />
-      <span class=${cx("cell-name", p.name.split(" ").some((w) => w.length > 11) && "long")}>${p.name}</span>
+      <span class=${cx("cell-name", ((n) => n > 12 ? "xlong" : n > 9 && "long")(Math.max(...(short ?? p.name).split(/\s+/).map((w) => w.length))))}>${short ?? p.name}</span>
       ${cell.winning ? html`<span class="sheen"></span>` : null}
       ${recent ? html`<span class="echo"></span>` : null}
       ${respect ? html`<span class="respect-badge">🤝 ${respect}</span>` : null}
@@ -430,9 +492,9 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
     : m.review?.owner === 0 ? "Ждём решение" : m.review?.owner === 1 ? "Твоё решение"
     : mine ? (m.hotseat ? `Ходит ${m.leftName}` : "Твой ход") : m.oppSelected !== null ? `${opp} думает…` : `Ходит ${opp}`;
   const color = m.review ? GOLD : m.paused ? MUTED : m.seat(m.turn) === 0 ? "#FFB3C1" : "#91FFD3";
-  const sub = m.watching ? html`<small>${m.review ? `зачёт: ${m.review.name ?? ""}` : m.paused ? "игроки взяли паузу" : "ты на трибуне"}</small>`
+  const sub = m.watching ? html`<small><${Marquee} text=${m.review ? `зачёт: ${m.review.name ?? ""}` : m.paused ? "игроки взяли паузу" : "ты на трибуне"} /></small>`
     // Time away is shown only at the top (the ring by the player's status, the opponent-away bubble), not down here.
-    : m.review ? html`<small>зачёт: ${m.review.name ?? byId[m.review.playerId].name}</small>` : null;
+    : m.review ? html`<small><${Marquee} text=${`зачёт: ${m.review.name ?? byId[m.review.playerId].name}`} /></small>` : null;
 
   return html`<div class="tray-row">
     <div class=${cx("tray turn-tray glass", m.roundOver && !m.watching && "over")}>
@@ -440,17 +502,18 @@ function BottomTray({ m, findNew, close, openChat, openMenu }) {
       : m.roundOver ? html`<${RoundButton} m=${m} findNew=${findNew} close=${close} />` : html`
         <${TurnDial} m=${m} size=${48} />
         ${m.canLeaveFree && !m.watching ? html`<button class="tray-label press" onClick=${m.paused || (m.online && !m.fromQuick) ? close : findNew}>
-            <b style="color:#32E5A1">${m.paused || (m.online && !m.fromQuick) ? "Выйти без штрафа »" : "Новый соперник »"}</b>
-            <small>${opp} не отвечает</small></button>`
+            <b class="wrap" style="color:#32E5A1">${m.paused || (m.online && !m.fromQuick) ? "Выйти без штрафа" : "Новый соперник"}</b>
+            <small><${Marquee} text=${`${opp} ${quietWord(m)}`} /></small></button>`
         : pause ? html`<button class="tray-label press" onClick=${() => { pause.run(); store.changed(); }}>
-            <b style=${`color:${pause.color}`}>${pause.title}</b><small>${pause.detail}</small></button>`
-        : html`<span class="tray-label"><b style=${`color:${color}`}>${title}</b>${sub}</span>`}`}
+            <b class="wrap" style=${`color:${pause.color}`}>${pause.title}</b><small><${Marquee} text=${pause.detail} /></small></button>`
+        : html`<span class="tray-label"><b style=${`color:${color}`}><${Marquee} text=${title} /></b>${sub}</span>`}`}
     </div>
     <div class="tray tools-tray glass">
       ${m.chatOff ? null : html`<button class="tool press" onClick=${openChat} aria-label=${m.unread ? `Чат, новых сообщений: ${m.unread}` : "Чат"}>
         <img src=${img("chat")} alt="" />${m.unread ? html`<b class="badge">${m.unread}</b>` : null}</button>
       <i class="tool-sep"></i>`}
-      <button class="tool press" onClick=${openMenu} aria-label="Меню матча"><img src=${img("menu")} alt="" /></button>
+      <button class="tool press" onClick=${openMenu} aria-label=${m.menuBadge === "1" ? "Меню матча: предложение ничьей" : m.menuBadge ? "Меню матча: ничья доступна" : "Меню матча"}>
+        <img src=${img("menu")} alt="" />${m.menuBadge ? html`<b class=${cx("badge", m.menuBadge === "!" && "warn")}>${m.menuBadge}</b>` : null}</button>
     </div>
   </div>`;
 }
@@ -488,9 +551,15 @@ function RoundButton({ m, findNew, close }) {
   </button>`;
 }
 
+const winReason = (r = "") => /^Соперник сдался/.test(r) ? "Соперник сдался" : /^Соперник завершил участие/.test(r) ? "Соперник покинул матч"
+  : /^Соперник не вернулся/.test(r) ? "Соперник не вернулся в игру за 60 секунд" : /^Вышел из игры после того, как время вне игры/.test(r) ? "У соперника истекло время вне игры"
+  : /^Соперник не отвечает/.test(r) ? "Соперник не отвечал" : null;
+
+const WALKOVER = { ready: "Соперник не подтвердил готовность — техническая победа", gone: "Соперник не вернулся к следующему раунду — техническая победа" };
+
 /** The round's result in a bubble under the board, in the winner's colour with their mark. */
 function ResultBubble({ m }) {
-  const w = m.roundWinner, done = m.matchOver;
+  const walk = !!m.walkoverWin, w = walk ? 0 : m.roundWinner, done = m.matchOver;
   const title = m.watching && w === 0 ? (done ? `Матч выиграл ${m.leftName}` : `Раунд выиграл ${m.leftName}`)
     : w === 0 ? (done ? "Победа в матче!" : "Раунд твой")
     : w === 1 ? (done ? `Матч выиграл ${m.opponent.name}` : `Раунд выиграл ${m.opponent.name}`)
@@ -498,7 +567,12 @@ function ResultBubble({ m }) {
     : /^Шесть ходов без захвата/.test(m.g?.reason ?? "") ? "Пат: 6 ходов без захвата" : "Ничья в раунде";
   const ws = w === null ? null : m.seat(w);
   const tint = ws === 0 ? RED : ws === 1 ? MINT : GOLD;
-  return html`<div class="result-bubble" style=${`--t:${tint}`}><img src=${img(w === null ? "whistle" : m.mark(w))} alt="" /><b>${title}</b></div>`;
+  // Lost for two turns without a move: say so, or it reads as if the one who left had won by leaving.
+  const why = (walk ? WALKOVER[m.endNotice?.code] ?? "Соперник не продолжил матч — техническая победа" : null)
+    ?? (m.idleLost && !m.watching ? (w === 1 ? "Активность не подтверждена — победа в матче засчитана сопернику" : w === 0 ? "Соперник не подтвердил активность" : null) : null)
+    // A round won not on the board: say how, or «Раунд твой» comes out of nowhere (the server's reasons).
+    ?? (w === 0 && !m.watching ? winReason(m.g?.reason) : null);
+  return html`<div class=${cx("result-bubble", why && "with-why")} style=${`--t:${tint}`}><img src=${img(w === null ? "whistle" : m.mark(w))} alt="" /><b>${title}${why ? html`<small>${why}</small>` : null}</b></div>`;
 }
 
 /** .game-reward: the reward card; in 0.3 s, out at 2.35 s. */

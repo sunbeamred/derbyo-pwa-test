@@ -1,7 +1,7 @@
 // A real match on the site's server, behind the same face as the local Match (model.js), so the screens read
 // either. The server owns everything; this turns its room state into "you" (owner 0) and "the other side" (owner 1).
 import { store, LEVELS, Hints, botName } from "./model.js";
-import { api, openStream, uuid, savedSession, account } from "./net.js";
+import { api, openStream, uuid, savedSession, account, diag } from "./net.js";
 
 const HINT_LEVEL = { profile: 1, letters: 2, four: 3 };
 const HINT_ID = [null, "profile", "letters", "four"];
@@ -26,6 +26,8 @@ export function criterion(c) {
   return { key: c.id, title: c.type === "p" ? POSITION[c.key] ?? title : title, icon, note: c.note ?? null };
 }
 
+// «спит» after this much of the opponent's own turn time with nothing done (owner, 2026-11-07).
+const SLEEP_MS = 75_000;
 // The server's HIDE_GRACE: after the time-away budget, an absence this long loses the round.
 const HIDE_GRACE = 5;
 
@@ -65,7 +67,12 @@ export class OnlineMatch {
     };
     this.pulse = setInterval(presence, 15000);
     // Coming back, say it twice more: the minimise beacon (sendBeacon has no answer to check) may land a moment later.
-    this.onVisibility = () => { presence(); if (!document.hidden) for (const ms of [2000, 6000]) setTimeout(() => { if (!document.hidden) presence(); }, ms); };
+    // Coming back, the screen still holds the state from before minimising: explanation windows wait for a fresh one
+    // (or 4 s), so the one that is current now shows, not an older one that the server has since replaced.
+    this.onVisibility = () => {
+      if (document.hidden) { this.stale = true; clearTimeout(this.staleTimer); }
+      else if (this.stale) { this.shownAt = Date.now(); this.staleTimer = setTimeout(() => { this.stale = false; store.changed(); }, 4000); }
+      presence(); if (!document.hidden) for (const ms of [2000, 6000]) setTimeout(() => { if (!document.hidden) presence(); }, ms); };
     document.addEventListener("visibilitychange", this.onVisibility);
     this.onHide = () => { try { navigator.sendBeacon?.("/api/presence", new Blob([JSON.stringify({ status: "hidden", token: session.token })], { type: "application/json" })); } catch {} };
     addEventListener("pagehide", this.onHide);
@@ -96,6 +103,8 @@ export class OnlineMatch {
     if (f.type === "clock") { this.offset = f.serverNow - Date.now(); return; }
     if (f.type === "replaced" || f.type === "closed") {
       this.closed = f.message || "Комната закрыта";
+      // The host took this player out (owner, 2026-11-07): the screen says so, not just «закрыта».
+      this.kicked = f.reason === "kicked";
       this.stop(false);
       this.onClosed?.(this.closed);
       store.changed();
@@ -117,6 +126,10 @@ export class OnlineMatch {
       st = JSON.parse(JSON.stringify(st).replaceAll("Скаут Боб", this.botName));
     }
     const before = this.g;
+    if (this.stale && this.shownAt && st.serverNow - (this.offset ?? 0) >= this.shownAt - 1000) { this.stale = false; clearTimeout(this.staleTimer); }
+    // Sandbox diagnostics: how long the turn timer stood at zero before the server's next state came.
+    if (this.zeroAt) { diag.note("zero", { ms: Date.now() - this.zeroAt, mine: this.zeroMine }); this.zeroAt = 0; }
+    { const lag = Date.now() - (st.serverNow - (this.offset ?? 0)); if (this.offset != null && Math.abs(lag) > 2000) diag.note("late", { ms: lag }); }
     this.state = st;
     this.offset = st.serverNow - Date.now();
     this.watching = st.role !== "player";
@@ -145,16 +158,28 @@ export class OnlineMatch {
     // A draw for the whole match, after three drawn rounds in a row (the site's rule): offered by one, agreed by the other.
     this.drawOffer = this.watching || !st.drawOffer ? null : st.drawOffer === st.selfId ? "mine" : "theirs";
     this.canOfferDraw = !this.watching && !!st.canAgreeDraw && !st.drawOffer;
+    this.matchDrawAfter = st.matchDrawAfter ?? 12;
+    // No draws against a bot or for two on one screen.
+    this.drawsAllowed = !this.watching && !this.hotseat && !!them && !them.bot;
     this.freeLeave = this.watching ? null : st.freeLeave ?? null;
+    // Why the round or the match ended, for the explanation window (js/ui/explain.js); serverSeat is the seat the server means.
+    this.endNotice = st.endNotice ?? null; this.serverSeat = st.seat ?? null;
     this.reactions(st.reactions);
     this.score = [st.score[this.mySeat] ?? 0, st.score[1 - this.mySeat] ?? 0];
     this.round = st.round;
     this.roundResults = (st.roundResults ?? []).map((r) => this.owner(r.winner));
     this.viewers = (st.viewers ?? []).map((v) => v.name);
+    // Each viewer's card (rating, games, profile id) for their profile; «you» on the stands is found by id, not by name.
+    this.viewerCards = Object.fromEntries((st.viewers ?? []).map((v) => [v.name, v.card ?? null]));
+    this.standsMe = (st.viewers ?? []).find((v) => v.id === st.selfId)?.name ?? null;
     this.chat = (st.chat ?? []).map((c) => ({ id: c.id, who: c.senderId === st.selfId ? "Ты" : c.name, text: c.text, kind: "text", spectator: c.role === "spectator", likes: c.likeCount ?? 0, liked: !!c.liked }));
     for (const c of st.chat ?? []) if (!this.seenChat.has(c.id)) { this.seenChat.add(c.id); if (!this.firstState && c.senderId !== st.selfId) this.unread++; }
     this.oppLeft = !them && st.round > 0;
     this.matchOver = !!st.seriesComplete;
+    // A match won because the other side did not go on between rounds (the server's walkover, room event «abandoned»
+    // with the winner's seat): the bubble says so instead of the last round's reason (owner, 2026-11-07).
+    const ab = (st.events ?? []).filter((e) => e.type === "abandoned").at(-1);
+    this.walkoverWin = this.matchOver && !this.watching && ab?.seat != null && ab.seat === st.seat;
     this.levelSetting = st.settings?.level ?? 2;
 
     const g = st.game;
@@ -179,8 +204,17 @@ export class OnlineMatch {
     this.choices = g.choices ?? null;
     this.mismatch = g.mismatch ? { cell: g.mismatch.cell, playerId: g.mismatch.player, name: g.mismatch.name, why: g.mismatch.why } : null;
     this.oppMissed = g.missed?.[1 - this.mySeat] ?? 0;
+    this.myMissed = g.missed?.[this.mySeat] ?? 0;
     const pr = g.pauseRequest;
     this.pauseRequest = pr;
+    // A draw inside the round: the server opens the offer only when the round is hard, and never says when.
+    this.roundDrawOpen = !this.watching && !this.roundOver && !!g.drawOpen;
+    this.roundDrawOffer = this.watching || this.roundOver || !g.drawOffer ? null : g.drawOffer.by === this.mySeat ? "mine" : "theirs";
+    // The menu button: «!» when a draw has just opened, «1» for the opponent's offer, both until the menu is opened.
+    const opened = !this.drawsAllowed ? "" : (this.roundDrawOpen ? "r" + g.id : "") + (this.canOfferDraw ? "m" + this.round : "");
+    if (opened && opened !== this.drawOpened) this.menuAlert = true;
+    this.drawOpened = opened;
+    this.offerKey = this.roundDrawOffer === "theirs" ? "r" + g.drawOffer.until : this.drawOffer === "theirs" ? "m" + this.round : null;
     this.resume = g.resume;
     this.level = LEVELS[(g.level ?? 2) - 1] ?? "";
     this.levelIndexNow = (g.level ?? 2) - 1;
@@ -232,6 +266,7 @@ export class OnlineMatch {
         // Leaving is already on screen (pill, bubble with the countdown, sound); only the return gets a line, in the bubble's words.
         case "connect": if (!mine && !this.watching && g.stage === "play") this.show(`${e.actorName ?? this.opponent.name} вернулся в игру`, true); break;
         case "disconnect": case "pause_request": break;
+        case "draw_decline": if (!mine && !this.watching) this.show(`${this.opponent.name}: играем дальше`, false); break;
         case "hint": case "review": case "pause": case "resume": case "join": case "absence": case "hide-budget": case "viewer":
           if (e.text) this.show(e.actorName && !e.text.includes(e.actorName) ? `${e.actorName}: ${e.text}` : e.text, e.type === "resume" || e.type === "connect" || e.type === "join");
           break;
@@ -246,6 +281,7 @@ export class OnlineMatch {
     const now = this.now();
     const prev = this.seconds;
     this.seconds = g.deadline ? Math.max(0, Math.ceil((g.deadline - now) / 1000)) : g.remaining ? Math.ceil(g.remaining / 1000) : g.seconds || 0;
+    if (this.seconds === 0 && prev > 0 && g.deadline && g.stage === "play" && !this.zeroAt) { this.zeroAt = Date.now(); this.zeroMine = this.turn === 0; }
     // A room made on the site «Без таймера» has no turn clock: the dial shows ∞, as the site does, not a frozen 0.
     this.untimed = !g.seconds && !g.deadline && !g.remaining;
     if (this.review) this.review.left = Math.max(0, Math.ceil((this.review.until - now) / 1000));
@@ -256,6 +292,18 @@ export class OnlineMatch {
     if (this.paused && this.resume?.[this.mySeat] && !this.resume?.[1 - this.mySeat]) { this.resumeSince ??= now; this.resumeWait = Math.round((now - this.resumeSince) / 1000); }
     else { this.resumeSince = null; this.resumeWait = null; }
     const them = this.them, me = this.me;
+    // «спит» (owner, 2026-11-07): the opponent's own turn time with nothing done, my turns not counted. A lapsed
+    // turn of theirs (the server's missed run) counts whole; any move of theirs ends the run, and so the count.
+    const opp = 1 - this.mySeat, turnMs = (g.seconds || 0) * 1000;
+    if (g.stage !== "play" || g.paused || this.watching) { this.oppIdleMs = 0; this.oppTurnSince = null; }
+    else {
+      const theirs = g.turn === opp, picking = theirs && g.selected !== null && g.selected !== undefined;
+      if (theirs && !g.deadline) this.oppTurnSince ??= now; else if (!theirs) this.oppTurnSince = null;
+      const started = g.deadline && turnMs ? g.deadline - turnMs : this.oppTurnSince;
+      const lapsed = (g.missed?.[opp] || 0) * turnMs;
+      this.oppIdleMs = picking ? 0 : lapsed + (theirs && started ? Math.max(0, now - started) : 0);
+    }
+    this.oppSleeping = !this.hotseat && this.oppIdleMs >= SLEEP_MS;
     const until = them?.awayDeadline ?? them?.returnDeadline;
     this.oppAwayFor = them && (until || !them.online || them.status === "hidden") && !this.roundOver ? Math.max(0, Math.round((now - (them.since ?? now)) / 1000)) : null;
     // Why a side is away, as the site says it: the tab hidden, another window, or the connection lost.
@@ -273,8 +321,12 @@ export class OnlineMatch {
     this.awayTotal = g.hideBudget ? Math.round(g.hideBudget / 1000) : 45;
     // Once the budget is spent, each absence gets the server's 5-second grace before the round is lost: show that, not 0.
     const spent = (p) => !!g.hideBudget && !!p && (p.hideStrikes > 0 || p.hideLeftMs === 0);
-    const budget = (p, deadline) => deadline ? Math.max(0, Math.ceil((deadline - now) / 1000)) : spent(p) ? HIDE_GRACE : Math.round((p?.hideLeftMs ?? this.awayTotal * 1000) / 1000);
-    const total = (p, deadline) => deadline && p?.since ? Math.max(1, Math.round((deadline - p.since) / 1000)) : spent(p) ? HIDE_GRACE : this.awayTotal;
+    // While minimised with budget left, the server's deadline is the budget plus its 5-second grace: count the budget
+    // alone, or the number drops by those 5 seconds the moment the player comes back.
+    const grace = (p) => !!g.hideBudget && !!p?.online && (p.status === "hidden" || p.status === "blurred") && !spent(p) ? HIDE_GRACE * 1000 : 0;
+    const budget = (p, deadline) => deadline ? Math.max(0, Math.ceil((deadline - grace(p) - now) / 1000)) : spent(p) ? HIDE_GRACE : Math.round((p?.hideLeftMs ?? this.awayTotal * 1000) / 1000);
+    // Minimised with budget left: the gold ring goes on from where the green one stood, on the level's whole budget.
+    const total = (p, deadline) => grace(p) ? this.awayTotal : deadline && p?.since ? Math.max(1, Math.round((deadline - grace(p) - p.since) / 1000)) : spent(p) ? HIDE_GRACE : this.awayTotal;
     this.leftAwayBudget = budget(me, mineUntil);
     this.leftAwayTotal = total(me, mineUntil);
     this.oppAwayTotal = total(them, until);
@@ -343,10 +395,15 @@ export class OnlineMatch {
   /** My open offer stays on screen as a quiet line, like the opponent's offer stays as a card. */
   get myOffer() {
     if (this.watching) return null;
-    if (this.drawOffer === "mine") return `Ничья предложена · ждём ${this.opponent.name}`;
+    if (this.drawOffer === "mine" || this.roundDrawOffer === "mine") return `Ничья предложена · ждём ${this.opponent.name}`;
     if (this.raise?.by === this.mySeat && this.state?.canRaise) return `Сложнее предложено · ждём ${this.opponent.name}`;
     return null;
   }
+  get menuBadge() { return this.offerKey && this.offerKey !== this.offerSeen ? "1" : this.menuAlert && (this.roundDrawOpen || this.canOfferDraw) ? "!" : null; }
+  // The «!» moves from the menu button onto the open draw row for this one opening of the menu.
+  menuOpened() { this.offerSeen = this.offerKey; this.freshDraw = !!this.menuAlert; this.menuAlert = false; }
+  offerRoundDraw() { this.act("draw_offer").then(() => store.changed()).catch(() => {}); }
+  answerRoundDraw(yes) { this.act("draw_answer", { accept: yes }).catch(() => {}); }
   answerDraw(yes) { this.act(yes ? "accept_draw" : "decline_draw").catch(() => {}); }
   get offerRaise() { return !!this.state?.canRaise && this.raise?.by !== this.mySeat; }
   get raisedLevel() { return LEVELS[Math.min(LEVELS.length - 1, (this.state?.nextLevel ?? this.levelIndexNow + 1))]; }
@@ -356,6 +413,13 @@ export class OnlineMatch {
   }
   /** The server says when you may leave without it counting: the other side stopped answering. */
   get canLeaveFree() { return !!this.freeLeave; }
+  /** The other side stopped moving (two turns without a move) rather than lost the line or left. */
+  get oppIdle() { return this.freeLeave === "missed"; }
+  /** «Ты здесь?»: a whole turn of mine already went by without a move, and this one is down to its last 20 seconds. */
+  get idleCheck() { return this.online && !this.watching && !this.hotseat && !this.roundOver && !this.paused && !this.untimed && this.turn === 0 && this.myMissed >= 1 && this.seconds <= 20; }
+  imHere() { this.myMissed = 0; if (this.g?.missed) this.g.missed[this.mySeat] = 0; this.post("/api/action", { id: uuid(), type: "here", game: this.g?.id ?? null }).catch(() => {}); }
+  /** The round ended because a side made no move for two turns and the other left (the server's reason). */
+  get idleLost() { return /^Два хода без действий/.test(this.g?.reason ?? ""); }
   /** A match the quick search found (its rematches too): a new opponent comes from the same search; a room match leads back to the menu. */
   get fromQuick() { return !!this.state?.quick; }
   get hasBoard() { return !!this.g; }
@@ -374,8 +438,11 @@ export class OnlineMatch {
   avatarOf(owner) { return (owner === 0 ? this.me : this.them)?.card?.avatar ?? (owner === 0 && !this.watching && !this.hotseat ? account.profile?.avatar : null) ?? null; }
   viewerProfile(v) {
     // You in the stands: your own account's numbers.
-    const p = v === account.name ? account.profile : null;
+    const p = v === this.standsMe || v === account.name ? account.profile : null;
     if (p && (p.games || p.rating != null)) return { name: v, photo: p.avatar ?? null, flag: null, rating: p.rating, rank: p.rank, level: p.level, games: p.games, winRate: p.games ? Math.round((p.wins / p.games) * 100) : 0, bestStreak: p.bestStreak };
+    // Someone else: the card the server keeps for them (a guest has none, only a name).
+    const c = this.viewerCards?.[v];
+    if (c) return { name: v, profileId: c.profileId, photo: c.avatar ?? null, flag: flagOf(c.country), rating: c.rating, rank: c.rank, level: c.level, games: c.games, winRate: c.games ? Math.round((c.wins / c.games) * 100) : 0, bestStreak: c.bestStreak };
     return { name: v, flag: null, rating: null, rank: null, level: null, games: null, winRate: null, bestStreak: null };
   }
   get headToHead() { return null; }

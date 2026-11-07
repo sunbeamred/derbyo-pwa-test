@@ -690,7 +690,9 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join, auto }) {
   useEffect(() => setShowRoom(false), [v?.round]);
   const inGame = playing || (v?.status === "done" && !showRoom);
   // The round is a match: the app's tab bar steps aside, as it does for tic-tac-toe.
-  useEffect(() => { document.body.classList.toggle("ctx-full", inGame); return () => document.body.classList.remove("ctx-full"); }, [inGame]);
+  // The room too (owner, 2026-11-07): sitting in one, the tab bar is gone as in a tic-tac-toe room.
+  const full = inGame || !!seat;
+  useEffect(() => { document.body.classList.toggle("ctx-full", full); return () => document.body.classList.remove("ctx-full"); }, [full]);
   // Doors only at a round's very start, not when coming back to one already under way.
   const fresh0 = playing && !v.guesses.length && hintLeft !== null && hintLeft > 110 ? `${v.code}-${v.round}` : null;
   useEffect(() => {
