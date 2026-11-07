@@ -103,6 +103,8 @@ export class OnlineMatch {
     if (f.type === "clock") { this.offset = f.serverNow - Date.now(); return; }
     if (f.type === "replaced" || f.type === "closed") {
       this.closed = f.message || "Комната закрыта";
+      // The host took this player out (owner, 2026-11-07): the screen says so, not just «закрыта».
+      this.kicked = f.reason === "kicked";
       this.stop(false);
       this.onClosed?.(this.closed);
       store.changed();

@@ -325,7 +325,8 @@ export function OnlineRoom({ nav, app, debug = false }) {
       { title: "Закрыть", kind: "destructive", run: () => { setAskClose(false); bye.current = true; m.act("close_room").catch(() => {}).finally(() => nav.back()); } }]} />` : null}
   ${oppMenu && friend ? html`<${Alert} title=${friend.name} onClose=${() => setOppMenu(false)} actions=${[
       ...(friend.bot ? [] : [{ title: "Профиль", run: () => { setOppMenu(false); setOppProfile(true); } }]),
-      { title: friend.bot ? "Убрать бота" : "Удалить из комнаты", kind: "destructive", run: () => { setOppMenu(false); m.act(friend.bot ? "remove_bot" : "kick", { seat: 1 - m.mySeat }).catch(() => {}); } },
+      ...(friend.bot ? [] : [{ title: "На трибуну", run: () => { setOppMenu(false); m.act("to_stands", { seat: 1 - m.mySeat }).catch(() => {}); } }]),
+      { title: friend.bot ? "Убрать бота" : "Исключить из комнаты", kind: "destructive", run: () => { setOppMenu(false); m.act(friend.bot ? "remove_bot" : "kick", { seat: 1 - m.mySeat }).catch(() => {}); } },
       { title: "Отмена", run: () => setOppMenu(false) }]} />` : null}
   ${oppProfile && friend ? html`<${Panel} onClose=${() => setOppProfile(false)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${1} close=${leave} />`}<//>` : null}
   <${BottomBar}><${RoomBar} m=${m} stands=${stands} leave=${() => ask() || nav.back()}>${meReady || waiting ? html`<${ReadyWait} m=${m} who=${friend?.name ?? "второго игрока"} />`
@@ -404,7 +405,8 @@ export function OnlineLocker({ nav, app, m }) {
   const awayNote = deadline && !host?.online ? (waitLeft > 0 ? `зайдёт · ${waitLeft} с` : "не зашёл") : "не в сети";
   return html`<div class="screen-with-bar"><div class="screen-scroll"><div class="page">
     <${LobbyHeader} title=${`Комната ${m.code}`} back=${() => ask() || nav.back()} />
-    <div class="locker-title"><small class="cap gold">РАЗДЕВАЛКА</small><h2>${m.closed ? "Комната закрыта" : watching ? "Ты на трибуне" : !host ? "Ждём второго игрока" : "Оба на месте. Пора играть."}</h2></div>
+    <div class="locker-title"><small class="cap gold">РАЗДЕВАЛКА</small><h2>${m.kicked ? "Тебя исключили из комнаты" : m.closed ? "Комната закрыта" : watching ? "Ты на трибуне" : !host ? "Ждём второго игрока" : "Оба на месте. Пора играть."}</h2>
+      ${m.kicked ? html`<p class="hint-line small">Создатель исключил тебя из комнаты. Вернуться в неё нельзя, пока она открыта.</p>` : null}</div>
     <${Duel} leftRed=${m.mySeat === 0} viewers=${stands.eye}
       left=${{ name: m.leftName, photo: m.avatarOf(0), flag: m.myFlag, rating: m.myRating, rank: m.myRank, ready: meReady, open: () => setProfile({ owner: 0 }) }}
       right=${host ? { name: host.name, bot: !!host.bot, photo: m.avatarOf(1), flag: m.opponent.flag, rating: m.opponent.rating, rank: m.opponent.rank, ready: !!host.ready, gone: !host.online, note: awayNote, open: () => setProfile({ owner: 1 }) } : null}>
