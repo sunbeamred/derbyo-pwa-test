@@ -1617,8 +1617,12 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .rating-page { position: relative; isolation: isolate; overflow-x: hidden; overflow-x: clip; }
 /* The top three sit lower on the rating so more of the flag shows above them (owner, 2026-11-08). */
 .rating-page .top3 { margin-top: 64px; }
-.wave-flag { position: absolute; z-index: -1; left: 50%; top: calc(var(--safe-t) - 4px); width: min(112%, 520px); transform: translateX(-50%); pointer-events: none;
-  -webkit-mask-image: linear-gradient(#000 40%, transparent 97%); mask-image: linear-gradient(#000 40%, transparent 97%); will-change: transform, opacity; }
+/* Every edge fades (owner on an iPhone, 2026-11-08: hard edges read as frames — the top one under the status bar,
+   the grain layer's rectangle): a vertical and a horizontal fade, intersected. */
+.wave-flag { position: absolute; z-index: -1; left: 50%; top: calc(var(--safe-t) - 40px); width: min(112%, 520px); transform: translateX(-50%); pointer-events: none;
+  -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 45%, transparent 96%), linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(transparent, #000 22%, #000 45%, transparent 96%), linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  -webkit-mask-composite: source-in; mask-composite: intersect; will-change: transform, opacity; }
 .wave-flag canvas { display: block; width: 100%; height: auto; }
 /* Frosted glass, not a soft picture: the cloth heavily blurred and a touch brighter and richer, under a pane with fine
    grain and a pale sheen — the flag reads as colour and light behind glass. */
