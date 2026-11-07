@@ -25,7 +25,7 @@ export function RatingTab({ visible }) {
   }, [period, visible, account.profile?.id]);
   const list = data?.period === period ? data.entries : null;
   return html`<div class="screen-scroll"><div class="page rating-page">
-    ${list?.length && !data.requiresLogin ? html`<${WaveFlag} code=${list[0].country} />` : null}
+    ${list?.length && !data.requiresLogin ? html`<${WaveFlag} code=${list[0].country} visible=${visible} />` : null}
     <h1 class="big-title">Рейтинг</h1>
     <div class="segmented">${PERIODS.map(([id, t]) => html`<button class=${period === id ? "on" : ""} onClick=${() => setPeriod(id)}>${t}</button>`)}</div>
     ${err ? html`<p class="hint-line pad">${err}</p>`
@@ -41,43 +41,69 @@ export function RatingTab({ visible }) {
   </div>`;
 }
 
-/** The leader's flag waving behind the table (owner, 2026-11-07). The emoji is drawn once onto a canvas and trimmed
- * to the cloth, then cut into vertical strips that rise and fall one after another; only transforms and opacity move.
+/** The leader's flag waving behind the table (owner, 2026-11-07). The flag comes from the app's vector flag font
+ * (Twemoji Country Flags), drawn once onto a canvas at the screen's real pixel size, so it stays sharp; each frame the
+ * cloth is redrawn in thin columns lifted by a sine wave, the free end moving more than the pole, with a light and a
+ * shade running along. It sleeps while the tab is hidden; with reduced motion it is drawn once and stays still.
  * No country (or the flag hidden: the site sends no country then) — nothing is drawn. */
-const flagPics = new Map();
-function flagPicture(code) {
-  if (flagPics.has(code)) return flagPics.get(code);
-  let url = null;
+const FLAG_FONT = '"Twemoji Country Flags"';
+async function flagCloth(code, width) {
   const f = flagOf(code);
-  try {
-    const c = document.createElement("canvas"); c.width = 240; c.height = 200;
-    const g = c.getContext("2d", { willReadFrequently: true });
-    g.textAlign = "center"; g.textBaseline = "middle"; g.font = '150px "Apple Color Emoji","Noto Color Emoji","Segoe UI Emoji",sans-serif';
-    g.fillText(f, 120, 104);
-    const d = g.getImageData(0, 0, 240, 200).data;
-    let x0 = 240, y0 = 200, x1 = -1, y1 = -1, colored = 0;
-    for (let y = 0; y < 200; y++) for (let x = 0; x < 240; x++) {
-      const i = (y * 240 + x) * 4;
-      if (d[i + 3] < 40) continue;
-      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
-      if (Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]) > 30) colored++;
-    }
-    // A phone without colour flags draws two grey letters: then there is no flag to wave.
-    if (f && x1 > x0 && colored > 400) {
-      const w = x1 - x0 + 1, h = y1 - y0 + 1, o = document.createElement("canvas"); o.width = w; o.height = h;
-      o.getContext("2d").drawImage(c, x0, y0, w, h, 0, 0, w, h);
-      url = { src: o.toDataURL("image/png"), ratio: w / h };
-    }
-  } catch { url = null; }
-  flagPics.set(code, url);
-  return url;
+  if (!f) return null;
+  try { await document.fonts.load(`100px ${FLAG_FONT}`, f); } catch {}
+  if (!document.fonts.check(`100px ${FLAG_FONT}`, f)) return null;
+  // The glyph is a flat rectangle inside its em box: find its edges on a small copy, then draw it big.
+  const probe = document.createElement("canvas"); probe.width = 160; probe.height = 160;
+  const pg = probe.getContext("2d", { willReadFrequently: true });
+  pg.textBaseline = "middle"; pg.textAlign = "center"; pg.font = `120px ${FLAG_FONT}`; pg.fillText(f, 80, 80);
+  const d = pg.getImageData(0, 0, 160, 160).data;
+  let x0 = 160, y0 = 160, x1 = -1, y1 = -1;
+  for (let y = 0; y < 160; y++) for (let x = 0; x < 160; x++) if (d[(y * 160 + x) * 4 + 3] > 200) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 - x0 < 40 || y1 - y0 < 20) return null;
+  const k = width / (x1 - x0 + 1), w = Math.round(width), h = Math.round((y1 - y0 + 1) * k);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d");
+  g.textBaseline = "middle"; g.textAlign = "center"; g.font = `${120 * k}px ${FLAG_FONT}`;
+  // Slightly overscaled so the glyph's rounded corners fall outside: a crisp rectangle of cloth.
+  g.save(); g.translate(w / 2, h / 2); g.scale(1.03, 1.05); g.fillText(f, (80 - (x0 + x1 + 1) / 2) * k, (80 - (y0 + y1 + 1) / 2) * k); g.restore();
+  return c;
 }
-const WAVE_STRIPS = 24;
-function WaveFlag({ code }) {
-  const pic = code ? flagPicture(code) : null;
-  if (!pic) return null;
-  return html`<div class="wave-flag" aria-hidden="true" style=${`--r:${pic.ratio};--img:url(${pic.src})`}><div class="wf-cloth">${[...Array(WAVE_STRIPS).keys()].map((k) =>
-    html`<i style=${`--k:${k};--a:${(0.25 + 0.75 * k / (WAVE_STRIPS - 1)).toFixed(3)};background-position:${(k / (WAVE_STRIPS - 1)) * 100}% 0`}></i>`)}</div></div>`;
+function WaveFlag({ code, visible }) {
+  const ref = useRef(null);
+  const [ok, setOk] = useState(false);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas || !code || !visible) return;
+    let raf = 0, alive = true, cloth = null, last = 0;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const draw = (t) => {
+      const g = canvas.getContext("2d"), W = canvas.width, H = canvas.height, cw = cloth.width, ch = cloth.height;
+      g.clearRect(0, 0, W, H);
+      const amp = ch * 0.055, top = (H - ch) / 2, step = Math.max(2, Math.round(W / 260));
+      for (let x = 0; x < cw; x += step) {
+        const u = x / cw, reach = 0.15 + 0.85 * u;            // the pole side barely moves
+        const ph = u * 9.5 - t * 0.0021;
+        const dy = Math.sin(ph) * amp * reach;
+        g.drawImage(cloth, x, 0, step, ch, x, top + dy, step, ch);
+        const light = Math.cos(ph) * reach;                    // the slope of the wave: lit on one side, shaded on the other
+        g.fillStyle = light > 0 ? `rgba(255,255,255,${(light * 0.16).toFixed(3)})` : `rgba(0,0,0,${(-light * 0.38).toFixed(3)})`;
+        g.fillRect(x, top + dy, step, ch);
+      }
+    };
+    const loop = (t) => { if (!alive) return; if (t - last > 30) { last = t; draw(t); } raf = requestAnimationFrame(loop); };
+    (async () => {
+      const dpr = Math.min(3, devicePixelRatio || 1), box = canvas.parentElement.getBoundingClientRect();
+      cloth = await flagCloth(code, box.width * dpr);
+      if (!alive) return;
+      if (!cloth) { setOk(false); return; }
+      canvas.width = cloth.width; canvas.height = Math.round(cloth.height * 1.16);
+      setOk(true);
+      if (still) draw(0); else raf = requestAnimationFrame(loop);
+    })();
+    return () => { alive = false; cancelAnimationFrame(raf); };
+  }, [code, visible]);
+  if (!code) return null;
+  return html`<div class=${cx("wave-flag", ok && "on")} aria-hidden="true"><canvas ref=${ref}></canvas></div>`;
 }
 
 const scoreText = (e, period) => (period === "week" ? (e.points > 0 ? "+" : "") + e.points : e.rating);
