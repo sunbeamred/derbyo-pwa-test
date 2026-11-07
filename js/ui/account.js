@@ -16,6 +16,7 @@ export function RatingTab({ visible }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
   const [open, setOpen] = useState(null);
+  const [palette, setPalette] = useState(null);
   useEffect(() => {
     if (!visible) return;
     let live = true;
@@ -24,7 +25,8 @@ export function RatingTab({ visible }) {
     return () => { live = false; };
   }, [period, visible, account.profile?.id]);
   const list = data?.period === period ? data.entries : null;
-  return html`<div class="screen-scroll"><div class="page">
+  return html`<div class="screen-scroll"><div class="page rating-page">
+    ${list?.length && !data.requiresLogin ? html`<${WaveFlag} code=${list[0].country} visible=${visible} onPalette=${setPalette} />` : null}
     <h1 class="big-title">Рейтинг</h1>
     <div class="segmented">${PERIODS.map(([id, t]) => html`<button class=${period === id ? "on" : ""} onClick=${() => setPeriod(id)}>${t}</button>`)}</div>
     ${err ? html`<p class="hint-line pad">${err}</p>`
@@ -32,12 +34,105 @@ export function RatingTab({ visible }) {
       : data.requiresLogin ? html`<p class="placeholder">Друзья видны после входа в аккаунт — вкладка «Профиль».</p>`
       : !list.length ? html`<p class="placeholder">${period === "week" ? "На этой неделе ещё никто не набрал очков." : "Пока пусто."}</p>`
       // The metal top three only on the main table; the week and friends stay a plain list.
-      : html`${period === "rating" ? html`<${TopThree} top=${list.slice(0, 3)} period=${period} open=${setOpen} />` : null}
+      : html`${period === "rating" ? html`<${TopThree} top=${list.slice(0, 3)} period=${period} open=${setOpen} palette=${palette} />` : null}
         ${(period === "rating" ? list.slice(3) : list).length ? html`<div class="board-list glass">${(period === "rating" ? list.slice(3) : list).map((e) => html`<${BoardRow} e=${e} period=${period} open=${setOpen} />`)}</div>` : null}
         <p class="hint-line small center">Рейтинг — после 5 игр с двумя разными соперниками</p>`}
   </div>
   ${open ? html`<${Panel} onClose=${() => setOpen(null)}><${PlayerCard} id=${open} /><//>` : null}
   </div>`;
+}
+
+/** The leader's flag waving behind the table (owner, 2026-11-07). The flag comes from the app's vector flag font
+ * (Twemoji Country Flags), drawn once onto a canvas at the screen's real pixel size, so it stays sharp; each frame the
+ * cloth is redrawn in thin columns lifted by a sine wave, the free end moving more than the pole, with a light and a
+ * shade running along. It sleeps while the tab is hidden; with reduced motion it is drawn once and stays still.
+ * No country (or the flag hidden: the site sends no country then) — nothing is drawn. */
+const FLAG_FONT = '"Twemoji Country Flags"';
+async function flagCloth(code, width) {
+  const f = flagOf(code);
+  if (!f) return null;
+  try { await document.fonts.load(`100px ${FLAG_FONT}`, f); } catch {}
+  if (!document.fonts.check(`100px ${FLAG_FONT}`, f)) return null;
+  // The glyph is a flat rectangle inside its em box: find its edges on a small copy, then draw it big.
+  const probe = document.createElement("canvas"); probe.width = 160; probe.height = 160;
+  const pg = probe.getContext("2d", { willReadFrequently: true });
+  pg.textBaseline = "middle"; pg.textAlign = "center"; pg.font = `120px ${FLAG_FONT}`; pg.fillText(f, 80, 80);
+  const d = pg.getImageData(0, 0, 160, 160).data;
+  let x0 = 160, y0 = 160, x1 = -1, y1 = -1;
+  for (let y = 0; y < 160; y++) for (let x = 0; x < 160; x++) if (d[(y * 160 + x) * 4 + 3] > 200) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 - x0 < 40 || y1 - y0 < 20) return null;
+  const k = width / (x1 - x0 + 1), w = Math.round(width), h = Math.round((y1 - y0 + 1) * k);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d");
+  g.textBaseline = "middle"; g.textAlign = "center"; g.font = `${120 * k}px ${FLAG_FONT}`;
+  // Slightly overscaled so the glyph's rounded corners fall outside: a crisp rectangle of cloth.
+  g.save(); g.translate(w / 2, h / 2); g.scale(1.03, 1.05); g.fillText(f, (80 - (x0 + x1 + 1) / 2) * k, (80 - (y0 + y1 + 1) / 2) * k); g.restore();
+  return c;
+}
+/** The flag's own colours for the champion's ring: the most common colours of a small copy,
+ * each clearly different from the ones already picked; near-black only when nothing else is there. */
+function flagPalette(cloth) {
+  const c = document.createElement("canvas"); c.width = 48; c.height = 32;
+  const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(cloth, 0, 0, 48, 32);
+  const d = g.getImageData(0, 0, 48, 32).data, n = new Map();
+  for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 200) continue; const k = (d[i] >> 4) << 8 | (d[i + 1] >> 4) << 4 | d[i + 2] >> 4; n.set(k, (n.get(k) || 0) + 1); }
+  const rgb = (k) => [((k >> 8) & 15) * 17, ((k >> 4) & 15) * 17, (k & 15) * 17];
+  const far = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) > 110;
+  // Colours covering under 3% of the cloth are edges and small details (a crescent's rim), not the flag's colours.
+  const total = [...n.values()].reduce((a, b) => a + b, 0);
+  const all = [...n.entries()].sort((x, y) => y[1] - x[1]).filter(([, v], i) => i === 0 || v >= total * 0.03).map(([k]) => rgb(k));
+  const out = [];
+  for (const c of all) { if (out.length === 3) break; if (Math.max(...c) < 60) continue; if (out.every((o) => far(o, c))) out.push(c); }
+  if (!out.length && all.length) out.push(all[0]);
+  return out.map(([r, g, b]) => `rgb(${r},${g},${b})`);
+}
+/** Round the flag (owner, 2026-11-08): the champion's ring in the flag's colours (via onPalette) and depth: on
+ * scrolling the flag moves slower than the rows and fades. Confetti and a spotlight with dust were tried and dropped. */
+function WaveFlag({ code, visible, onPalette }) {
+  const ref = useRef(null), boxRef = useRef(null);
+  const [ok, setOk] = useState(false);
+  useEffect(() => {
+    const canvas = ref.current, box = boxRef.current;
+    if (!canvas || !code || !visible) return;
+    let raf = 0, alive = true, cloth = null, last = 0, scrollY = 0;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Depth: half speed and a fade over the first 320 px of scrolling.
+    const scroller = box.closest(".screen-scroll");
+    const onScroll = () => { scrollY = scroller.scrollTop; if (still) depth(); };
+    const depth = () => { const y = Math.max(0, scrollY); box.style.transform = `translate3d(-50%, ${(y * 0.5).toFixed(1)}px, 0) scale(${(1 + y / 2400).toFixed(4)})`; box.style.opacity = Math.max(0, 1 - y / 320).toFixed(3); };
+    scroller?.addEventListener("scroll", onScroll, { passive: true });
+    const waveAt = (x, t) => { const u = x / cloth.width; return { ph: u * 9.5 - t * 0.0021, reach: 0.15 + 0.85 * u }; };
+    const draw = (t) => {
+      const g = canvas.getContext("2d"), W = canvas.width, H = canvas.height, cw = cloth.width, ch = cloth.height;
+      g.clearRect(0, 0, W, H);
+      const amp = ch * 0.055, top = (H - ch) / 2, step = Math.max(1, Math.round(W / 260));
+      for (let x = 0; x < cw; x += step) {
+        const { ph, reach } = waveAt(x, t);
+        const dy = Math.sin(ph) * amp * reach;
+        g.drawImage(cloth, x, 0, step, ch, x, top + dy, step, ch);
+        const light = Math.cos(ph) * reach;                    // the slope of the wave: lit on one side, shaded on the other
+        g.fillStyle = light > 0 ? `rgba(255,255,255,${(light * 0.16).toFixed(3)})` : `rgba(0,0,0,${(-light * 0.38).toFixed(3)})`;
+        g.fillRect(x, top + dy, step, ch);
+      }
+    };
+    const loop = (t) => { if (!alive) return; if (t - last > 30) { last = t; draw(t); depth(); } raf = requestAnimationFrame(loop); };
+    (async () => {
+      const r = box.getBoundingClientRect();
+      cloth = await flagCloth(code, r.width);  // frosted anyway: screen points are enough, and lighter to redraw
+      if (!alive) return;
+      if (!cloth) { setOk(false); onPalette?.(null); return; }
+      canvas.width = cloth.width; canvas.height = Math.round(cloth.height * 1.16);
+      onPalette?.(flagPalette(cloth));
+      setOk(true);
+      onScroll(); depth();
+      if (still) draw(0); else raf = requestAnimationFrame(loop);
+    })();
+    return () => { alive = false; cancelAnimationFrame(raf); scroller?.removeEventListener("scroll", onScroll); };
+  }, [code, visible]);
+  useEffect(() => { if (!code) onPalette?.(null); }, [code]);
+  if (!code) return null;
+  return html`<div class=${cx("wave-flag", ok && "on")} ref=${boxRef} aria-hidden="true">
+    <canvas class="wf-cloth" ref=${ref}></canvas><span class="wf-glass"></span></div>`;
 }
 
 const scoreText = (e, period) => (period === "week" ? (e.points > 0 ? "+" : "") + e.points : e.rating);
@@ -54,7 +149,7 @@ function BoardRow({ e, period, open }) {
 
 /** The first place as a full-width gold bubble: a neon ring runs round it and sparks rise from it;
  * second and third as silver and bronze below. Faces are rounded squares with the flag on the corner, as in the match. */
-function TopThree({ top, period, open }) {
+function TopThree({ top, period, open, palette }) {
   const face = (e) => {
     const flag = flagOrGlobe(e.country);
     return html`<span class="tt-face">${e.avatar ? html`<img src=${e.avatar} alt="" />` : html`<i>${initials2(e.nickname)}</i>`}
@@ -66,7 +161,7 @@ function TopThree({ top, period, open }) {
     <span class="tt-name">${e.nickname}</span><b class="tt-score num">${scoreText(e, period)}</b>
   </button>` : html`<span></span>`;
   return html`<div class="top3">
-    ${first ? html`<div class="tt-gold-wrap">
+    ${first ? html`<div class=${cx("tt-gold-wrap", palette?.length && "flag-ring")} style=${palette?.length ? palette.concat(palette, palette).slice(0, 3).map((c, i) => `--f${i + 1}:${c}`).join(";") : null}>
       <span class="tt-sparks" aria-hidden="true">${[...Array(10).keys()].map((i) => html`<i style=${`--x:${6 + i * 9.5}%;--d:${(i * 0.37) % 2.2}s;--t:${1.8 + (i % 4) * 0.35}s`}></i>`)}</span>
       <button class=${cx("tt-card gold", first.self && "self")} onClick=${() => open(first.id)}>
         <span class="tt-shine"></span>
