@@ -93,14 +93,53 @@ function flagPalette(cloth) {
 }
 /** Round the flag (owner, 2026-11-08): the champion's ring in the flag's colours (via onPalette) and depth: on
  * scrolling the flag moves slower than the rows and fades. Confetti and a spotlight with dust were tried and dropped. */
-/** A touch more colour and light, once, in place (what CSS saturate(1.4) brightness(1.08) did before). */
-function richer(c) {
-  const g = c.getContext("2d", { willReadFrequently: true }), img = g.getImageData(0, 0, c.width, c.height), d = img.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const l = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-    for (let k = 0; k < 3; k++) d[i + k] = Math.max(0, Math.min(255, (l + (d[i + k] - l) * 1.4) * 1.08));
+/** The frosted cloth, computed once with plain pixel arithmetic — no CSS filter or mask and no canvas blend modes,
+ * which iPhones drew differently (owner, 2026-11-08: hard edges, then a washed, cut-off flag). Richer colours, a soft
+ * blur (three box passes ≈ CSS blur(10px)), fine grain and a pale sheen; alpha fades to nothing on every side, so the
+ * cloth has no edge anywhere. Returns the cloth plus a lit and a shaded copy for the wave's light and shade. */
+function softCloth(cloth) {
+  const pad = 28, w = cloth.width + pad * 2, h = cloth.height + pad * 2;
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d", { willReadFrequently: true });
+  g.drawImage(cloth, pad, pad);
+  const img = g.getImageData(0, 0, w, h), d = img.data, n = w * h;
+  // Premultiplied floats, so the blur spreads colour and transparency together.
+  let r = new Float32Array(n), gg = new Float32Array(n), b = new Float32Array(n), a = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const A = d[i * 4 + 3] / 255, R = d[i * 4], G = d[i * 4 + 1], B = d[i * 4 + 2], l = 0.2126 * R + 0.7152 * G + 0.0722 * B;
+    const k = (v) => Math.max(0, Math.min(255, (l + (v - l) * 1.4) * 1.08));
+    r[i] = k(R) * A; gg[i] = k(G) * A; b[i] = k(B) * A; a[i] = A;
   }
-  g.putImageData(img, 0, 0);
+  const RAD = 9, tmp = new Float32Array(n);
+  const pass = (src) => {
+    for (let y = 0; y < h; y++) {                  // horizontal
+      let acc = 0; const o = y * w;
+      for (let x = -RAD; x <= RAD; x++) acc += src[o + Math.min(w - 1, Math.max(0, x))];
+      for (let x = 0; x < w; x++) { tmp[o + x] = acc / (2 * RAD + 1); acc += src[o + Math.min(w - 1, x + RAD + 1)] - src[o + Math.max(0, x - RAD)]; }
+    }
+    for (let x = 0; x < w; x++) {                  // vertical
+      let acc = 0;
+      for (let y = -RAD; y <= RAD; y++) acc += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
+      for (let y = 0; y < h; y++) { src[y * w + x] = acc / (2 * RAD + 1); acc += tmp[Math.min(h - 1, y + RAD + 1) * w + x] - tmp[Math.max(0, y - RAD) * w + x]; }
+    }
+  };
+  for (const ch of [r, gg, b, a]) for (let p = 0; p < 3; p++) pass(ch);
+  const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+  const make = (gain) => {
+    const out = g.createImageData(w, h), o = out.data;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x, A = a[i];
+      const fade = ease(x / (w * 0.22)) * ease((w - x) / (w * 0.22)) * ease(y / (h * 0.24)) * ease((h - y) / (h * 0.38));
+      const sheen = 0.1 * Math.max(0, 1 - (x / w + y / h));
+      const grain = (Math.random() - 0.5) * 14;
+      const un = (v) => (A > 0.002 ? v / A : 0);
+      const px = (v) => Math.max(0, Math.min(255, (un(v) + (255 - un(v)) * sheen + grain) * gain));
+      o[i * 4] = px(r[i]); o[i * 4 + 1] = px(gg[i]); o[i * 4 + 2] = px(b[i]); o[i * 4 + 3] = Math.round(A * fade * 255);
+    }
+    const cc = document.createElement("canvas"); cc.width = w; cc.height = h; cc.getContext("2d").putImageData(out, 0, 0);
+    return cc;
+  };
+  return { base: make(1), lit: make(1.28), dark: make(0.5) };
 }
 function WaveFlag({ code, visible, onPalette }) {
   const ref = useRef(null), boxRef = useRef(null);
@@ -115,63 +154,33 @@ function WaveFlag({ code, visible, onPalette }) {
     const onScroll = () => { scrollY = scroller.scrollTop; if (still) depth(); };
     const depth = () => { const y = Math.max(0, scrollY); box.style.transform = `translate3d(-50%, ${(y * 0.5).toFixed(1)}px, 0) scale(${(1 + y / 2400).toFixed(4)})`; box.style.opacity = Math.max(0, 1 - y / 320).toFixed(3); };
     scroller?.addEventListener("scroll", onScroll, { passive: true });
-    const waveAt = (x, t) => { const u = x / cloth.width; return { ph: u * 9.5 - t * 0.0021, reach: 0.15 + 0.85 * u }; };
-    // Everything is painted inside the canvas, not with CSS filter/mask (owner's iPhone, 2026-11-08: Safari showed the
-    // box's hard edges). Frosted: the wave is drawn into a canvas BLUR times smaller, then scaled up in four shifted
-    // copies added together; grain and a pale sheen go only where the cloth is; every edge fades out.
-    const BLUR = 6;
-    let small = null, grain = null;
+    let soft = null;
+    const waveAt = (x, t) => { const u = x / soft.base.width; return { ph: u * 9.5 - t * 0.0021, reach: 0.15 + 0.85 * u }; };
+    // Each frame only copies thin columns of the ready frosted cloth, lifted by the wave (plain drawImage), and lays the
+    // lit or shaded copy over each column with some opacity: the light and shade run along the cloth.
     const draw = (t) => {
-      const W = canvas.width, H = canvas.height, cw = cloth.width, ch = cloth.height;
-      const sw = Math.ceil(W / BLUR), sh = Math.ceil(H / BLUR);
-      if (!small) { small = document.createElement("canvas"); small.width = sw; small.height = sh; }
-      const s = small.getContext("2d");
-      s.setTransform(1, 0, 0, 1, 0, 0); s.clearRect(0, 0, sw, sh); s.setTransform(1 / BLUR, 0, 0, 1 / BLUR, 0, 0);
-      const amp = ch * 0.055, top = (H - ch) / 2, step = Math.max(2, Math.round(W / 130));
-      for (let x = 0; x < cw; x += step) {
+      const g = canvas.getContext("2d"), W = canvas.width, H = canvas.height, { base, lit, dark } = soft, ch = base.height;
+      g.globalAlpha = 1; g.clearRect(0, 0, W, H);
+      const amp = ch * 0.05, top = (H - ch) / 2, step = 2;
+      for (let x = 0; x < W; x += step) {
         const { ph, reach } = waveAt(x, t);
-        const dy = Math.sin(ph) * amp * reach;
-        s.drawImage(cloth, x, 0, step, ch, x, top + dy, step + 1, ch);
-        const light = Math.cos(ph) * reach;                    // the slope of the wave: lit on one side, shaded on the other
-        s.fillStyle = light > 0 ? `rgba(255,255,255,${(light * 0.16).toFixed(3)})` : `rgba(0,0,0,${(-light * 0.38).toFixed(3)})`;
-        s.fillRect(x, top + dy, step + 1, ch);
+        const y = top + Math.sin(ph) * amp * reach;
+        g.globalAlpha = 1; g.drawImage(base, x, 0, step, ch, x, y, step, ch);
+        const light = Math.cos(ph) * reach;
+        if (light > 0.02) { g.globalAlpha = light * 0.55; g.drawImage(lit, x, 0, step, ch, x, y, step, ch); }
+        else if (light < -0.02) { g.globalAlpha = -light * 0.6; g.drawImage(dark, x, 0, step, ch, x, y, step, ch); }
       }
-      const g = canvas.getContext("2d");
-      g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; g.clearRect(0, 0, W, H);
-      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
-      g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.25;
-      const o = BLUR * 0.6;
-      for (const [dx, dy] of [[-o, -o], [o, -o], [-o, o], [o, o]]) g.drawImage(small, dx, dy, W, H);
-      g.globalAlpha = 1; g.globalCompositeOperation = "source-atop";
-      if (!grain) {
-        grain = document.createElement("canvas"); grain.width = W; grain.height = H;
-        const q = grain.getContext("2d"), img = q.createImageData(W, H);
-        for (let i = 0; i < img.data.length; i += 4) { img.data[i] = img.data[i + 1] = img.data[i + 2] = 255; img.data[i + 3] = Math.random() < 0.5 ? Math.random() * 34 : 0; }
-        q.putImageData(img, 0, 0);
-      }
-      g.drawImage(grain, 0, 0);
-      const sheen = g.createLinearGradient(0, 0, W * 0.6, H);
-      sheen.addColorStop(0, "rgba(255,255,255,.12)"); sheen.addColorStop(0.4, "rgba(255,255,255,.02)"); sheen.addColorStop(0.7, "rgba(255,255,255,.07)"); sheen.addColorStop(1, "rgba(255,255,255,0)");
-      g.fillStyle = sheen; g.fillRect(0, 0, W, H);
-      // Soft on every side: keep the picture only under a vertical and a horizontal fade.
-      g.globalCompositeOperation = "destination-in";
-      const v = g.createLinearGradient(0, 0, 0, H);
-      v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(0.22, "#000"); v.addColorStop(0.45, "#000"); v.addColorStop(0.96, "rgba(0,0,0,0)");
-      g.fillStyle = v; g.fillRect(0, 0, W, H);
-      const h = g.createLinearGradient(0, 0, W, 0);
-      h.addColorStop(0, "rgba(0,0,0,0)"); h.addColorStop(0.24, "#000"); h.addColorStop(0.76, "#000"); h.addColorStop(1, "rgba(0,0,0,0)");
-      g.fillStyle = h; g.fillRect(0, 0, W, H);
-      g.globalCompositeOperation = "source-over";
+      g.globalAlpha = 1;
     };
     const loop = (t) => { if (!alive) return; if (t - last > 30) { last = t; draw(t); depth(); } raf = requestAnimationFrame(loop); };
     (async () => {
       const r = box.getBoundingClientRect();
-      cloth = await flagCloth(code, r.width);  // frosted anyway: screen points are enough, and lighter to redraw
+      cloth = await flagCloth(code, Math.round(r.width * 0.86));  // frosted anyway: screen points are enough
       if (!alive) return;
       if (!cloth) { setOk(false); onPalette?.(null); return; }
-      canvas.width = cloth.width; canvas.height = Math.round(cloth.height * 1.16);
       onPalette?.(flagPalette(cloth));
-      richer(cloth);
+      soft = softCloth(cloth);
+      canvas.width = soft.base.width; canvas.height = Math.round(soft.base.height * 1.12);
       setOk(true);
       onScroll(); depth();
       if (still) draw(0); else raf = requestAnimationFrame(loop);
