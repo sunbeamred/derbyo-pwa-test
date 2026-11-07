@@ -480,7 +480,7 @@ input { font-family: inherit; }
 .st.left { color: #FF9AA8; }
 .st.idle { color: #FFB37A; }
 .st.missed, .st.away { color: var(--soft); }
-.st-ico { display: inline-block; width: 1em; height: 1em; vertical-align: -.14em; }
+.st-ico { display: inline-block; width: 1.08em; height: 1.08em; vertical-align: -.17em; margin-right: 1px; }
 .tokens { display: inline-flex; align-items: center; gap: 3px; color: rgba(244, 247, 252, .9); font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .tokens img { width: 14px; height: 14px; }
 .pavatar { position: relative; flex: none; padding: 3px; border-radius: 13px; box-shadow: inset 0 0 0 1.5px transparent; transition: box-shadow .2s; }

@@ -242,8 +242,13 @@ function LevelRow({ m, live }) {
  *  between rounds, or a pause / «Готов» left unanswered (owner, 2026-11-06). */
 const quietWord = (m) => m.oppIdle ? "бездействует" : m.freeLeave === "gone" ? (m.oppGoneKind === "offline" ? "— нет связи" : "свернул") : "не отвечает";
 
-// «нет связи»: a broken link, drawn so it looks the same on every phone (the ⛓️‍💥 emoji is missing on older ones).
-const LINK_BROKEN = html`<svg class="st-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5 5 11a2.1 2.1 0 0 1-3-3l1.5-1.5M9.5 6.5 11 5a2.1 2.1 0 0 1 3 3l-1.5 1.5M5.5 2v2M2 5.5h2M10.5 14v-2M14 10.5h-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+// Status icons (owner, 2026-11-07): Tabler outline (MIT), drawn so they look the same on every phone, instead of emoji
+// and symbols that were faint or missing: wifi-off «нет связи», zzz «спит», eye-off «свернул», hourglass-empty «не отвечает».
+const ico = (paths, w = 2.4) => html`<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=${w} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths.map((d) => html`<path d=${d} />`)}</svg>`;
+const ST_OFFLINE = ico(["M12 18l.01 0", "M9.172 15.172a4 4 0 0 1 5.656 0", "M6.343 12.343a7.963 7.963 0 0 1 3.864 -2.14m4.163 .155a7.965 7.965 0 0 1 3.287 2", "M3.515 9.515a12 12 0 0 1 3.544 -2.455m3.101 -.92a12 12 0 0 1 10.325 3.374", "M3 3l18 18"]);
+const ST_SLEEP = ico(["M4 12h6l-6 8h6", "M14 4h6l-6 8h6"], 2.6);
+const ST_HIDDEN = ico(["M10.585 10.587a2 2 0 0 0 2.829 2.828", "M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87", "M3 3l18 18"]);
+const ST_WAIT = ico(["M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z", "M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z"]);
 
 function SideTag({ m, owner }) {
   const mine = owner === 0, isBot = !mine && m.opponent.isBot;
@@ -256,11 +261,11 @@ function SideTag({ m, owner }) {
   const left = mine ? !!m.meLeft : m.oppLeft;
   const status = left ? html`<span class="st left">○ покинул матч</span>`
     // «не отвечает» only when the server says so (the same signal that offers «Выйти без штрафа»).
-    // Two missed turns with the app open: «💤 спит»; a pause or «Готов» left unanswered: «⏱ не отвечает».
-    : !mine && m.canLeaveFree && away === null && !goneFree ? html`<span class="st idle">${m.oppIdle ? "💤 спит" : "⏱ не отвечает"}</span>`
-    : !mine && m.oppSleeping && away === null && !gone ? html`<span class="st idle">💤 спит</span>`
+    // Two missed turns with the app open: «спит»; a pause or «Готов» left unanswered: «не отвечает».
+    : !mine && m.canLeaveFree && away === null && !goneFree ? html`<span class="st idle">${m.oppIdle ? html`${ST_SLEEP} спит` : html`${ST_WAIT} не отвечает`}</span>`
+    : !mine && m.oppSleeping && away === null && !gone ? html`<span class="st idle">${ST_SLEEP} спит</span>`
     // A missed turn is not shown (owner, 2026-11-06): «бездействует» comes once it matters.
-    : away !== null || gone || goneFree ? html`<span class="st away">${kind === "offline" ? html`${LINK_BROKEN} нет связи` : "◒ свернул"}</span>`
+    : away !== null || gone || goneFree ? html`<span class="st away">${kind === "offline" ? html`${ST_OFFLINE} нет связи` : html`${ST_HIDDEN} свернул`}</span>`
     : html`<span class="st in">● в игре</span>`;
   // The budget: the server's seconds left (counting down while away), out of the level's total.
   const total = (mine ? (m.watching ? m.leftAwayTotal : m.myAwayTotal) : m.oppAwayTotal) ?? m.awayTotal ?? 45;
