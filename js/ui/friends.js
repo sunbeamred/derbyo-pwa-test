@@ -79,15 +79,22 @@ export function FriendsStrip() {
   const calls = useCalls();
   const [pick, setPick] = useState(null);
   const [err, setErr] = useState(null);
-  const on = (st?.friends ?? []).filter((p) => p.presence && p.presence !== "offline");
+  // Many friends (owner, 2026-11-07): the 10 most useful — free to call first, then those in a match (to watch),
+  // the ones you played last first in each — and «+N» opens the full list in the profile.
+  const rank = (p) => (p.presence === "online" ? 0 : 1);
+  const on = (st?.friends ?? []).filter((p) => p.presence && p.presence !== "offline")
+    .sort((a, b) => rank(a) - rank(b) || (b.played || 0) - (a.played || 0));
   if (!on.length) return null;
+  const MAX = 10, shown = on.length > MAX ? on.slice(0, MAX - 1) : on, more = on.length - shown.length;
   const call = async (p) => { setErr(null); try { await social.invite(p.id); invites.refresh(); setPick(null); } catch (x) { setErr(x.message); } };
   const calling = (p) => calls.find((i) => i.friend === p.id && i.direction === "outgoing" && i.game !== "room" && i.game !== "contexto");
   return html`<div class="fs">
     <h4 class="section">ДРУЗЬЯ ОНЛАЙН · ${on.length}</h4>
-    <div class="fs-row">${on.map((p) => html`<button class=${cx("fs-one press", pick?.id === p.id && "on")} onClick=${() => { setErr(null); setPick(pick?.id === p.id ? null : p); }}>
+    <div class="fs-row">${shown.map((p) => html`<button class=${cx("fs-one press", pick?.id === p.id && "on")} onClick=${() => { setErr(null); setPick(pick?.id === p.id ? null : p); }}>
       <span class=${cx("fs-av", "pres-" + p.presence)}><${Face} name=${p.nickname} photo=${p.avatar} small=${true} /><i></i></span>
-      <small>${p.nickname}</small></button>`)}</div>
+      <small>${p.nickname}</small></button>`)}
+      ${more ? html`<button class="fs-one fs-more press" onClick=${() => { setPick(null); dispatchEvent(new CustomEvent("derbyo-friends")); }}>
+        <span class="fs-av"><b>+${more}</b></span><small>Все</small></button>` : null}</div>
     ${pick ? html`<div class="fs-menu glass">
       <b>${pick.nickname}</b><small>${PRESENCE[pick.presence] ?? ""}</small>
       <div class="fs-acts">
