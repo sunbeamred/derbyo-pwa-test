@@ -91,7 +91,7 @@ export function OnlineLobby({ nav, app }) {
         <button class="navy-btn tall" onClick=${go(() => nav.push("room"))}><img src=${img("invite")} alt="" />Создать</button>
         <button class="mint-btn tall press" onClick=${go(() => nav.push("code"))}><img src=${img("arrow")} alt="" />По коду</button>
       </div>
-      ${hotseat ? html`<button class="navy-btn" onClick=${go(() => nav.push("room", { debug: true }))}>🛠 Тест: соперник-кукла</button>` : null}
+      ${hotseat && /sandbox/.test(location.hostname) ? html`<button class="navy-btn" onClick=${go(() => nav.push("room", { debug: true }))}>🛠 Тест: соперник-кукла</button>` : null}
     </section>
     <section class="mode-group glass">
       <h4 class="mg-head"><i class="mg-dot"></i>Офлайн<small>без рейтинга</small></h4>
