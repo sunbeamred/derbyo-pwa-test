@@ -1611,13 +1611,34 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .tt-card.self { outline: 2px solid #fff; outline-offset: -2px; }
 .tt-gold-wrap .tt-card { z-index: 1; }
 
-/* The leader's flag waving faintly behind the rating (owner, 2026-11-07): a canvas drawn in js (WaveFlag);
-   the bottom fades out so the rows stay readable. */
+/* The leader's flag waving faintly behind the rating (owner, 2026-11-07/08): canvases drawn in js (WaveFlag) —
+   the soft blurred cloth, a spotlight from above, dust and confetti sharp on top; the bottom fades out so the rows stay
+   readable. js moves the whole box for depth on scrolling (translate + opacity). */
 .rating-page { position: relative; isolation: isolate; }
-.wave-flag { position: absolute; z-index: -1; left: 50%; top: calc(var(--safe-t) - 4px); width: min(112%, 520px); translate: -50% 0; pointer-events: none;
-  opacity: 0; transition: opacity .8s; -webkit-mask-image: linear-gradient(#000 40%, transparent 97%); mask-image: linear-gradient(#000 40%, transparent 97%); }
-.wave-flag.on { opacity: .55; }
-.wave-flag canvas { display: block; width: 100%; height: auto; filter: blur(3px); }
+.wave-flag { position: absolute; z-index: -1; left: 50%; top: calc(var(--safe-t) - 4px); width: min(112%, 520px); transform: translateX(-50%); pointer-events: none;
+  -webkit-mask-image: linear-gradient(#000 40%, transparent 97%); mask-image: linear-gradient(#000 40%, transparent 97%); will-change: transform, opacity; }
+.wave-flag canvas { display: block; width: 100%; height: auto; }
+/* Frosted glass, not a soft picture: the cloth heavily blurred and a touch brighter and richer, under a pane with fine
+   grain and a pale sheen — the flag reads as colour and light behind glass. */
+.wf-cloth { opacity: 0; transition: opacity .8s; filter: blur(16px) saturate(1.4) brightness(1.08); transform: scale(1.06); }
+.wave-flag.on .wf-cloth { opacity: .7; }
+.wf-glass { position: absolute; inset: 0; opacity: 0; transition: opacity .8s;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 140px 140px,
+    linear-gradient(165deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .03) 38%, rgba(255, 255, 255, .07) 70%, rgba(255, 255, 255, 0)); }
+.wave-flag.on .wf-glass { opacity: .5; }
+.wf-fx { position: absolute; inset: 0; height: 100% !important; opacity: 0; transition: opacity .8s; }
+.wave-flag.on .wf-fx { opacity: 1; }
+/* The spotlight: a soft warm cone from above the title, swaying a little. */
+.wf-beam { position: absolute; left: 18%; right: 18%; top: -30%; height: 135%; opacity: 0; transition: opacity 1.2s; transform-origin: 50% 0; mix-blend-mode: screen;
+  filter: blur(12px); animation: wf-beam 9s ease-in-out infinite alternate; }
+.wf-beam::before { content: ""; position: absolute; inset: 0; clip-path: polygon(44% 0, 56% 0, 96% 100%, 4% 100%);
+  background: linear-gradient(rgba(255, 246, 220, .85), rgba(255, 236, 190, .3) 55%, transparent 92%); }
+.wave-flag.on .wf-beam { opacity: 1; }
+@keyframes wf-beam { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+/* The champion's running ring in the colours of his flag. */
+.tt-gold-wrap.flag-ring::before, .tt-gold-wrap.flag-ring::after {
+  background: conic-gradient(from var(--tt-a), var(--f1), var(--f2), var(--f3), var(--f1), var(--f2), var(--f3), var(--f1)); }
+@media (prefers-reduced-motion: reduce) { .wf-beam { animation: none; } }
 
 /* A thin strip at the top while there is no network or the match stream is being restored. */
 .net-strip { position: fixed; z-index: 95; left: 50%; top: calc(var(--safe-t) + 6px); translate: -50% 0; display: flex; align-items: center; gap: 8px;
