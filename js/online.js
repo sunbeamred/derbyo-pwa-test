@@ -1,7 +1,7 @@
 // A real match on the site's server, behind the same face as the local Match (model.js), so the screens read
 // either. The server owns everything; this turns its room state into "you" (owner 0) and "the other side" (owner 1).
 import { store, LEVELS, Hints, botName } from "./model.js";
-import { api, openStream, uuid, savedSession, account } from "./net.js";
+import { api, openStream, uuid, savedSession, account, diag } from "./net.js";
 
 const HINT_LEVEL = { profile: 1, letters: 2, four: 3 };
 const HINT_ID = [null, "profile", "letters", "four"];
@@ -127,6 +127,9 @@ export class OnlineMatch {
     }
     const before = this.g;
     if (this.stale && this.shownAt && st.serverNow - (this.offset ?? 0) >= this.shownAt - 1000) { this.stale = false; clearTimeout(this.staleTimer); }
+    // Sandbox diagnostics: how long the turn timer stood at zero before the server's next state came.
+    if (this.zeroAt) { diag.note("zero", { ms: Date.now() - this.zeroAt, mine: this.zeroMine }); this.zeroAt = 0; }
+    { const lag = Date.now() - (st.serverNow - (this.offset ?? 0)); if (this.offset != null && Math.abs(lag) > 2000) diag.note("late", { ms: lag }); }
     this.state = st;
     this.offset = st.serverNow - Date.now();
     this.watching = st.role !== "player";
@@ -278,6 +281,7 @@ export class OnlineMatch {
     const now = this.now();
     const prev = this.seconds;
     this.seconds = g.deadline ? Math.max(0, Math.ceil((g.deadline - now) / 1000)) : g.remaining ? Math.ceil(g.remaining / 1000) : g.seconds || 0;
+    if (this.seconds === 0 && prev > 0 && g.deadline && g.stage === "play" && !this.zeroAt) { this.zeroAt = Date.now(); this.zeroMine = this.turn === 0; }
     // A room made on the site «Без таймера» has no turn clock: the dial shows ∞, as the site does, not a frozen 0.
     this.untimed = !g.seconds && !g.deadline && !g.remaining;
     if (this.review) this.review.left = Math.max(0, Math.ceil((this.review.until - now) / 1000));
