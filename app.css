@@ -1612,25 +1612,20 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .tt-gold-wrap .tt-card { z-index: 1; }
 
 /* The leader's flag waving faintly behind the rating (owner, 2026-11-07/08): a canvas drawn in js (WaveFlag) —
-   the cloth behind frosted glass; the bottom fades out so the rows stay
-   readable. js moves the whole box for depth on scrolling (translate + opacity). */
+   the cloth behind frosted glass, fading out on every side so the rows stay readable. js moves the whole box for
+   depth on scrolling (translate + opacity). */
 /* The flag is wider than the screen: clip it, or the page scrolls sideways (owner, 2026-11-08). */
 .rating-page { position: relative; isolation: isolate; overflow-x: hidden; overflow-x: clip; }
 /* The top three sit lower on the rating so more of the flag shows above them (owner, 2026-11-08). */
 .rating-page .top3 { margin-top: 64px; }
+/* Blur, grain and the fading edges are painted inside the canvas (js WaveFlag): Safari on the owner's iPhone showed
+   hard box edges with CSS filter and mask (2026-11-08). */
 .flag-test { position: absolute; z-index: 2; right: 16px; top: calc(var(--safe-t) + 18px); padding: 7px 12px; border-radius: 99px; font-size: 14px; font-weight: 700;
   color: var(--ink); background: rgba(13, 25, 39, .72); border: 1px solid var(--line); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-.wave-flag { position: absolute; z-index: -1; left: 50%; top: calc(var(--safe-t) - 4px); width: min(112%, 520px); transform: translateX(-50%); pointer-events: none;
-  -webkit-mask-image: linear-gradient(#000 40%, transparent 97%); mask-image: linear-gradient(#000 40%, transparent 97%); will-change: transform, opacity; }
+.wave-flag { position: absolute; z-index: -1; left: 50%; top: calc(var(--safe-t) - 40px); width: min(112%, 520px); transform: translateX(-50%); pointer-events: none; will-change: transform, opacity; }
 .wave-flag canvas { display: block; width: 100%; height: auto; }
-/* Frosted glass, not a soft picture: the cloth heavily blurred and a touch brighter and richer, under a pane with fine
-   grain and a pale sheen — the flag reads as colour and light behind glass. */
-.wf-cloth { opacity: 0; transition: opacity .8s; filter: blur(10px) saturate(1.4) brightness(1.08); transform: scale(1.06); }
-.wave-flag.on .wf-cloth { opacity: .7; }
-.wf-glass { position: absolute; inset: 0; opacity: 0; transition: opacity .8s;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 140px 140px,
-    linear-gradient(165deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .03) 38%, rgba(255, 255, 255, .07) 70%, rgba(255, 255, 255, 0)); }
-.wave-flag.on .wf-glass { opacity: .5; }
+.wf-cloth { opacity: 0; transition: opacity .8s; }
+.wave-flag.on .wf-cloth { opacity: .75; }
 /* The champion's running ring in the colours of his flag. */
 .tt-gold-wrap.flag-ring::before, .tt-gold-wrap.flag-ring::after {
   background: conic-gradient(from var(--tt-a), var(--f1), var(--f2), var(--f3), var(--f1), var(--f2), var(--f3), var(--f1)); }

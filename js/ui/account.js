@@ -93,6 +93,15 @@ function flagPalette(cloth) {
 }
 /** Round the flag (owner, 2026-11-08): the champion's ring in the flag's colours (via onPalette) and depth: on
  * scrolling the flag moves slower than the rows and fades. Confetti and a spotlight with dust were tried and dropped. */
+/** A touch more colour and light, once, in place (what CSS saturate(1.4) brightness(1.08) did before). */
+function richer(c) {
+  const g = c.getContext("2d", { willReadFrequently: true }), img = g.getImageData(0, 0, c.width, c.height), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const l = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    for (let k = 0; k < 3; k++) d[i + k] = Math.max(0, Math.min(255, (l + (d[i + k] - l) * 1.4) * 1.08));
+  }
+  g.putImageData(img, 0, 0);
+}
 function WaveFlag({ code, visible, onPalette }) {
   const ref = useRef(null), boxRef = useRef(null);
   const [ok, setOk] = useState(false);
@@ -107,18 +116,52 @@ function WaveFlag({ code, visible, onPalette }) {
     const depth = () => { const y = Math.max(0, scrollY); box.style.transform = `translate3d(-50%, ${(y * 0.5).toFixed(1)}px, 0) scale(${(1 + y / 2400).toFixed(4)})`; box.style.opacity = Math.max(0, 1 - y / 320).toFixed(3); };
     scroller?.addEventListener("scroll", onScroll, { passive: true });
     const waveAt = (x, t) => { const u = x / cloth.width; return { ph: u * 9.5 - t * 0.0021, reach: 0.15 + 0.85 * u }; };
+    // Everything is painted inside the canvas, not with CSS filter/mask (owner's iPhone, 2026-11-08: Safari showed the
+    // box's hard edges). Frosted: the wave is drawn into a canvas BLUR times smaller, then scaled up in four shifted
+    // copies added together; grain and a pale sheen go only where the cloth is; every edge fades out.
+    const BLUR = 6;
+    let small = null, grain = null;
     const draw = (t) => {
-      const g = canvas.getContext("2d"), W = canvas.width, H = canvas.height, cw = cloth.width, ch = cloth.height;
-      g.clearRect(0, 0, W, H);
-      const amp = ch * 0.055, top = (H - ch) / 2, step = Math.max(1, Math.round(W / 260));
+      const W = canvas.width, H = canvas.height, cw = cloth.width, ch = cloth.height;
+      const sw = Math.ceil(W / BLUR), sh = Math.ceil(H / BLUR);
+      if (!small) { small = document.createElement("canvas"); small.width = sw; small.height = sh; }
+      const s = small.getContext("2d");
+      s.setTransform(1, 0, 0, 1, 0, 0); s.clearRect(0, 0, sw, sh); s.setTransform(1 / BLUR, 0, 0, 1 / BLUR, 0, 0);
+      const amp = ch * 0.055, top = (H - ch) / 2, step = Math.max(2, Math.round(W / 130));
       for (let x = 0; x < cw; x += step) {
         const { ph, reach } = waveAt(x, t);
         const dy = Math.sin(ph) * amp * reach;
-        g.drawImage(cloth, x, 0, step, ch, x, top + dy, step, ch);
+        s.drawImage(cloth, x, 0, step, ch, x, top + dy, step + 1, ch);
         const light = Math.cos(ph) * reach;                    // the slope of the wave: lit on one side, shaded on the other
-        g.fillStyle = light > 0 ? `rgba(255,255,255,${(light * 0.16).toFixed(3)})` : `rgba(0,0,0,${(-light * 0.38).toFixed(3)})`;
-        g.fillRect(x, top + dy, step, ch);
+        s.fillStyle = light > 0 ? `rgba(255,255,255,${(light * 0.16).toFixed(3)})` : `rgba(0,0,0,${(-light * 0.38).toFixed(3)})`;
+        s.fillRect(x, top + dy, step + 1, ch);
       }
+      const g = canvas.getContext("2d");
+      g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; g.clearRect(0, 0, W, H);
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+      g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.25;
+      const o = BLUR * 0.6;
+      for (const [dx, dy] of [[-o, -o], [o, -o], [-o, o], [o, o]]) g.drawImage(small, dx, dy, W, H);
+      g.globalAlpha = 1; g.globalCompositeOperation = "source-atop";
+      if (!grain) {
+        grain = document.createElement("canvas"); grain.width = W; grain.height = H;
+        const q = grain.getContext("2d"), img = q.createImageData(W, H);
+        for (let i = 0; i < img.data.length; i += 4) { img.data[i] = img.data[i + 1] = img.data[i + 2] = 255; img.data[i + 3] = Math.random() < 0.5 ? Math.random() * 34 : 0; }
+        q.putImageData(img, 0, 0);
+      }
+      g.drawImage(grain, 0, 0);
+      const sheen = g.createLinearGradient(0, 0, W * 0.6, H);
+      sheen.addColorStop(0, "rgba(255,255,255,.12)"); sheen.addColorStop(0.4, "rgba(255,255,255,.02)"); sheen.addColorStop(0.7, "rgba(255,255,255,.07)"); sheen.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = sheen; g.fillRect(0, 0, W, H);
+      // Soft on every side: keep the picture only under a vertical and a horizontal fade.
+      g.globalCompositeOperation = "destination-in";
+      const v = g.createLinearGradient(0, 0, 0, H);
+      v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(0.22, "#000"); v.addColorStop(0.45, "#000"); v.addColorStop(0.96, "rgba(0,0,0,0)");
+      g.fillStyle = v; g.fillRect(0, 0, W, H);
+      const h = g.createLinearGradient(0, 0, W, 0);
+      h.addColorStop(0, "rgba(0,0,0,0)"); h.addColorStop(0.24, "#000"); h.addColorStop(0.76, "#000"); h.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = h; g.fillRect(0, 0, W, H);
+      g.globalCompositeOperation = "source-over";
     };
     const loop = (t) => { if (!alive) return; if (t - last > 30) { last = t; draw(t); depth(); } raf = requestAnimationFrame(loop); };
     (async () => {
@@ -128,6 +171,7 @@ function WaveFlag({ code, visible, onPalette }) {
       if (!cloth) { setOk(false); onPalette?.(null); return; }
       canvas.width = cloth.width; canvas.height = Math.round(cloth.height * 1.16);
       onPalette?.(flagPalette(cloth));
+      richer(cloth);
       setOk(true);
       onScroll(); depth();
       if (still) draw(0); else raf = requestAnimationFrame(loop);
@@ -137,7 +181,7 @@ function WaveFlag({ code, visible, onPalette }) {
   useEffect(() => { if (!code) onPalette?.(null); }, [code]);
   if (!code) return null;
   return html`<div class=${cx("wave-flag", ok && "on")} ref=${boxRef} aria-hidden="true">
-    <canvas class="wf-cloth" ref=${ref}></canvas><span class="wf-glass"></span></div>`;
+    <canvas class="wf-cloth" ref=${ref}></canvas></div>`;
 }
 
 const scoreText = (e, period) => (period === "week" ? (e.points > 0 ? "+" : "") + e.points : e.rating);
