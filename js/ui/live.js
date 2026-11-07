@@ -272,15 +272,16 @@ function useRoom(make, app) {
 }
 
 /** «Создать»: your room on the server. The code is real; a friend joins it from the app or the site. */
-export function OnlineRoom({ nav, app, debug = false }) {
-  const [settings, setSettings] = useState(newSettings());
+export function OnlineRoom({ nav, app, debug = false, given = null }) {
+  // `given`: the room already open on the server (back from the bar), with its own rules.
+  const [settings, setSettings] = useState(() => (given?.state ? fromServer(given.state.settings, given.state.locked) : newSettings()));
   const [copied, setCopied] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [calling, setCalling] = useState(false);
   const [askClose, setAskClose] = useState(false);
   const [oppMenu, setOppMenu] = useState(false);
   const [oppProfile, setOppProfile] = useState(false);
-  const [m, err] = useRoom(() => (debug ? debugRoom() : createRoom(createBody(settings))).then((s) => new OnlineMatch(s)), app);
+  const [m, err] = useRoom(() => (given ? Promise.resolve(given) : (debug ? debugRoom() : createRoom(createBody(settings))).then((s) => new OnlineMatch(s))), app);
   const stands = useStands(m);
   const bye = useRef(false);
   useFullScreen();

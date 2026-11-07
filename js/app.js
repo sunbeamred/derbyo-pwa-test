@@ -180,8 +180,10 @@ function App() {
     /** A room's locker; with the rooms list under it when it was opened from elsewhere (a link, an invite), so «назад» lands there. */
     locker: (m) => {
       if (live.current.leaving) return;
+      // Your own room, back from the bar (owner, 2026-11-07): its full screen (invite, bot, settings), not the locker.
+      const own = !!m.state?.isHost && !m.state?.quick && !m.watching;
       const s = live.current.stack, add = s.some((x) => x.name === "lobby") ? [] : [{ name: "lobby", props: {}, key: ++keys, at: 0 }];
-      add.push({ name: "locker", props: { m }, key: ++keys, at: Date.now() });
+      add.push({ name: own ? "room" : "locker", props: own ? { given: m } : { m }, key: ++keys, at: Date.now() });
       add.forEach((_, i) => history.pushState({ d: s.length + i + 1 }, ""));
       setStack([...s, ...add]);
     },
@@ -312,7 +314,12 @@ function App() {
       if (!m.hasBoard) nav.locker(m); else open(m);
     },
   };
-  const ret = () => { setMatch(minimized); setMinimized(null); setMatchLeaving(false); coverOpened(); };
+  /** Back from the bar: a room whose match has not begun opens its room screen, not the bare wait screen. */
+  const ret = () => {
+    const m = live.current.minimized;
+    if (m && !m.hasBoard && !m.closed && m.state) { setMinimized(null); setTab(1); nav.locker(m); return; }
+    setMatch(minimized); setMinimized(null); setMatchLeaving(false); coverOpened();
+  };
   /** The × on the return bar: the stands or a finished match go at once; a round in play asks first (it counts as lost). */
   const [leaveAsk, setLeaveAsk] = useState(false);
   const dropNow = () => { const m = live.current.minimized; setLeaveAsk(false); if (!m) return; m.stop(); setMinimized(null); };
@@ -392,7 +399,7 @@ function App() {
   useEffect(() => {
     const onSession = (e) => app.session(e.detail);
     const onWatch = (e) => { setTab(1); app.joinRoom(e.detail, { role: "spectator" }); };
-    const onReturn = () => { const m = live.current.minimized; if (!m) return; setMatch(m); setMinimized(null); setMatchLeaving(false); coverOpened(); };
+    const onReturn = () => { if (live.current.minimized) ret(); };
     addEventListener("derbyo-watch", onWatch);
     // A friend's call into their own room: its free seat, by its code, as «По коду» does.
     const onJoinRoom = (e) => { setTab(1); app.joinRoom(e.detail, { role: "player" }); };
@@ -476,13 +483,21 @@ function App() {
       findNew=${() => { close(); setTimeout(openSearch, COVER_MS); }} /><//>` : null}
     ${leaveAsk ? html`<${Alert} title="Выйти из матча?" message=${`Раунд засчитается ${minimized?.opponent.name ?? "сопернику"}.`} onClose=${() => setLeaveAsk(false)}
       actions=${[{ title: "Остаться", run: () => setLeaveAsk(false) }, { title: "Выйти", kind: "destructive", run: dropNow }]} />` : null}
-    ${busy ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setBusy(false)}
+    ${busy && minimized && !minimized.hasBoard && !minimized.round ? html`<${Alert} title="Ты в комнате" onClose=${() => setBusy(false)}
+      message=${`Сначала выйди из комнаты ${minimized.code} — потом можно начать новую игру.`}
+      actions=${[{ title: "Вернуться в комнату", kind: "bold", run: () => { setBusy(false); ret(); } }, { title: "Выйти из комнаты", kind: "destructive", run: () => { setBusy(false); dropNow(); } }, { title: "Отмена", run: () => setBusy(false) }]} />`
+    : busy ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setBusy(false)}
       message=${`Идёт матч с ${minimized?.opponent.name ?? "соперником"}. Вернись в него или сдайся — потом можно начать новый.`}
       actions=${[{ title: "Вернуться в матч", kind: "bold", run: () => { setBusy(false); ret(); } }, { title: "Сдаться", kind: "destructive", stay: true, run: () => { setBusy(false); setLeaveAsk(true); } }, { title: "Отмена", run: () => setBusy(false) }]} />` : null}
-    ${elsewhereAsk === "busy" && elsewhere ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setElsewhereAsk(null)}
+    ${elsewhereAsk === "busy" && elsewhere && !elsewhere.live && !elsewhere.opponent ? html`<${Alert} title="Ты в комнате" onClose=${() => setElsewhereAsk(null)}
+      message=${`Сначала выйди из комнаты ${elsewhere.code} — потом можно начать новую игру.`}
+      actions=${[{ title: "Вернуться в комнату", kind: "bold", run: comeBack }, { title: "Выйти из комнаты", kind: "destructive", run: giveUp }, { title: "Отмена", run: () => setElsewhereAsk(null) }]} />`
+    : elsewhereAsk === "busy" && elsewhere ? html`<${Alert} title="Сначала заверши матч" onClose=${() => setElsewhereAsk(null)}
       message=${`Идёт матч ${elsewhere.bot ? "с ботом" : `с ${elsewhere.opponent ?? "соперником"}`}. Вернись в него или сдайся — потом можно начать новый.`}
       actions=${[{ title: "Вернуться в матч", kind: "bold", run: comeBack }, { title: "Сдаться", kind: "destructive", run: () => setElsewhereAsk("leave"), stay: true }, { title: "Отмена", run: () => setElsewhereAsk(null) }]} />` : null}
-    ${elsewhereAsk === "leave" && elsewhere ? html`<${Alert} title="Покинуть матч?" message="Победа будет засчитана сопернику." onClose=${() => setElsewhereAsk(null)}
+    ${elsewhereAsk === "leave" && elsewhere && !elsewhere.live && !elsewhere.opponent ? html`<${Alert} title="Выйти из комнаты?" onClose=${() => setElsewhereAsk(null)}
+      actions=${[{ title: "Остаться", run: () => setElsewhereAsk(null) }, { title: "Выйти", kind: "destructive", run: giveUp }]} />`
+    : elsewhereAsk === "leave" && elsewhere ? html`<${Alert} title="Покинуть матч?" message="Победа будет засчитана сопернику." onClose=${() => setElsewhereAsk(null)}
       actions=${[{ title: "Остаться", run: () => setElsewhereAsk(null) }, { title: "Покинуть", kind: "destructive", run: giveUp }]} />` : null}
     ${install && !match ? html`<${InstallSheet} close=${() => { setInstall(false); if (whatsNew.due()) setNews(true); }} />` : null}
     ${news && !install && !match ? html`<${WhatsNewSheet} close=${() => setNews(false)} />` : null}
@@ -615,8 +630,9 @@ function CallBar({ c, i }) {
 const ReturnBar = ({ m, go, drop }) => html`<div class="return-bar glass-bar">
   <button class="rb-main press" onClick=${go}>
     <span class="rb-dot"><i></i></span>
-    <span class="rb-t"><small>${m.watching ? "Ты на трибуне" : "Матч идёт"}</small>
-      <b><${Marquee} text=${`${m.watching ? m.leftName + " — " : ""}${m.opponent.name} · ${m.score[0]}:${m.score[1]} · раунд ${m.round}`} /></b></span>
+    <span class="rb-t"><small>${m.watching ? "Ты на трибуне" : !m.hasBoard && !m.round ? "Ты в комнате" : "Матч идёт"}</small>
+      <b><${Marquee} text=${!m.hasBoard && !m.round ? (m.them ? `${m.watching ? m.leftName + " — " : ""}${m.opponent.name} · ждём начала` : `Комната ${m.code} · ждём второго игрока`)
+        : `${m.watching ? m.leftName + " — " : ""}${m.opponent.name} · ${m.score[0]}:${m.score[1]} · раунд ${m.round}`} /></b></span>
     <span class="rb-go">Вернуться</span>
   </button>
   <button class="round-no press" aria-label=${m.watching ? "Уйти с трибуны" : "Выйти из матча"} onClick=${drop}><${Icon} name="x" size="14" weight="2.5" /></button>
@@ -626,10 +642,10 @@ const ReturnBar = ({ m, go, drop }) => html`<div class="return-bar glass-bar">
 const ElsewhereBar = ({ r, go, drop }) => html`<div class="return-bar glass-bar">
   <button class="rb-main press" onClick=${go}>
     <span class="rb-dot"><i></i></span>
-    <span class="rb-t"><small>Матч идёт</small><b><${Marquee} text=${r.bot ? "Против бота" : r.opponent ?? "Соперник"} /></b></span>
+    <span class="rb-t"><small>${!r.live && !r.opponent ? "Ты в комнате" : "Матч идёт"}</small><b><${Marquee} text=${r.bot ? "Против бота" : r.opponent ?? "Ждём второго игрока"} /></b></span>
     <span class="rb-go">Вернуться</span>
   </button>
-  <button class="chip-btn rb-quit press" onClick=${drop}>Сдаться</button>
+  <button class="chip-btn rb-quit press" onClick=${drop}>${!r.live && !r.opponent ? "Выйти" : "Сдаться"}</button>
 </div>`;
 
 const Placeholder = ({ title, text, children }) => html`<div class="screen-scroll"><div class="page">
