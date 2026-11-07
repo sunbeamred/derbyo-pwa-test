@@ -24,7 +24,8 @@ export function RatingTab({ visible }) {
     return () => { live = false; };
   }, [period, visible, account.profile?.id]);
   const list = data?.period === period ? data.entries : null;
-  return html`<div class="screen-scroll"><div class="page">
+  return html`<div class="screen-scroll"><div class="page rating-page">
+    ${list?.length && !data.requiresLogin ? html`<${WaveFlag} code=${list[0].country} />` : null}
     <h1 class="big-title">Рейтинг</h1>
     <div class="segmented">${PERIODS.map(([id, t]) => html`<button class=${period === id ? "on" : ""} onClick=${() => setPeriod(id)}>${t}</button>`)}</div>
     ${err ? html`<p class="hint-line pad">${err}</p>`
@@ -38,6 +39,45 @@ export function RatingTab({ visible }) {
   </div>
   ${open ? html`<${Panel} onClose=${() => setOpen(null)}><${PlayerCard} id=${open} /><//>` : null}
   </div>`;
+}
+
+/** The leader's flag waving behind the table (owner, 2026-11-07). The emoji is drawn once onto a canvas and trimmed
+ * to the cloth, then cut into vertical strips that rise and fall one after another; only transforms and opacity move.
+ * No country (or the flag hidden: the site sends no country then) — nothing is drawn. */
+const flagPics = new Map();
+function flagPicture(code) {
+  if (flagPics.has(code)) return flagPics.get(code);
+  let url = null;
+  const f = flagOf(code);
+  try {
+    const c = document.createElement("canvas"); c.width = 240; c.height = 200;
+    const g = c.getContext("2d", { willReadFrequently: true });
+    g.textAlign = "center"; g.textBaseline = "middle"; g.font = '150px "Apple Color Emoji","Noto Color Emoji","Segoe UI Emoji",sans-serif';
+    g.fillText(f, 120, 104);
+    const d = g.getImageData(0, 0, 240, 200).data;
+    let x0 = 240, y0 = 200, x1 = -1, y1 = -1, colored = 0;
+    for (let y = 0; y < 200; y++) for (let x = 0; x < 240; x++) {
+      const i = (y * 240 + x) * 4;
+      if (d[i + 3] < 40) continue;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      if (Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]) > 30) colored++;
+    }
+    // A phone without colour flags draws two grey letters: then there is no flag to wave.
+    if (f && x1 > x0 && colored > 400) {
+      const w = x1 - x0 + 1, h = y1 - y0 + 1, o = document.createElement("canvas"); o.width = w; o.height = h;
+      o.getContext("2d").drawImage(c, x0, y0, w, h, 0, 0, w, h);
+      url = { src: o.toDataURL("image/png"), ratio: w / h };
+    }
+  } catch { url = null; }
+  flagPics.set(code, url);
+  return url;
+}
+const WAVE_STRIPS = 24;
+function WaveFlag({ code }) {
+  const pic = code ? flagPicture(code) : null;
+  if (!pic) return null;
+  return html`<div class="wave-flag" aria-hidden="true" style=${`--r:${pic.ratio};--img:url(${pic.src})`}><div class="wf-cloth">${[...Array(WAVE_STRIPS).keys()].map((k) =>
+    html`<i style=${`--k:${k};--a:${(0.25 + 0.75 * k / (WAVE_STRIPS - 1)).toFixed(3)};background-position:${(k / (WAVE_STRIPS - 1)) * 100}% 0`}></i>`)}</div></div>`;
 }
 
 const scoreText = (e, period) => (period === "week" ? (e.points > 0 ? "+" : "") + e.points : e.rating);

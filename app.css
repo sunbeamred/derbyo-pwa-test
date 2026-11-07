@@ -1611,6 +1611,19 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .tt-card.self { outline: 2px solid #fff; outline-offset: -2px; }
 .tt-gold-wrap .tt-card { z-index: 1; }
 
+/* The leader's flag waving faintly behind the rating (owner, 2026-11-07): strips of one picture rise and fall in turn,
+   a light and a shade run along them; the bottom fades out so the rows stay readable. */
+.rating-page { position: relative; isolation: isolate; }
+.wave-flag { position: absolute; z-index: -1; left: 50%; top: calc(var(--safe-t) + 4px); width: min(112%, 520px); translate: -50% 0; pointer-events: none;
+  opacity: .5; filter: saturate(1.1); -webkit-mask-image: linear-gradient(#000 45%, transparent 98%); mask-image: linear-gradient(#000 45%, transparent 98%); }
+.wf-cloth { display: flex; aspect-ratio: var(--r); transform: perspective(700px) rotateY(-14deg) rotateZ(-3deg); }
+.wf-cloth i { position: relative; flex: 1; margin-right: -1px; background-image: var(--img); background-size: calc(24 * 100%) 100%; background-repeat: no-repeat;
+  animation: wf-wave 2.6s ease-in-out calc(var(--k) * -.11s) infinite alternate; will-change: transform; }
+.wf-cloth i::after { content: ""; position: absolute; inset: 0; background: #000; opacity: 0; animation: wf-shade 2.6s ease-in-out calc(var(--k) * -.11s - .65s) infinite alternate; }
+@keyframes wf-wave { from { transform: translateY(calc(var(--a) * -5%)) scaleY(calc(1 - var(--a) * .03)); } to { transform: translateY(calc(var(--a) * 5%)) scaleY(1); } }
+@keyframes wf-shade { from { opacity: 0; } to { opacity: calc(var(--a) * .42); } }
+@media (prefers-reduced-motion: reduce) { .wf-cloth i, .wf-cloth i::after { animation: none !important; } }
+
 /* A thin strip at the top while there is no network or the match stream is being restored. */
 .net-strip { position: fixed; z-index: 95; left: 50%; top: calc(var(--safe-t) + 6px); translate: -50% 0; display: flex; align-items: center; gap: 8px;
   padding: 7px 14px; border-radius: 99px; background: rgba(60, 22, 30, .94); border: 1px solid rgba(255, 110, 130, .45); color: #FFD9DF;
