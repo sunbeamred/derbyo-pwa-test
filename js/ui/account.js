@@ -10,6 +10,9 @@ import { invites, secondsLeft } from "../invites.js";
 import { BUILD } from "../update.js";
 
 const PERIODS = [["rating", "Рейтинг"], ["week", "Неделя"], ["friends", "Друзья"]];
+// Sandbox and local only (owner, 2026-11-08): a button that puts another country's flag behind the rating, for testing.
+const FLAG_TEST = /sandbox|localhost|127\.0\.0\.1/.test(location.hostname);
+const TEST_FLAGS = ["KZ", "TR", "BR", "AR", "DE", "FR", "ES", "IT", "GB", "PT", "NL", "RU", "UZ", "AZ", "GE", "US", "JP", "KR", "MA", "NG"];
 
 export function RatingTab({ visible }) {
   const [period, setPeriod] = useState("rating");
@@ -17,6 +20,7 @@ export function RatingTab({ visible }) {
   const [err, setErr] = useState(null);
   const [open, setOpen] = useState(null);
   const [palette, setPalette] = useState(null);
+  const [testFlag, setTestFlag] = useState(null);
   useEffect(() => {
     if (!visible) return;
     let live = true;
@@ -26,7 +30,8 @@ export function RatingTab({ visible }) {
   }, [period, visible, account.profile?.id]);
   const list = data?.period === period ? data.entries : null;
   return html`<div class="screen-scroll"><div class="page rating-page">
-    ${list?.length && !data.requiresLogin ? html`<${WaveFlag} code=${list[0].country} visible=${visible} onPalette=${setPalette} />` : null}
+    ${list?.length && !data.requiresLogin ? html`<${WaveFlag} code=${testFlag ?? list[0].country} visible=${visible} onPalette=${setPalette} />` : null}
+    ${FLAG_TEST ? html`<button class="flag-test press" onClick=${() => setTestFlag(TEST_FLAGS[(TEST_FLAGS.indexOf(testFlag) + 1) % TEST_FLAGS.length])}>🛠 ${testFlag ? flagOf(testFlag) : "Флаг"}</button>` : null}
     <h1 class="big-title">Рейтинг</h1>
     <div class="segmented">${PERIODS.map(([id, t]) => html`<button class=${period === id ? "on" : ""} onClick=${() => setPeriod(id)}>${t}</button>`)}</div>
     ${err ? html`<p class="hint-line pad">${err}</p>`
