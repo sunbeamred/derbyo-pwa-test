@@ -255,7 +255,7 @@ function RoomBar({ m, stands, leave, children }) {
 // Short, one line each (owner, 2026-11-07: next to the chat and the exit it wrapped word by word).
 const ReadyWait = ({ m, who }) => html`<div class="waiting-bar"><span class="spinner muted"></span>
   <span class="wb-t"><b>Ждём ${who}</b><small>Ты готов</small></span>
-  ${m?.state && "freeLeave" in m.state ? html`<button class="navy-btn small wb-cancel" onClick=${() => m.unready().catch(() => {})}>Отменить</button>` : null}</div>`;
+  ${m?.state && "freeLeave" in m.state ? html`<button class="wb-x press" aria-label="Отменить готовность" onClick=${() => m.unready().catch(() => {})}><${Icon} name="x" size="16" weight="2.4" /></button>` : null}</div>`;
 
 /** Hooks a screen to a room's live match; a room left behind (back, not into the match) is left on the server. */
 function useRoom(make, app) {
