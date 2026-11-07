@@ -550,9 +550,11 @@ const winReason = (r = "") => /^Соперник сдался/.test(r) ? "Соп
   : /^Соперник не вернулся/.test(r) ? "Соперник не вернулся в игру за 60 секунд" : /^Вышел из игры после того, как время вне игры/.test(r) ? "У соперника истекло время вне игры"
   : /^Соперник не отвечает/.test(r) ? "Соперник не отвечал" : null;
 
+const WALKOVER = { ready: "Соперник не подтвердил готовность — техническая победа", gone: "Соперник не вернулся к следующему раунду — техническая победа" };
+
 /** The round's result in a bubble under the board, in the winner's colour with their mark. */
 function ResultBubble({ m }) {
-  const w = m.roundWinner, done = m.matchOver;
+  const walk = !!m.walkoverWin, w = walk ? 0 : m.roundWinner, done = m.matchOver;
   const title = m.watching && w === 0 ? (done ? `Матч выиграл ${m.leftName}` : `Раунд выиграл ${m.leftName}`)
     : w === 0 ? (done ? "Победа в матче!" : "Раунд твой")
     : w === 1 ? (done ? `Матч выиграл ${m.opponent.name}` : `Раунд выиграл ${m.opponent.name}`)
@@ -561,7 +563,8 @@ function ResultBubble({ m }) {
   const ws = w === null ? null : m.seat(w);
   const tint = ws === 0 ? RED : ws === 1 ? MINT : GOLD;
   // Lost for two turns without a move: say so, or it reads as if the one who left had won by leaving.
-  const why = (m.idleLost && !m.watching ? (w === 1 ? "Активность не подтверждена — победа в матче засчитана сопернику" : w === 0 ? "Соперник не подтвердил активность" : null) : null)
+  const why = (walk ? WALKOVER[m.endNotice?.code] ?? "Соперник не продолжил матч — техническая победа" : null)
+    ?? (m.idleLost && !m.watching ? (w === 1 ? "Активность не подтверждена — победа в матче засчитана сопернику" : w === 0 ? "Соперник не подтвердил активность" : null) : null)
     // A round won not on the board: say how, or «Раунд твой» comes out of nowhere (the server's reasons).
     ?? (w === 0 && !m.watching ? winReason(m.g?.reason) : null);
   return html`<div class=${cx("result-bubble", why && "with-why")} style=${`--t:${tint}`}><img src=${img(w === null ? "whistle" : m.mark(w))} alt="" /><b>${title}${why ? html`<small>${why}</small>` : null}</b></div>`;

@@ -173,6 +173,10 @@ export class OnlineMatch {
     for (const c of st.chat ?? []) if (!this.seenChat.has(c.id)) { this.seenChat.add(c.id); if (!this.firstState && c.senderId !== st.selfId) this.unread++; }
     this.oppLeft = !them && st.round > 0;
     this.matchOver = !!st.seriesComplete;
+    // A match won because the other side did not go on between rounds (the server's walkover, room event «abandoned»
+    // with the winner's seat): the bubble says so instead of the last round's reason (owner, 2026-11-07).
+    const ab = (st.events ?? []).filter((e) => e.type === "abandoned").at(-1);
+    this.walkoverWin = this.matchOver && !this.watching && ab?.seat != null && ab.seat === st.seat;
     this.levelSetting = st.settings?.level ?? 2;
 
     const g = st.game;
