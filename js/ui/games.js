@@ -1,4 +1,4 @@
-// «Контекстно» and «Что их связывает» in the app's look, like «Футболист дня» (daily.js): the site's /api/contexto and /api/links,
+// «Контекстбол» and «Что их связывает» in the app's look, like «Футболист дня» (daily.js): the site's /api/contexto and /api/links,
 // the same localStorage keys as the site's pages (progress is shared), a fixed top with tabs and levels, cards that scroll,
 // and the answer field at the bottom bar opening a sheet over the keyboard.
 import { html, useState, useEffect, useRef, cx, img, Icon, BottomBar, LobbyHeader, Panel, vibrate, Alert } from "./common.js";
@@ -234,7 +234,7 @@ export function ContextoView({ nav, join, auto }) {
   const n = round?.guesses.length ?? 0;
   const playing = round && !round.over;
   return html`<div class="screen-with-bar daily-screen">
-    <${GameTop} title="Контекстно" back=${nav.back} mode=${mode} setMode=${pickMode} tabs=${tabs}
+    <${GameTop} title="Контекстбол" back=${nav.back} mode=${mode} setMode=${pickMode} tabs=${tabs}
       levels=${st?.levels} level=${memo.endless.level} setLevel=${setLevel} line=${line}
       field=${playing ? html`<${AskButton} busy=${busy} text=${`Назови футболиста${n ? ` · лучший #${best}` : ""}`} open=${() => setAsking(true)} />` : null} />
     <div class="screen-scroll"><div class="page game-page">
@@ -261,7 +261,7 @@ export function ContextoView({ nav, join, auto }) {
           : html`<button class="primary-btn ctx-next" onClick=${next}><img src=${img("bolt")} alt="" />Следующий игрок</button>`}</div>`} />`}
     <//>
     ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}><div class="menu">
-        <h2>Контекстно</h2>
+        <h2>Контекстбол</h2>
         ${playing ? html`<button class="navy-btn menu-row" disabled=${busy || best <= st.hintFloor} onClick=${() => { setMenuOpen(false); hint(); }}>${best <= st.hintFloor ? "Подсказок больше нет — ты уже близко" : "Взять подсказку"}</button>
           <button class="navy-btn menu-row destructive" disabled=${busy} onClick=${() => { setMenuOpen(false); setGiveUp(true); }}>Сдаться</button>`
         : mode === "daily" ? html`<button class="navy-btn menu-row" onClick=${() => { setMenuOpen(false); setMode("endless"); }}>Играть бесконечный</button>`
@@ -495,7 +495,7 @@ function CtxIntro({ v, done }) {
   useEffect(() => { vibrate(12); const t = setTimeout(done, matchMedia("(prefers-reduced-motion: reduce)").matches ? 200 : 1800); return () => clearTimeout(t); }, []);
   return html`<div class="entrance" aria-hidden="true">
     <div class="ent-scene"></div><div class="ent-beams"></div>
-    <div class="ent-copy"><small>КОНТЕКСТНО · РАУНД ${v.round}</small><b>Выходим на поле</b></div>
+    <div class="ent-copy"><small>КОНТЕКСТБОЛ · РАУНД ${v.round}</small><b>Выходим на поле</b></div>
   </div>`;
 }
 
@@ -667,7 +667,7 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join, auto }) {
   }
   const link = () => `${location.origin}/#ctx=${seat.code}`;
   const share = async () => {
-    const text = `Сыграем в «Контекстно» в DERBYO? Комната ${spaced(seat.code)}\n${link()}`;
+    const text = `Сыграем в «Контекстбол» в DERBYO? Комната ${spaced(seat.code)}\n${link()}`;
     try { if (navigator.share) { await navigator.share({ text }); return; } } catch (e) { if (e.name === "AbortError") return; }
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {}
   };
@@ -740,7 +740,7 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join, auto }) {
   const next = () => call("start", { level: v.level });
   if (inGame) return html`<div class="screen-with-bar daily-screen ctx-round">
     <div class="game-top">
-      <${LobbyHeader} title=${`Контекстно · раунд ${v.round}`} back=${nav.back} />
+      <${LobbyHeader} title=${`Контекстбол · раунд ${v.round}`} back=${nav.back} />
       ${!playing ? result : seated ? html`<${AskButton} busy=${busy} text=${`Назови футболиста${sorted[0] ? ` · лучший #${sorted[0].rank}` : ""}`} open=${() => setAsking(true)} />`
         : html`<button class="primary-btn" disabled=${freeSeat === undefined} onClick=${() => call("sit", { seat: freeSeat })}>
             <img src=${img("plus")} alt="" />${freeSeat === undefined ? "Все 8 мест заняты — ты на трибуне" : "Сесть за стол и играть"}</button>`}
@@ -774,7 +774,7 @@ function ContextoFriends({ nav, st, tabs, mode, setMode, join, auto }) {
   </div>`;
 
   return html`<div class="screen-with-bar daily-screen">
-    <${GameTop} title="Контекстно" back=${step ? () => { setStep(null); setErr(null); } : nav.back} mode=${mode} setMode=${(m) => { setStep(null); setMode(m); }} tabs=${tabs} line=${line} />
+    <${GameTop} title="Контекстбол" back=${step ? () => { setStep(null); setErr(null); } : nav.back} mode=${mode} setMode=${(m) => { setStep(null); setMode(m); }} tabs=${tabs} line=${line} />
     <div class="screen-scroll"><div class="page game-page">
       ${step === "code" ? html`
         <label class="code-boxes ctx-code-boxes">

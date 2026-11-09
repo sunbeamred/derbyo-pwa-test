@@ -113,7 +113,7 @@ export function HomeView({ nav }) {
 // The mini-games: every online app has them (the server's /api/daily, /api/contexto, /api/links); the offline demo does not.
 const MINI_GAMES = [
   { id: "daily", path: "/daily", title: "Футболист дня", text: "Угадай одного футболиста за день" },
-  { id: "contexto", path: "/contexto", title: "Контекстно", text: "Кто ближе к загаданному — с друзьями" },
+  { id: "contexto", path: "/contexto", title: "Контекстбол", text: "Кто ближе к загаданному — с друзьями" },
   { id: "links", path: "/links", title: "Что их связывает", text: "Пять футболистов, одна связь" },
 ];
 
