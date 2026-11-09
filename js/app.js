@@ -506,7 +506,7 @@ function App() {
     ${news && !install && !match ? html`<${WhatsNewSheet} close=${() => setNews(false)} />` : null}
     ${askPush && !install && !news && !match ? html`<${PushAskSheet} close=${() => setAskPush(false)} />` : null}
     ${invite && !match ? html`<div class="invite-toast glass" role="alert">
-      <img src=${img("invite")} alt="" /><span><b>${invite.nickname}</b><small>${invite.game === "contexto" ? "зовёт в Контекстно" : invite.game === "room" ? "зовёт в свою комнату" : "зовёт сыграть"}</small></span>
+      <img src=${img("invite")} alt="" /><span><b>${invite.nickname}</b><small>${invite.game === "contexto" ? "зовёт в Контекстбол" : invite.game === "room" ? "зовёт в свою комнату" : "зовёт сыграть"}</small></span>
       <button class="chip-btn press accept" onClick=${() => { const i = invite; setInvite(null); takeInvite(i).catch((e) => alert(e.message)); }}>Играть</button>
       <button class="round-no press" aria-label="Скрыть" onClick=${() => setInvite(null)}><${Icon} name="x" size="14" weight="2.5" /></button></div>` : null}
     ${feedback ? html`<${FeedbackSheet} context=${feedback} close=${() => setFeedback(null)} />` : null}
