@@ -979,8 +979,8 @@ button.toggle-card { width: 100%; color: inherit; text-align: left; }
 .edit-profile .picker-row .picker { position: static; }
 .lvl { white-space: nowrap; flex: none; }
 .pf-name > span { flex-wrap: wrap; }
-/* The hidden flag: our globe picture, sized like an emoji flag. */
-img.globe { display: inline-block; width: 1.5em; height: 1.5em; margin: -.25em -.1em; vertical-align: middle; object-fit: contain; }
+/* The hidden flag: our globe picture (cropped to the flag itself), as wide as an emoji flag. */
+img.globe { display: inline-block; width: 1.3em; height: auto; margin: 0; vertical-align: middle; border-radius: .16em; }
 /* A bot (or any picture that is not a photo) sits inside a small avatar instead of filling it. */
 .pf-avatar.mini img:not(.photo) { width: 74%; height: 74%; object-fit: contain; }
 /* The room block in the settings: access, stands and chat as one grouped card. */
@@ -1091,8 +1091,8 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 /* Header: the flag by the name (on the photo's side), the coins under the name. */
 .pname-row { display: flex; align-items: flex-end; gap: 4px; max-width: 100%; min-width: 0; }
 .pname-row .pname { min-width: 0; }
+.pflag img.globe, .intro-flag img.globe, .tt-flag img.globe { display: block; }
 .pflag { position: absolute; bottom: -8px; font-style: normal; font-size: 18px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); }
-.pflag img.globe { width: 19px; height: 19px; margin: 0; }
 /* The flag takes the photo's other bottom corner: the mark sits on one, the flag on the other. */
 .pavatar.mine .pflag { left: -1px; }
 .pavatar.theirs .pflag { right: -1px; }
@@ -1285,7 +1285,6 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 .intro-face .photo { width: 100%; height: 100%; border-radius: 22px; object-fit: cover; }
 .intro-face .bot { width: 62%; }
 .intro-flag { position: absolute; right: -10px; bottom: -10px; font-style: normal; font-size: 30px; line-height: 1; text-shadow: 0 3px 4px rgba(0, 0, 0, .7); }
-.intro-flag img.globe { width: 30px; height: 30px; margin: 0; }
 .intro-name { max-width: 100%; margin-top: 6px; padding: 0 .14em; font-size: 22px; line-height: 1.05; font-weight: 900; font-style: italic; letter-spacing: .01em; text-transform: uppercase;
   color: #fff; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; text-shadow: 0 0 18px var(--team-glow), 0 3px 0 rgba(0, 0, 0, .5); }
 .intro-rating { display: flex; flex-direction: column; gap: 0; }
@@ -1596,7 +1595,6 @@ body:has(.panel) .edge-fade { opacity: 0; transition: opacity .2s; }
 .gold .tt-face img { border-radius: 18px; }
 .gold .tt-face i { font-size: 21px; }
 .tt-flag { position: absolute; right: -8px; bottom: -8px; font-style: normal; font-size: 20px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); }
-.tt-flag img.globe { width: 20px; height: 20px; margin: 0; }
 .tt-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .tt-text small { font-size: 11px; font-weight: 800; letter-spacing: .08em; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tt-text small + .tt-name + small { letter-spacing: 0; font-weight: 700; }
