@@ -979,8 +979,9 @@ button.toggle-card { width: 100%; color: inherit; text-align: left; }
 .edit-profile .picker-row .picker { position: static; }
 .lvl { white-space: nowrap; flex: none; }
 .pf-name > span { flex-wrap: wrap; }
-/* The hidden flag: our globe picture (cropped to the flag itself), as wide as an emoji flag. */
-img.globe { display: inline-block; width: 1.3em; height: auto; margin: 0; vertical-align: middle; border-radius: .16em; }
+/* The hidden flag: our globe picture with a country flag's exact box in our flag font (Twemoji):
+   1em wide, .72em tall, .11em corners, standing .015em above the baseline. */
+img.globe { display: inline-block; width: 1em; height: .72em; margin: 0; vertical-align: .015em; border-radius: .11em; object-fit: cover; }
 /* A bot (or any picture that is not a photo) sits inside a small avatar instead of filling it. */
 .pf-avatar.mini img:not(.photo) { width: 74%; height: 74%; object-fit: contain; }
 /* The room block in the settings: access, stands and chat as one grouped card. */
@@ -1091,7 +1092,6 @@ body.sheet-up .tabbar, body.sheet-up .return-bar { opacity: 0; pointer-events: n
 /* Header: the flag by the name (on the photo's side), the coins under the name. */
 .pname-row { display: flex; align-items: flex-end; gap: 4px; max-width: 100%; min-width: 0; }
 .pname-row .pname { min-width: 0; }
-.pflag img.globe, .intro-flag img.globe, .tt-flag img.globe { display: block; }
 .pflag { position: absolute; bottom: -8px; font-style: normal; font-size: 18px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); }
 /* The flag takes the photo's other bottom corner: the mark sits on one, the flag on the other. */
 .pavatar.mine .pflag { left: -1px; }
