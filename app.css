@@ -1727,3 +1727,26 @@ body.ctx-full .app { --tb-space: max(22px, calc(var(--safe-b) - 10px)) !importan
 /* Three answers and more stand one under another, as on iOS (owner, 2026-11-07: the host's menu). */
 .alert-actions.col { flex-direction: column; }
 .alert-actions.col .alert-btn + .alert-btn { border-left: 0; border-top: 1px solid rgba(255, 255, 255, .1); }
+
+/* Rule cards (owner, 2026-11-15): a criterion is a button; its card says what counts, years spelled out. */
+.cond-btn { border-radius: 12px; transition: background .15s; }
+.cond-btn:active { background: var(--raised); }
+.cicon-wrap { position: relative; display: inline-grid; place-items: center; }
+.cond-mark { position: absolute; right: -7px; top: -5px; width: 15px; height: 15px; border-radius: 50%; background: var(--raised);
+  border: 1px solid var(--navy-line); color: var(--soft); font: 700 10px/13px var(--font); font-style: normal; text-align: center; pointer-events: none; }
+.cicon.badge { width: auto; min-width: calc(var(--s) * 1.05); height: calc(var(--s) * .72); padding: 0 6px; border-radius: 9px; background: var(--gold);
+  color: #07131E; font-weight: 800; font-size: calc(var(--s) * .36); display: grid; place-items: center; white-space: nowrap; }
+.board { position: relative; }
+.rule-hint { position: absolute; left: 50%; top: 64px; translate: -50% 0; z-index: 5; width: min(270px, 80%); background: var(--ink); color: #07131E;
+  border-radius: 14px; padding: 12px 14px; font-size: 14px; font-weight: 600; line-height: 1.35; box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.rule-hint-ok { background: #07131E; color: var(--ink); border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 700; }
+.rule-card { display: flex; flex-direction: column; gap: 12px; padding: 4px 2px 6px; }
+.rule-top { display: flex; align-items: center; gap: 12px; }
+.rule-kind { font-size: 12px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); }
+.rule-title { margin: 0; font-size: 21px; font-weight: 800; line-height: 1.2; }
+.rule-text { font-size: 15px; line-height: 1.45; color: var(--ink); }
+.rule-line { font-size: 14px; line-height: 1.45; color: var(--soft); }
+.rule-except { font-size: 14px; line-height: 1.4; color: var(--soft); background: var(--raised); border-radius: 14px; padding: 10px 12px; }
+.rule-except b { color: #FF8A96; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .cond-btn { transition: none; } }

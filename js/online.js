@@ -20,10 +20,13 @@ export function criterion(c) {
     case "p": icon = { kind: "image", src: `/icons/position-${c.key}.webp` }; break;
     case "a": icon = { kind: "image", src: c.key === "BDOR" ? "/icons/golden-ball.webp" : "/icons/trophy.webp" }; break;
     case "t": icon = { kind: "image", src: `/icons/${TROPHY[c.key] ?? "trophy"}.webp` }; break;
+    // Era («90-е») and birth decade («р. 80»): a gold badge with the short text (server 2026-11-14).
+    case "e": case "b": icon = { kind: "badge", text: c.short ?? title }; break;
     case "m": case "w": icon = { kind: "person", person: c.person, frame: `/icons/frame-${c.type === "m" ? "coach" : "teammate"}.webp` }; break;
     default: icon = { kind: "text", text: "?" };
   }
-  return { key: c.id, title: c.type === "p" ? POSITION[c.key] ?? title : title, icon, note: c.note ?? null };
+  // `card`: the rule shown when the criterion is tapped (server 2026-11-15); older servers send none.
+  return { key: c.id, title: c.type === "p" ? POSITION[c.key] ?? title : title, icon, note: c.note ?? null, card: c.card ?? null };
 }
 
 // «спит» after this much of the opponent's own turn time with nothing done (owner, 2026-11-07).
