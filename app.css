@@ -980,8 +980,10 @@ button.toggle-card { width: 100%; color: inherit; text-align: left; }
 .lvl { white-space: nowrap; flex: none; }
 .pf-name > span { flex-wrap: wrap; }
 /* The hidden flag: our globe picture with a country flag's exact box in our flag font (Twemoji):
-   1em wide, .72em tall, .11em corners, standing .015em above the baseline. */
-img.globe { display: inline-block; width: 1em; height: .72em; margin: 0; vertical-align: .015em; border-radius: .11em; object-fit: cover; }
+   1em wide, .72em tall, .11em corners, standing .015em above the baseline;
+   !important: picture rules of the spot around it (.tt-face img fills the face) must not resize it. */
+img.globe { display: inline-block !important; width: 1em !important; height: .72em !important; margin: 0 !important; vertical-align: .015em !important;
+  border-radius: .11em !important; object-fit: cover !important; }
 /* A bot (or any picture that is not a photo) sits inside a small avatar instead of filling it. */
 .pf-avatar.mini img:not(.photo) { width: 74%; height: 74%; object-fit: contain; }
 /* The room block in the settings: access, stands and chat as one grouped card. */
