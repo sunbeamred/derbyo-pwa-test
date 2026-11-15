@@ -26,6 +26,9 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   const [viewer, setViewer] = useState(null);
   // Rule cards (owner, 2026-11-15): a tapped criterion opens its rule; the hint shows once per phone.
   const [ruleOf, setRuleOf] = useState(null);
+  const [ruleHint, setRuleHint] = useState(() => !hintSeen());
+  const dropHint = () => { if (ruleHint) { markHintSeen(); setRuleHint(false); } };
+  const openRule = (c) => { dropHint(); setRuleOf(c); };
   const [confirmSurrender, setConfirmSurrender] = useState(false);
   const [drawHint, setDrawHint] = useState(null);
   const [shownToast, setShownToast] = useState(null);
@@ -151,8 +154,10 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   return html`<div class="match">
     <div class="match-body">
       <${Scoreboard} m=${m} openProfile=${setProfileOf} openStands=${() => setStandsOpen(true)} />
-      <${Board} m=${m} tap=${tapCell} openRule=${setRuleOf} />
+      <${Board} m=${m} tap=${tapCell} openRule=${openRule} />
       <div class="slot">
+        ${/* Under the board, where it covers nothing: shown once, while the server sends rule cards. */
+          ruleHint && m.cols.some((c) => c.card) && !m.watching ? html`<div class="rule-hint" role="note"><span>Нажми на условие — узнаешь правило</span><button class="rule-hint-ok press" onClick=${dropHint}>Понятно</button></div>` : null}
         ${notes.length ? html`<div class=${cx("notes", ((m.offerRaise && !m.watching) || m.roundOver) && "hidden")}>
           ${notes.map((c) => html`<div><b>${(c.label ?? c.title) + ": "}</b><span>${c.note}</span></div>`)}</div>` : null}
         ${m.offerRaise && !m.watching ? html`<div class="raise-offer glass">
@@ -350,13 +355,14 @@ export function ConditionIcon({ icon, size = 34 }) {
       return html`<span class="cicon person" style=${s}>${ph ? html`<img class="ph" src=${ph} alt="" />` : null}<img class="fr" src=${icon.frame} alt="" /></span>`;
     }
     case "text": return html`<span class="cicon text" style=${s}>${icon.text}</span>`;
-    case "badge": return html`<span class="cicon badge" style=${s}>${icon.text}</span>`;
+    case "badge": return html`<span class="cicon era-badge" style=${s}>${icon.text}</span>`;
   }
 }
 
-// Criteria whose meaning is not obvious from the name carry a small «i»; every criterion with a card opens it.
-const MARKED = new Set(["Эпоха", "Год рождения", "Турнир", "Награда"]);
-const marked = (c) => !!c.card && (MARKED.has(c.card.kind) || !!c.card.lines);
+// The new criteria (eras, birth decades, awards, tournaments, trophy and country groups) carry a small «i»;
+// every criterion with a card opens it, clubs and countries included.
+const NEW_CRITERION = /^(?:[eba]:|t:(?:INTL|UCLINTL|WC\d{4}|EURO\d{4})$|[nl]:[A-Z0-9]{3,}$)/;
+const marked = (c) => !!c.card && NEW_CRITERION.test(c.key ?? "");
 const HINT_KEY = "derbyo-rule-hint-seen";
 const hintSeen = () => { try { return localStorage.getItem(HINT_KEY) === "1"; } catch { return true; } };
 const markHintSeen = () => { try { localStorage.setItem(HINT_KEY, "1"); } catch {} };
@@ -415,9 +421,7 @@ function WordLines({ text }) {
 }
 
 function Board({ m, tap, openRule }) {
-  const [hint, setHint] = useState(() => !hintSeen());
-  const hasCards = m.cols.some((c) => c.card);
-  const open = (c) => { if (hint) { markHintSeen(); setHint(false); } openRule(c); };
+  const open = openRule;
   const ref = useRef();
   const lastMiss = useRef(m.missSignal);
   const lastReward = useRef(null);
@@ -445,7 +449,6 @@ function Board({ m, tap, openRule }) {
       <span class="lead"></span>
       ${m.cols.map((c) => html`<${CondHead} c=${c} open=${open} />`)}
     </div>
-    ${hint && hasCards && !m.watching ? html`<div class="rule-hint" role="note"><span>Нажми на условие — узнаешь правило</span><button class="rule-hint-ok press" onClick=${() => { markHintSeen(); setHint(false); }}>Понятно</button></div>` : null}
     ${[0, 1, 2].map((r) => html`<div class="board-row">
       <${CondHead} c=${m.rows[r]} row=${true} open=${open} />
       ${[0, 1, 2].map((c) => {
