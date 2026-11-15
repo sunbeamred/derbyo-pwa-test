@@ -156,8 +156,6 @@ export function MatchScreen({ m, close, findNew, minimize }) {
       <${Scoreboard} m=${m} openProfile=${setProfileOf} openStands=${() => setStandsOpen(true)} />
       <${Board} m=${m} tap=${tapCell} openRule=${openRule} />
       <div class="slot">
-        ${/* Under the board, where it covers nothing: shown once, while the server sends rule cards. */
-          ruleHint && m.cols.some((c) => c.card) && !m.watching ? html`<div class="rule-hint" role="note"><span>Нажми на условие — узнаешь правило</span><button class="rule-hint-ok press" onClick=${dropHint}>Понятно</button></div>` : null}
         ${notes.length ? html`<div class=${cx("notes", ((m.offerRaise && !m.watching) || m.roundOver) && "hidden")}>
           ${notes.map((c) => html`<div><b>${(c.label ?? c.title) + ": "}</b><span>${c.note}</span></div>`)}</div>` : null}
         ${m.offerRaise && !m.watching ? html`<div class="raise-offer glass">
@@ -166,6 +164,10 @@ export function MatchScreen({ m, close, findNew, minimize }) {
           </div>`
         : m.myOffer ? html`<div class="raise-offer glass"><span>${m.myOffer}</span></div>`
         : m.roundOver ? html`<${ResultBubble} m=${m} key=${m.finishSignal} />`
+        // Once per phone, in place of the slot line while the server sends rule cards (owner, 2026-11-15: calm, one text).
+        : !notes.length && ruleHint && m.cols.some((c) => c.card) && !m.watching ? html`<div class="rule-hint glass" role="note">
+            <img class="rule-hint-ico" src=${img("question")} alt="" /><span>Нажми на условие — покажем, что оно значит</span>
+            <button class="rule-hint-ok press" onClick=${dropHint}>Понятно</button></div>`
         : !notes.length ? html`<p class=${cx("slot-line", (shownToast || m.reward) && "hidden")}>${slotLine}</p>` : null}
         <div class="slot-notices">
           ${shownToast ? html`<${Toast} toast=${shownToast} />` : null}
@@ -359,15 +361,11 @@ export function ConditionIcon({ icon, size = 34 }) {
   }
 }
 
-// The new criteria (eras, birth decades, awards, tournaments, trophy and country groups) carry a small «i»;
-// every criterion with a card opens it, clubs and countries included.
-const NEW_CRITERION = /^(?:[eba]:|t:(?:INTL|UCLINTL|WC\d{4}|EURO\d{4})$|[nl]:[A-Z0-9]{3,}$)/;
-const marked = (c) => !!c.card && NEW_CRITERION.test(c.key ?? "");
 const HINT_KEY = "derbyo-rule-hint-seen";
 const hintSeen = () => { try { return localStorage.getItem(HINT_KEY) === "1"; } catch { return true; } };
 const markHintSeen = () => { try { localStorage.setItem(HINT_KEY, "1"); } catch {} };
 function CondHead({ c, row, open }) {
-  const icon = html`<span class="cicon-wrap"><${ConditionIcon} icon=${c.icon} size=${38} />${marked(c) ? html`<i class="cond-mark" aria-hidden="true">i</i>` : null}</span>`;
+  const icon = html`<${ConditionIcon} icon=${c.icon} size=${38} />`;
   const label = `Правило: ${c.card?.title ?? c.title}`;
   if (!c.card) return row ? html`<span class="lead row-head">${icon}<${WordLines} text=${c.title} /></span>` : html`<span class="col-head">${icon}<span class="col-title">${c.title}</span></span>`;
   return row ? html`<button class="lead row-head cond-btn" aria-label=${label} onClick=${() => open(c)}>${icon}<${WordLines} text=${c.title} /></button>`
