@@ -8,7 +8,9 @@ const HINT_ID = [null, "profile", "letters", "four"];
 const POSITION = { G: "Вратарь", D: "Защитник", M: "Полузащитник", F: "Нападающий" };
 // Award pictures modelled on the real trophies (owner, 2026-11-16): Torjägerkanone, the two golden boots, the Pichichi
 // cup, the Golden Boy ball. The other awards keep the generic trophy until their pictures come.
-const AWARD = { PICHICHI: "award-pichichi", PL_BOOT: "award-pl-boot", BL_SCORER: "award-bl-scorer", EGS: "award-egs", GOLDENBOY: "award-golden-boy" };
+// Pichichi and Zamora are the same MARCA cup in real life: one picture, the position in its corner (owner, 2026-11-16).
+const AWARD = { PICHICHI: { src: "award-marca-cup", corner: "/icons/position-F.webp" }, ZAMORA: { src: "award-marca-cup", corner: "/icons/position-G.webp" },
+  PL_BOOT: { src: "award-pl-boot" }, BL_SCORER: { src: "award-bl-scorer" }, EGS: { src: "award-egs" }, GOLDENBOY: { src: "award-golden-boy" } };
 const TROPHY = { WC: "trophy-wc", EURO: "trophy-euro", UCL: "trophy-ucl", COPA: "copa-america", UEL: "trophy-uel", CWC: "trophy-cwc", FAC: "trophy-fac", CDR: "trophy-cdr", DFB: "trophy-dfb", CI: "trophy-ci", CDF: "trophy-cdf" };
 
 /** A board condition from the server, in the shape the board draws (title, icon, note). */
@@ -21,7 +23,8 @@ export function criterion(c) {
     case "n": icon = { kind: "flag", emoji: c.flag ?? "🏳️" }; break;
     case "l": icon = { kind: "league", emoji: c.flag ?? "🏳️" }; break;
     case "p": icon = { kind: "image", src: `/icons/position-${c.key}.webp` }; break;
-    case "a": icon = { kind: "image", src: c.key === "BDOR" ? "/icons/golden-ball.webp" : AWARD[c.key] ? `img/${AWARD[c.key]}.webp` : "/icons/trophy.webp" }; break;
+    case "a": icon = AWARD[c.key] ? { kind: "image", src: `img/${AWARD[c.key].src}.webp`, corner: AWARD[c.key].corner ?? null }
+      : { kind: "image", src: c.key === "BDOR" ? "/icons/golden-ball.webp" : "/icons/trophy.webp" }; break;
     // A tournament he played («ЧМ-2006») is not a trophy he won: a ball, not a cup (owner's mock-up, 2026-11-15).
     case "t": icon = { kind: "image", src: /^(WC|EURO)\d{4}$/.test(c.key) ? "img/ball.webp" : `/icons/${TROPHY[c.key] ?? "trophy"}.webp` }; break;
     // Era («90-е») and birth decade («р. 80»): a gold badge with the short text (server 2026-11-14).

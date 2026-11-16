@@ -1747,3 +1747,8 @@ body.ctx-full .app { --tb-space: max(22px, calc(var(--safe-b) - 10px)) !importan
 .rule-except { font-size: 14px; line-height: 1.4; color: var(--soft); background: var(--raised); border-radius: 14px; padding: 10px 12px; }
 .rule-except b { color: #FF8A96; font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .cond-btn { transition: none; } }
+/* A shared trophy with a small badge in its corner: the MARCA cup for the top scorer (forward) or the keeper (owner, 2026-11-16). */
+.cicon.corner { position: relative; display: inline-block; }
+.cicon.corner .cicon-main { width: 100%; height: 100%; object-fit: contain; }
+.cicon-corner { position: absolute; right: calc(var(--s) * -.18); bottom: calc(var(--s) * -.1); width: calc(var(--s) * .55); height: calc(var(--s) * .55);
+  object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .7)); }

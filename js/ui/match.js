@@ -349,7 +349,9 @@ function RoundSteps({ results, current, live, base = 2 }) {
 export function ConditionIcon({ icon, size = 34 }) {
   const s = `--s:${size}px`;
   switch (icon.kind) {
-    case "crest": case "image": return html`<img class="cicon" style=${s} src=${icon.src} alt="" />`;
+    case "crest": case "image": return icon.corner
+      ? html`<span class="cicon corner" style=${s}><img class="cicon-main" src=${icon.src} alt="" /><img class="cicon-corner" src=${icon.corner} alt="" /></span>`
+      : html`<img class="cicon" style=${s} src=${icon.src} alt="" />`;
     case "flag": return html`<span class="cicon flag" style=${s}>${icon.emoji}</span>`;
     case "league": return html`<span class="cicon flag league" style=${s}>${icon.emoji}<img src=${img("ball")} alt="" /></span>`;
     case "person": {
