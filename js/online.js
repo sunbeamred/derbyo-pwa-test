@@ -28,7 +28,8 @@ export function criterion(c) {
     case "a": icon = AWARD[c.key] ? { kind: "image", src: `img/${AWARD[c.key].src}.webp`, corner: AWARD[c.key].corner ?? null }
       : { kind: "image", src: c.key === "BDOR" ? "/icons/golden-ball.webp" : "/icons/trophy.webp" }; break;
     // A tournament he played («ЧМ-2006») is not a trophy he won: a ball, not a cup (owner's mock-up, 2026-11-15).
-    case "t": icon = { kind: "image", src: /^(WC|EURO)\d{4}$/.test(c.key) ? "img/ball.webp" : `/icons/${TROPHY[c.key] ?? "trophy"}.webp` }; break;
+    // Each tournament he played shows that tournament's ball (owner's pictures after the real match balls, 2026-11-16).
+    case "t": icon = { kind: "image", src: /^(WC|EURO)\d{4}$/.test(c.key) ? `img/ball-${c.key.toLowerCase()}.webp` : `/icons/${TROPHY[c.key] ?? "trophy"}.webp` }; break;
     // Era («90-е») and birth decade («р. 80»): a gold badge with the short text (server 2026-11-14).
     case "e": case "b": icon = { kind: "badge", text: c.short ?? title }; break;
     case "m": case "w": icon = { kind: "person", person: c.person, frame: `/icons/frame-${c.type === "m" ? "coach" : "teammate"}.webp` }; break;
