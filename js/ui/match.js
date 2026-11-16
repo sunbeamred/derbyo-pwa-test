@@ -360,6 +360,12 @@ export function ConditionIcon({ icon, size = 34 }) {
     }
     case "text": return html`<span class="cicon text" style=${s}>${icon.text}</span>`;
     case "badge": return html`<span class="cicon era-badge" style=${s}>${icon.text}</span>`;
+    case "born": return html`<span class=${`cicon born y${icon.year}`} style=${s}><img src=${icon.src} alt="" /><b>${icon.year}</b></span>`;
+    case "wide": return html`<img class="cicon wide" style=${s} src=${icon.src} alt="" />`;
+    case "flagimg": return html`<span class="cicon flag" style=${s}><img class="flag-img" src=${icon.src} alt="" /></span>`;
+    case "cups": return html`<span class=${`cicon cups n${icon.srcs.length}`} style=${s}>${icon.srcs.map((src, i) => html`<img class=${`cup c${i}`} src=${src} alt="" />`)}</span>`;
+    // Like cards in a hand: the big teams in front, the middle one on top; a few more faint behind.
+    case "flagfan": return html`<span class="cicon flagfan" style=${s}>${(icon.back || []).map((f, i) => html`<span class=${`ff back b${i}`}>${f}</span>`)}${icon.front.map((f, i) => html`<span class=${`ff f${i}`}>${f}</span>`)}${icon.ball ? html`<img class="ff-ball" src=${img("ball")} alt="" />` : null}</span>`;
   }
 }
 

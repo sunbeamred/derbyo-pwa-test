@@ -1752,3 +1752,33 @@ body.ctx-full .app { --tb-space: max(22px, calc(var(--safe-b) - 10px)) !importan
 .cicon.corner .cicon-main { width: 100%; height: 100%; object-fit: contain; }
 .cicon-corner { position: absolute; right: calc(var(--s) * -.18); bottom: calc(var(--s) * -.1); width: calc(var(--s) * .55); height: calc(var(--s) * .55);
   object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .7)); }
+/* Group of nations or leagues: a fan of flags (owner, 2026-11-17). */
+.cicon.flagfan { position: relative; display: inline-block; width: calc(var(--s) * 1.5); height: var(--s); }
+.flagfan .ff { position: absolute; left: 50%; top: 50%; font-size: calc(var(--s) * .56); line-height: 1; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .8)); }
+.flagfan .back { font-size: calc(var(--s) * .46); opacity: .3; filter: none; z-index: 0; }
+.flagfan .b0 { transform: translate(-128%, -38%) rotate(-24deg); }
+.flagfan .b1 { transform: translate(28%, -38%) rotate(24deg); }
+.flagfan .b2 { transform: translate(-50%, -92%); }
+.flagfan .f0 { transform: translate(-92%, -46%) rotate(-13deg); z-index: 1; }
+.flagfan .f2 { transform: translate(-8%, -46%) rotate(13deg); z-index: 2; }
+.flagfan .f1 { transform: translate(-50%, -58%); z-index: 3; }
+.flagfan .ff-ball { position: absolute; right: 0; bottom: -3px; width: calc(var(--s) * .42); height: calc(var(--s) * .42); z-index: 4; }
+/* Eras (owner's pictures): no empty margin, as wide as a flag fan. */
+.cicon.wide { width: auto; height: auto; max-width: calc(var(--s) * 1.5); max-height: calc(var(--s) * .9); object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .6)); }
+/* One flag drawn as an image (the Soviet Union), in the box of a font flag: 1em × .73em. */
+.cicon.flag .flag-img { width: 1em; height: .73em; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .8)); }
+/* National-team wins: the app's cups side by side. */
+.cicon.cups { position: relative; display: inline-block; width: calc(var(--s) * 1.4); height: var(--s); }
+.cicon.cups .cup { position: absolute; top: 0; height: var(--s); width: auto; transform-origin: 50% 100%; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .7)); }
+.cicon.cups.n3 .c0 { left: 0; transform: rotate(-12deg) scale(.82); z-index: 1; }
+.cicon.cups.n3 .c1 { left: 50%; translate: -50% 0; z-index: 3; }
+.cicon.cups.n3 .c2 { right: 0; transform: rotate(12deg) scale(.82); z-index: 2; }
+.cicon.cups.n2 .c0 { left: 4%; transform: rotate(-8deg) scale(.9); z-index: 1; }
+.cicon.cups.n2 .c1 { right: 4%; transform: rotate(8deg) scale(.9); z-index: 2; }
+
+/* «Родился в…»: a baby boot, the year on a plaque in the laces' colour. */
+.cicon.born { position: relative; display: inline-block; }
+.cicon.born img { width: 100%; height: 100%; object-fit: contain; }
+.cicon.born b { position: absolute; left: 50%; bottom: -4%; translate: -50% 0; color: #fff; font-weight: 800; font-size: calc(var(--s) * .27); line-height: 1; padding: .14em .3em; border-radius: .35em; letter-spacing: -.02em; box-shadow: 0 1px 3px rgba(0, 0, 0, .6); text-shadow: 0 1px 1px rgba(0, 0, 0, .35); background: var(--born, #3F72A0); }
+.cicon.born.y1960 { --born: #8E34CC; } .cicon.born.y1970 { --born: #23914B; } .cicon.born.y1980 { --born: #B5821F; }
+.cicon.born.y1990 { --born: #D2263A; } .cicon.born.y2000 { --born: #3F72A0; }
