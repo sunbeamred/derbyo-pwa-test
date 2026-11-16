@@ -10,7 +10,9 @@ const POSITION = { G: "Вратарь", D: "Защитник", M: "Полуза�
 // cup, the Golden Boy ball. The other awards keep the generic trophy until their pictures come.
 // Pichichi and Zamora are the same MARCA cup in real life: one picture, the position in its corner (owner, 2026-11-16).
 const AWARD = { PICHICHI: { src: "award-marca-cup", corner: "/icons/position-F.webp" }, ZAMORA: { src: "award-marca-cup", corner: "/icons/position-G.webp" },
-  PL_BOOT: { src: "award-pl-boot" }, BL_SCORER: { src: "award-bl-scorer" }, EGS: { src: "award-egs" }, GOLDENBOY: { src: "award-golden-boy" } };
+  PL_BOOT: { src: "award-pl-boot" }, BL_SCORER: { src: "award-bl-scorer" }, EGS: { src: "award-egs" }, GOLDENBOY: { src: "award-golden-boy" },
+  // Serie A: the real Premio Paolo Rossi disc; Ligue 1: a silver ball on a gold base (owner's pictures, 2026-11-16).
+  CAPOCANNONIERE: { src: "award-serie-a" }, L1_SCORER: { src: "award-ligue1" } };
 const TROPHY = { WC: "trophy-wc", EURO: "trophy-euro", UCL: "trophy-ucl", COPA: "copa-america", UEL: "trophy-uel", CWC: "trophy-cwc", FAC: "trophy-fac", CDR: "trophy-cdr", DFB: "trophy-dfb", CI: "trophy-ci", CDF: "trophy-cdf" };
 
 /** A board condition from the server, in the shape the board draws (title, icon, note). */
