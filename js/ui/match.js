@@ -97,9 +97,10 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   if (m.review?.owner === 1 && !m.watching) lastReview.current = m.review;
 
   // Only the cell in play explains its two conditions (yours, or the one the other side is looking at): six notes at
-  // once filled the whole space under the board.
+  // once filled the whole space under the board. A condition with a rule card explains itself on tap, so under the
+  // board stays just the line whose turn it is (owner, 2026-11-17); only an older server without cards keeps notes.
   const focus = m.selected ?? m.oppSelected ?? null;
-  const notes = focus === null ? [] : [m.rows[Math.floor(focus / 3)], m.cols[focus % 3]].filter((c) => c?.note);
+  const notes = focus === null ? [] : [m.rows[Math.floor(focus / 3)], m.cols[focus % 3]].filter((c) => c?.note && !c.card);
   const slotLine = m.watching ? "Ты на трибуне: ходить нельзя, болеть в чате можно" : m.turn === 0 ? "Выбери клетку и назови футболиста" : "Ход соперника. Присмотри клетку на свой ход";
 
   let leaveMenu = null;
