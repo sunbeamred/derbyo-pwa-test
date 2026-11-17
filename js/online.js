@@ -6,6 +6,17 @@ import { api, openStream, uuid, savedSession, account, diag } from "./net.js";
 const HINT_LEVEL = { profile: 1, letters: 2, four: 3 };
 const HINT_ID = [null, "profile", "letters", "four"];
 const POSITION = { G: "Вратарь", D: "Защитник", M: "Полузащитник", F: "Нападающий" };
+// Award pictures modelled on the real trophies (owner, 2026-11-16): Torjägerkanone, the two golden boots, the Pichichi
+// cup, the Golden Boy ball. The other awards keep the generic trophy until their pictures come.
+// Pichichi and Zamora are the same MARCA cup in real life: one picture, the position in its corner (owner, 2026-11-16).
+const AWARD = { PICHICHI: { src: "award-marca-cup", corner: "/icons/position-F.webp" }, ZAMORA: { src: "award-marca-cup", corner: "/icons/position-G.webp" },
+  PL_BOOT: { src: "award-pl-boot" }, BL_SCORER: { src: "award-bl-scorer" }, EGS: { src: "award-egs" }, GOLDENBOY: { src: "award-golden-boy" },
+  // Serie A: the real Premio Paolo Rossi disc; Ligue 1: a silver ball on a gold base (owner's pictures, 2026-11-16).
+  CAPOCANNONIERE: { src: "award-serie-a" }, L1_SCORER: { src: "award-ligue1" } };
+// National-team wins drawn from the cups the app has: Euro, World Cup and Copa in a fan; the Champions League beside the World Cup.
+const BORN = new Set(["1960", "1970", "1980", "1990", "2000"]);
+const CUP_SETS = { INTL: ["EURO", "WC", "COPA"] };
+const cupSrc = (k) => k === "EURO" ? "img/trophy-euro.webp" : `/icons/${TROPHY[k]}.webp`;
 const TROPHY = { WC: "trophy-wc", EURO: "trophy-euro", UCL: "trophy-ucl", COPA: "copa-america", UEL: "trophy-uel", CWC: "trophy-cwc", FAC: "trophy-fac", CDR: "trophy-cdr", DFB: "trophy-dfb", CI: "trophy-ci", CDF: "trophy-cdf" };
 
 /** A board condition from the server, in the shape the board draws (title, icon, note). */
@@ -15,15 +26,28 @@ export function criterion(c) {
   switch (c.type) {
     case "c": icon = c.badge ? { kind: "crest", src: `https://media.api-sports.io/football/teams/${c.badge}.png` }
       : c.logo && /^https:\/\/a\.espncdn\.com\//.test(c.logo) ? { kind: "crest", src: c.logo } : { kind: "text", text: title.slice(0, 2).toUpperCase() }; break;
-    case "n": icon = { kind: "flag", emoji: c.flag ?? "🏳️" }; break;
-    case "l": icon = { kind: "league", emoji: c.flag ?? "🏳️" }; break;
+    // A group of nations or leagues (server 2026-11-17): a fan of its flags, the league ball on league groups.
+    case "n": icon = c.flags?.image ? { kind: "flagimg", src: `img/flag-${c.flags.image}.webp` } : c.flags?.front?.length ? { kind: "flagfan", ...c.flags } : { kind: "flag", emoji: c.flag ?? "🏳️" }; break;
+    case "l": icon = c.flags?.front?.length ? { kind: "flagfan", ...c.flags, ball: true } : { kind: "league", emoji: c.flag ?? "🏳️" }; break;
     case "p": icon = { kind: "image", src: `/icons/position-${c.key}.webp` }; break;
-    case "a": icon = { kind: "image", src: c.key === "BDOR" ? "/icons/golden-ball.webp" : "/icons/trophy.webp" }; break;
-    case "t": icon = { kind: "image", src: `/icons/${TROPHY[c.key] ?? "trophy"}.webp` }; break;
+    case "a": icon = AWARD[c.key] ? { kind: "image", src: `img/${AWARD[c.key].src}.webp`, corner: AWARD[c.key].corner ?? null }
+      : { kind: "image", src: c.key === "BDOR" ? "/icons/golden-ball.webp" : "/icons/trophy.webp" }; break;
+    // A tournament he played («ЧМ-2006») is not a trophy he won: a ball, not a cup (owner's mock-up, 2026-11-15).
+    // Each tournament he played shows that tournament's ball (owner's pictures after the real match balls, 2026-11-16).
+    // «ЛЧ + сборная»: the Champions League cup in front, the three national-team cups fanned beside it (owner, 2026-11-17).
+    case "t": icon = c.key === "UCLINTL" ? { kind: "cupsplus", main: cupSrc("UCL"), srcs: CUP_SETS.INTL.map(cupSrc) }
+      : CUP_SETS[c.key] ? { kind: "cups", srcs: CUP_SETS[c.key].map(cupSrc) }
+      : { kind: "image", src: /^(WC|EURO)\d{4}$/.test(c.key) ? `img/ball-${c.key.toLowerCase()}.webp` : c.key === "EURO" ? "img/trophy-euro.webp" : `/icons/${TROPHY[c.key] ?? "trophy"}.webp` }; break;
+    // Era («90-е») and birth decade («р. 80»): a gold badge with the short text (server 2026-11-14).
+    // Eras: the owner's pictures in the spirit of each decade, wide like a flag fan (2026-11-17); birth decades keep the badge.
+    case "e": icon = { kind: "wide", src: `img/era-${c.key}.webp` }; break;
+    // Born in a decade: a baby boot in the decade's colour, the full year as text on top (owner, 2026-11-17).
+    case "b": icon = BORN.has(c.key) ? { kind: "born", src: `img/born-${c.key}.webp`, year: c.key } : { kind: "badge", text: c.short ?? title }; break;
     case "m": case "w": icon = { kind: "person", person: c.person, frame: `/icons/frame-${c.type === "m" ? "coach" : "teammate"}.webp` }; break;
     default: icon = { kind: "text", text: "?" };
   }
-  return { key: c.id, title: c.type === "p" ? POSITION[c.key] ?? title : title, icon, note: c.note ?? null };
+  // `card`: the rule shown when the criterion is tapped (server 2026-11-15); older servers send none.
+  return { key: c.id, title: c.type === "p" ? POSITION[c.key] ?? title : title, icon, note: c.note ?? null, card: c.card ?? null };
 }
 
 // «спит» after this much of the opponent's own turn time with nothing done (owner, 2026-11-07).

@@ -18,7 +18,8 @@ export const installState = {
 };
 
 /** «Что нового»: once, after the app is installed or the player chooses to stay in the browser. */
-const NEWS = "whats-new-1";
+// A new key shows the window once more to everyone (2026-11-17: the board update).
+const NEWS = "whats-new-2";
 export const whatsNew = {
   due() {
     try { return !localStorage.getItem(NEWS) && (isStandalone() || ["browser", "steps", "installed"].includes(localStorage.getItem("install-choice"))); }
@@ -27,10 +28,11 @@ export const whatsNew = {
   seen() { try { localStorage.setItem(NEWS, "1"); } catch {} },
 };
 
+// The board update (owner, 2026-11-17): new kinds of conditions, fewer repeats, the rule card on tap.
 const NEWS_ITEMS = [
-  ["vibrate", "Создано для телефона", "Интерфейс собран заново под смартфон.", null],
-  ["game-daily", "Новые мини-игры", "Футболист дня, «Контекстбол» и «Что их связывает».", "+2 к рейтингу за футболиста дня"],
-  ["bolt", "Надёжные матчи", "Честный таймер, понятные статусы и возврат в игру после обрыва связи.", null],
+  ["era-1990", "Новые условия на поле", "Эпохи, год рождения, турниры, награды, группы сборных и чемпионатов: Африка, Балканы, Аравия и другие.", null],
+  ["ball-wc2006", "Поля повторяются реже", "«Знаток» и «Легенда» стали заметно разнообразнее, «Энциклопедия» — сложнее.", null],
+  ["question", "Нажми на условие", "Покажем правило и что значит каждая клетка именно на этом поле.", null],
 ];
 
 export function WhatsNewSheet({ close }) {

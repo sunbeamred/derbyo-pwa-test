@@ -24,6 +24,11 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   const [profileOf, setProfileOf] = useState(null);
   const [standsOpen, setStandsOpen] = useState(false);
   const [viewer, setViewer] = useState(null);
+  // Rule cards (owner, 2026-11-15): a tapped criterion opens its rule; the hint shows once per phone.
+  const [ruleOf, setRuleOf] = useState(null);
+  const [ruleHint, setRuleHint] = useState(() => !hintSeen());
+  const dropHint = () => { if (ruleHint) { markHintSeen(); setRuleHint(false); } };
+  const openRule = (c) => { dropHint(); setRuleOf(c); };
   const [confirmSurrender, setConfirmSurrender] = useState(false);
   const [drawHint, setDrawHint] = useState(null);
   const [shownToast, setShownToast] = useState(null);
@@ -92,9 +97,10 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   if (m.review?.owner === 1 && !m.watching) lastReview.current = m.review;
 
   // Only the cell in play explains its two conditions (yours, or the one the other side is looking at): six notes at
-  // once filled the whole space under the board.
+  // once filled the whole space under the board. A condition with a rule card explains itself on tap, so under the
+  // board stays just the line whose turn it is (owner, 2026-11-17); only an older server without cards keeps notes.
   const focus = m.selected ?? m.oppSelected ?? null;
-  const notes = focus === null ? [] : [m.rows[Math.floor(focus / 3)], m.cols[focus % 3]].filter((c) => c?.note);
+  const notes = focus === null ? [] : [m.rows[Math.floor(focus / 3)], m.cols[focus % 3]].filter((c) => c?.note && !c.card);
   const slotLine = m.watching ? "Ты на трибуне: ходить нельзя, болеть в чате можно" : m.turn === 0 ? "Выбери клетку и назови футболиста" : "Ход соперника. Присмотри клетку на свой ход";
 
   let leaveMenu = null;
@@ -149,7 +155,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
   return html`<div class="match">
     <div class="match-body">
       <${Scoreboard} m=${m} openProfile=${setProfileOf} openStands=${() => setStandsOpen(true)} />
-      <${Board} m=${m} tap=${tapCell} />
+      <${Board} m=${m} tap=${tapCell} openRule=${openRule} />
       <div class="slot">
         ${notes.length ? html`<div class=${cx("notes", ((m.offerRaise && !m.watching) || m.roundOver) && "hidden")}>
           ${notes.map((c) => html`<div><b>${(c.label ?? c.title) + ": "}</b><span>${c.note}</span></div>`)}</div>` : null}
@@ -159,6 +165,10 @@ export function MatchScreen({ m, close, findNew, minimize }) {
           </div>`
         : m.myOffer ? html`<div class="raise-offer glass"><span>${m.myOffer}</span></div>`
         : m.roundOver ? html`<${ResultBubble} m=${m} key=${m.finishSignal} />`
+        // Once per phone, in place of the slot line while the server sends rule cards (owner, 2026-11-15: calm, one text).
+        : !notes.length && ruleHint && m.cols.some((c) => c.card) && !m.watching ? html`<div class="rule-hint glass" role="note">
+            <img class="rule-hint-ico" src=${img("question")} alt="" /><span>Нажми на условие — покажем, что оно значит</span>
+            <button class="rule-hint-ok press" onClick=${dropHint}>Понятно</button></div>`
         : !notes.length ? html`<p class=${cx("slot-line", (shownToast || m.reward) && "hidden")}>${slotLine}</p>` : null}
         <div class="slot-notices">
           ${shownToast ? html`<${Toast} toast=${shownToast} />` : null}
@@ -177,6 +187,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${standsOpen ? html`<${Panel} onClose=${() => setStandsOpen(false)}>${(leave) => html`<${StandsSheet} m=${m} open=${(v) => { leave(); setViewer(v); }} />`}<//>` : null}
     ${viewer ? html`<${Panel} onClose=${() => setViewer(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${1} viewer=${viewer} close=${leave} />`}<//>` : null}
     ${profileOf !== null ? html`<${Panel} onClose=${() => setProfileOf(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${profileOf} close=${leave} />`}<//>` : null}
+    ${ruleOf ? html`<${Panel} onClose=${() => setRuleOf(null)} class="rule-panel">${(leave) => html`<${RuleCard} c=${ruleOf} board=${[...m.rows, ...m.cols]} close=${leave} />`}<//>` : null}
     ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}>${menu}<//>` : null}
     ${/* One window at a time: «Ты здесь?» and the surrender question first, the explanation waits for them. */
       noticeFor(m) && !m.idleCheck && !confirmSurrender ? html`<${Explainer} notice=${noticeFor(m)} key=${noticeFor(m).id} />` : null}
@@ -339,7 +350,9 @@ function RoundSteps({ results, current, live, base = 2 }) {
 export function ConditionIcon({ icon, size = 34 }) {
   const s = `--s:${size}px`;
   switch (icon.kind) {
-    case "crest": case "image": return html`<img class="cicon" style=${s} src=${icon.src} alt="" />`;
+    case "crest": case "image": return icon.corner
+      ? html`<span class="cicon corner" style=${s}><img class="cicon-main" src=${icon.src} alt="" /><img class="cicon-corner" src=${icon.corner} alt="" /></span>`
+      : html`<img class="cicon" style=${s} src=${icon.src} alt="" />`;
     case "flag": return html`<span class="cicon flag" style=${s}>${icon.emoji}</span>`;
     case "league": return html`<span class="cicon flag league" style=${s}>${icon.emoji}<img src=${img("ball")} alt="" /></span>`;
     case "person": {
@@ -347,7 +360,49 @@ export function ConditionIcon({ icon, size = 34 }) {
       return html`<span class="cicon person" style=${s}>${ph ? html`<img class="ph" src=${ph} alt="" />` : null}<img class="fr" src=${icon.frame} alt="" /></span>`;
     }
     case "text": return html`<span class="cicon text" style=${s}>${icon.text}</span>`;
+    case "badge": return html`<span class="cicon era-badge" style=${s}>${icon.text}</span>`;
+    case "born": return html`<span class=${`cicon born y${icon.year}`} style=${s}><img src=${icon.src} alt="" /><b>${icon.year}</b></span>`;
+    case "wide": return html`<img class="cicon wide" style=${s} src=${icon.src} alt="" />`;
+    case "flagimg": return html`<span class="cicon flag" style=${s}><img class="flag-img" src=${icon.src} alt="" /></span>`;
+    case "cupsplus": return html`<span class="cicon cupsplus" style=${s}><img class="cup-main" src=${icon.main} alt="" /><span class="cicon cups n3" style=${`--s:${Math.round(size * .78)}px`}>${icon.srcs.map((src, i) => html`<img class=${`cup c${i}`} src=${src} alt="" />`)}</span></span>`;
+    case "cups": return html`<span class=${`cicon cups n${icon.srcs.length}`} style=${s}>${icon.srcs.map((src, i) => html`<img class=${`cup c${i}`} src=${src} alt="" />`)}</span>`;
+    // Like cards in a hand: the big teams in front, the middle one on top; a few more faint behind.
+    case "flagfan": return html`<span class="cicon flagfan" style=${s}>${(icon.back || []).map((f, i) => html`<span class=${`ff back b${i}`}>${f}</span>`)}${icon.front.map((f, i) => html`<span class=${`ff f${i}`}>${f}</span>`)}${icon.ball ? html`<img class="ff-ball" src=${img("ball")} alt="" />` : null}</span>`;
   }
+}
+
+const HINT_KEY = "derbyo-rule-hint-seen";
+const hintSeen = () => { try { return localStorage.getItem(HINT_KEY) === "1"; } catch { return true; } };
+const markHintSeen = () => { try { localStorage.setItem(HINT_KEY, "1"); } catch {} };
+function CondHead({ c, row, open }) {
+  const icon = html`<${ConditionIcon} icon=${c.icon} size=${38} />`;
+  const label = `Правило: ${c.card?.title ?? c.title}`;
+  if (!c.card) return row ? html`<span class="lead row-head">${icon}<${WordLines} text=${c.title} /></span>` : html`<span class="col-head">${icon}<span class="col-title">${c.title}</span></span>`;
+  return row ? html`<button class="lead row-head cond-btn" aria-label=${label} onClick=${() => open(c)}>${icon}<${WordLines} text=${c.title} /></button>`
+    : html`<button class="col-head cond-btn" aria-label=${label} onClick=${() => open(c)}>${icon}<span class="col-title">${c.title}</span></button>`;
+}
+/** The rule of one criterion: what it is, the full title (years spelled out), the rule, examples, what does not count. */
+// A long list of countries (Africa has 54) sits in its own short scrolling box (owner, 2026-11-17): the card keeps
+// its size and its font on small phones, the board stays in view.
+function RuleLine({ text }) {
+  const long = text.split(", ").length > 10;
+  return long ? html`<div class="rule-scroll" tabindex="0" aria-label="Список стран"><p class="rule-line">${text}</p></div>` : html`<p class="rule-line">${text}</p>`;
+}
+
+// «На этом поле» (owner, 2026-11-17): one line per condition this one crosses, written by the server for that pair;
+// the note below is small and grey. Servers without `cross` keep the general lines.
+function RuleCard({ c, board = [], close }) {
+  const k = c.card;
+  const cross = (k.cross || []).map((x) => ({ ...x, n: board.find((b) => b.key === x.id) })).filter((x) => x.n);
+  return html`<div class="rule-card">
+    <div class="rule-top"><${ConditionIcon} icon=${c.icon} size=${44} /><div><div class="rule-kind">${k.kind}</div><h3 class="rule-title">${k.title}</h3></div></div>
+    <p class="rule-text">${k.rule}</p>
+    ${(k.lines || []).map((l) => html`<${RuleLine} text=${l} />`)}
+    ${cross.length ? html`<div class="rule-on">На этом поле</div>
+      ${cross.map((x) => html`<div class="rule-cross"><${ConditionIcon} icon=${x.n.icon} size=${30} /><p><b>${x.n.title}</b> — ${x.text}</p></div>`)}` : null}
+    ${k.except ? html`<p class="rule-note">${k.except}</p>` : null}
+    <button class="primary-btn press" onClick=${() => close()}>Понятно</button>
+  </div>`;
 }
 
 // Surnames on the cards (owner, 2026-11-06): Messi, Donnarumma, Aubameyang; the search, the profile and «Не подходит»
@@ -385,7 +440,8 @@ function WordLines({ text }) {
   return html`<span class="word-lines" ref=${ref} style=${`font-size:${size}px`}>${words.map((w) => html`<span>${w}</span>`)}</span>`;
 }
 
-function Board({ m, tap }) {
+function Board({ m, tap, openRule }) {
+  const open = openRule;
   const ref = useRef();
   const lastMiss = useRef(m.missSignal);
   const lastReward = useRef(null);
@@ -411,10 +467,10 @@ function Board({ m, tap }) {
   return html`<div class="board" ref=${ref}>
     <div class="board-row head">
       <span class="lead"></span>
-      ${m.cols.map((c) => html`<span class="col-head"><${ConditionIcon} icon=${c.icon} size=${38} /><span class="col-title">${c.title}</span></span>`)}
+      ${m.cols.map((c) => html`<${CondHead} c=${c} open=${open} />`)}
     </div>
     ${[0, 1, 2].map((r) => html`<div class="board-row">
-      <span class="lead row-head"><${ConditionIcon} icon=${m.rows[r].icon} size=${38} /><${WordLines} text=${m.rows[r].title} /></span>
+      <${CondHead} c=${m.rows[r]} row=${true} open=${open} />
       ${[0, 1, 2].map((c) => {
         const i = r * 3 + c, cell = m.cells[i];
         return html`<${Cell} key=${i} cell=${cell} short=${shortNames[i]} cross=${cell ? m.seat(cell.owner) === 0 : false}
