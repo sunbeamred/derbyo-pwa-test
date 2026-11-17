@@ -1764,7 +1764,7 @@ body.ctx-full .app { --tb-space: max(22px, calc(var(--safe-b) - 10px)) !importan
 .flagfan .f1 { transform: translate(-50%, -58%); z-index: 3; }
 .flagfan .ff-ball { position: absolute; right: 0; bottom: -3px; width: calc(var(--s) * .42); height: calc(var(--s) * .42); z-index: 4; }
 /* Eras (owner's pictures): no empty margin, as wide as a flag fan. */
-.cicon.wide { width: auto; height: auto; max-width: calc(var(--s) * 1.5); max-height: calc(var(--s) * .9); object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .6)); }
+.cicon.wide { width: calc(var(--s) * 1.8); height: var(--s); object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .6)); }
 /* One flag drawn as an image (the Soviet Union), in the box of a font flag: 1em × .73em. */
 .cicon.flag .flag-img { width: 1em; height: .73em; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .8)); }
 /* National-team wins: the app's cups side by side. */
@@ -1782,3 +1782,18 @@ body.ctx-full .app { --tb-space: max(22px, calc(var(--safe-b) - 10px)) !importan
 .cicon.born b { position: absolute; left: 50%; bottom: -4%; translate: -50% 0; color: #fff; font-weight: 800; font-size: calc(var(--s) * .27); line-height: 1; padding: .14em .3em; border-radius: .35em; letter-spacing: -.02em; box-shadow: 0 1px 3px rgba(0, 0, 0, .6); text-shadow: 0 1px 1px rgba(0, 0, 0, .35); background: var(--born, #3F72A0); }
 .cicon.born.y1960 { --born: #8E34CC; } .cicon.born.y1970 { --born: #23914B; } .cicon.born.y1980 { --born: #B5821F; }
 .cicon.born.y1990 { --born: #D2263A; } .cicon.born.y2000 { --born: #3F72A0; }
+
+/* «На этом поле»: the crossing conditions, each on its own row with its small icon; the note small and grey. */
+.rule-on { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); margin-top: 2px; }
+.rule-cross { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 12px; background: var(--raised); }
+.rule-cross > .cicon { flex: none; }
+.rule-cross p { margin: 0; font-size: 14px; line-height: 1.35; color: var(--soft); }
+.rule-cross b { color: var(--ink); font-weight: 700; }
+.rule-note { font-size: 12.5px; line-height: 1.4; color: var(--soft); opacity: .8; }
+.rule-scroll { max-height: 92px; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px; border-radius: 12px; background: var(--raised);
+  -webkit-mask-image: linear-gradient(#000 75%, transparent); mask-image: linear-gradient(#000 75%, transparent); }
+.rule-scroll .rule-line { margin: 0 0 14px; }
+.rule-scroll:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.cicon.cupsplus { position: relative; display: inline-block; width: calc(var(--s) * 1.75); height: var(--s); }
+.cicon.cupsplus .cup-main { position: absolute; left: 0; top: 0; height: var(--s); width: auto; transform: rotate(-6deg); transform-origin: 50% 100%; z-index: 4; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .7)); }
+.cicon.cupsplus > .cups { position: absolute; right: 0; bottom: 0; z-index: 2; }

@@ -186,7 +186,7 @@ export function MatchScreen({ m, close, findNew, minimize }) {
     ${standsOpen ? html`<${Panel} onClose=${() => setStandsOpen(false)}>${(leave) => html`<${StandsSheet} m=${m} open=${(v) => { leave(); setViewer(v); }} />`}<//>` : null}
     ${viewer ? html`<${Panel} onClose=${() => setViewer(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${1} viewer=${viewer} close=${leave} />`}<//>` : null}
     ${profileOf !== null ? html`<${Panel} onClose=${() => setProfileOf(null)}>${(leave) => html`<${ProfileSheet} m=${m} owner=${profileOf} close=${leave} />`}<//>` : null}
-    ${ruleOf ? html`<${Panel} onClose=${() => setRuleOf(null)} class="rule-panel">${(leave) => html`<${RuleCard} c=${ruleOf} close=${leave} />`}<//>` : null}
+    ${ruleOf ? html`<${Panel} onClose=${() => setRuleOf(null)} class="rule-panel">${(leave) => html`<${RuleCard} c=${ruleOf} board=${[...m.rows, ...m.cols]} close=${leave} />`}<//>` : null}
     ${menuOpen ? html`<${Panel} onClose=${() => setMenuOpen(false)}>${menu}<//>` : null}
     ${/* One window at a time: «Ты здесь?» and the surrender question first, the explanation waits for them. */
       noticeFor(m) && !m.idleCheck && !confirmSurrender ? html`<${Explainer} notice=${noticeFor(m)} key=${noticeFor(m).id} />` : null}
@@ -363,6 +363,7 @@ export function ConditionIcon({ icon, size = 34 }) {
     case "born": return html`<span class=${`cicon born y${icon.year}`} style=${s}><img src=${icon.src} alt="" /><b>${icon.year}</b></span>`;
     case "wide": return html`<img class="cicon wide" style=${s} src=${icon.src} alt="" />`;
     case "flagimg": return html`<span class="cicon flag" style=${s}><img class="flag-img" src=${icon.src} alt="" /></span>`;
+    case "cupsplus": return html`<span class="cicon cupsplus" style=${s}><img class="cup-main" src=${icon.main} alt="" /><span class="cicon cups n3" style=${`--s:${Math.round(size * .78)}px`}>${icon.srcs.map((src, i) => html`<img class=${`cup c${i}`} src=${src} alt="" />`)}</span></span>`;
     case "cups": return html`<span class=${`cicon cups n${icon.srcs.length}`} style=${s}>${icon.srcs.map((src, i) => html`<img class=${`cup c${i}`} src=${src} alt="" />`)}</span>`;
     // Like cards in a hand: the big teams in front, the middle one on top; a few more faint behind.
     case "flagfan": return html`<span class="cicon flagfan" style=${s}>${(icon.back || []).map((f, i) => html`<span class=${`ff back b${i}`}>${f}</span>`)}${icon.front.map((f, i) => html`<span class=${`ff f${i}`}>${f}</span>`)}${icon.ball ? html`<img class="ff-ball" src=${img("ball")} alt="" />` : null}</span>`;
@@ -380,13 +381,25 @@ function CondHead({ c, row, open }) {
     : html`<button class="col-head cond-btn" aria-label=${label} onClick=${() => open(c)}>${icon}<span class="col-title">${c.title}</span></button>`;
 }
 /** The rule of one criterion: what it is, the full title (years spelled out), the rule, examples, what does not count. */
-function RuleCard({ c, close }) {
+// A long list of countries (Africa has 54) sits in its own short scrolling box (owner, 2026-11-17): the card keeps
+// its size and its font on small phones, the board stays in view.
+function RuleLine({ text }) {
+  const long = text.split(", ").length > 10;
+  return long ? html`<div class="rule-scroll" tabindex="0" aria-label="Список стран"><p class="rule-line">${text}</p></div>` : html`<p class="rule-line">${text}</p>`;
+}
+
+// «На этом поле» (owner, 2026-11-17): one line per condition this one crosses, written by the server for that pair;
+// the note below is small and grey. Servers without `cross` keep the general lines.
+function RuleCard({ c, board = [], close }) {
   const k = c.card;
+  const cross = (k.cross || []).map((x) => ({ ...x, n: board.find((b) => b.key === x.id) })).filter((x) => x.n);
   return html`<div class="rule-card">
     <div class="rule-top"><${ConditionIcon} icon=${c.icon} size=${44} /><div><div class="rule-kind">${k.kind}</div><h3 class="rule-title">${k.title}</h3></div></div>
     <p class="rule-text">${k.rule}</p>
-    ${(k.lines || []).map((l) => html`<p class="rule-line">${l}</p>`)}
-    ${k.except ? html`<p class="rule-except"><b>Важно:</b> ${k.except}</p>` : null}
+    ${(k.lines || []).map((l) => html`<${RuleLine} text=${l} />`)}
+    ${cross.length ? html`<div class="rule-on">На этом поле</div>
+      ${cross.map((x) => html`<div class="rule-cross"><${ConditionIcon} icon=${x.n.icon} size=${30} /><p><b>${x.n.title}</b> — ${x.text}</p></div>`)}` : null}
+    ${k.except ? html`<p class="rule-note">${k.except}</p>` : null}
     <button class="primary-btn press" onClick=${() => close()}>Понятно</button>
   </div>`;
 }
