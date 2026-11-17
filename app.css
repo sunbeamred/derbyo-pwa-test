@@ -1764,7 +1764,7 @@ body.ctx-full .app { --tb-space: max(22px, calc(var(--safe-b) - 10px)) !importan
 .flagfan .f1 { transform: translate(-50%, -58%); z-index: 3; }
 .flagfan .ff-ball { position: absolute; right: 0; bottom: -3px; width: calc(var(--s) * .42); height: calc(var(--s) * .42); z-index: 4; }
 /* Eras (owner's pictures): no empty margin, as wide as a flag fan. */
-.cicon.wide { width: calc(var(--s) * 1.8); height: var(--s); object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .6)); }
+.cicon.wide { box-sizing: border-box; width: calc(var(--s) * 1.8); height: var(--s); padding: calc(var(--s) * .13) 0; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .6)); }
 /* One flag drawn as an image (the Soviet Union), in the box of a font flag: 1em × .73em. */
 .cicon.flag .flag-img { width: 1em; height: .73em; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .8)); }
 /* National-team wins: the app's cups side by side. */
