@@ -47,7 +47,8 @@ export function criterion(c) {
     default: icon = { kind: "text", text: "?" };
   }
   // `card`: the rule shown when the criterion is tapped (server 2026-11-15); older servers send none.
-  return { key: c.id, title: c.type === "p" ? POSITION[c.key] ?? title : title, icon, note: c.note ?? null, card: c.card ?? null };
+  // `kicker`: a small «сборная» over a nation group's undeclined name (server 2026-11-19).
+  return { key: c.id, title: c.type === "p" ? POSITION[c.key] ?? title : title, icon, note: c.note ?? null, card: c.card ?? null, kicker: c.kicker ?? null };
 }
 
 // «спит» after this much of the opponent's own turn time with nothing done (owner, 2026-11-07).

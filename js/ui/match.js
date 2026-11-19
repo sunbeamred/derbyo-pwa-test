@@ -377,9 +377,11 @@ const markHintSeen = () => { try { localStorage.setItem(HINT_KEY, "1"); } catch 
 function CondHead({ c, row, open }) {
   const icon = html`<${ConditionIcon} icon=${c.icon} size=${38} />`;
   const label = `Правило: ${c.card?.title ?? c.title}`;
-  if (!c.card) return row ? html`<span class="lead row-head">${icon}<${WordLines} text=${c.title} /></span>` : html`<span class="col-head">${icon}<span class="col-title">${c.title}</span></span>`;
-  return row ? html`<button class="lead row-head cond-btn" aria-label=${label} onClick=${() => open(c)}>${icon}<${WordLines} text=${c.title} /></button>`
-    : html`<button class="col-head cond-btn" aria-label=${label} onClick=${() => open(c)}>${icon}<span class="col-title">${c.title}</span></button>`;
+  // A nation group: a small «сборная» over its undeclined name, as on the rule card (owner, 2026-11-19).
+  const kick = c.kicker ? html`<small class="cond-kicker">${c.kicker}</small>` : null;
+  if (!c.card) return row ? html`<span class="lead row-head">${icon}${kick}<${WordLines} text=${c.title} /></span>` : html`<span class="col-head">${icon}<span class="col-title">${kick}${c.title}</span></span>`;
+  return row ? html`<button class="lead row-head cond-btn" aria-label=${label} onClick=${() => open(c)}>${icon}<span class="row-label">${kick}<${WordLines} text=${c.title} /></span></button>`
+    : html`<button class="col-head cond-btn" aria-label=${label} onClick=${() => open(c)}>${icon}<span class="col-title">${kick}${c.title}</span></button>`;
 }
 /** The rule of one criterion: what it is, the full title (years spelled out), the rule, examples, what does not count. */
 // A long list of countries (Africa has 54) sits in its own short scrolling box (owner, 2026-11-17): the card keeps
